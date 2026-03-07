@@ -1,53 +1,34 @@
-# Quản lý sách
-Môn học: Lập Trình Web PTIT
+# Book Shop
+Tên dự án: Website bán sách trực tuyến.
 
-Yêu cầu dự án: Tạo Web quản lý sách (Người bán, người mua, các thao tác quản lý sách, mua sách, thanh toán, ...)
+Mục tiêu: Xây dựng hệ thống cho phép người dùng tìm kiếm, xem và mua sách online, đồng thời hỗ trợ quản lý sách và đơn hàng cho quản trị viên.
 
-Chi tiết: [Link YouTube](https://youtu.be/XwT-syuvcQU?si=BLijGWfBIddWHMIJ)
+Công nghệ sử dụng
 
-(Dưới đây nêu một vài điểm đáng chú ý)
-# Công nghệ
-SpringBoot
+Backend: Java Spring Boot, RESTful API
 
-Thymleaf
+Frontend: HTML, CSS, JavaScript
 
-Jpa + mySQL
+Database: SQL Server
 
-Lombok
+Quản lý mã nguồn: Git
 
-Spring Security
+Chức năng chính
 
-Common Validator
+Đăng ký và đăng nhập tài khoản.
 
-# Cách UpLoad Ảnh
+Xem danh sách sách, tìm kiếm và xem chi tiết sách.
 
-**Cách lưu ảnh từ view xuống DB**
-Trong entity Book thêm 1 field có kiểu dữ liệu MultipartFile để xử lý ảnh trên view, 1 file có kiểu dữ liệu byte[] lưu ảnh trong DB.
+Thêm sách vào giỏ hàng và đặt hàng.
 
-Trên view tạo thẻ input có th:field tương ứng field MultipartFile.
+Thanh toán và theo dõi trạng thái đơn hàng.
 
-Ở server: set field byte[] của book = newBook.getFileData().getBytes(); gọi save của bookRepository
+Phân quyền người dùng
 
-**Cách load ảnh lên**
-Trên view, phần ảnh gắn link có request “bookImage”, tham số id = id của book.
+Guest: xem danh sách và thông tin sách.
 
-Bên controller xử lý bằng method productImage.
+Customer: đăng ký/đăng nhập, mua sách, quản lý giỏ hàng và theo dõi đơn hàng.
 
-# Cách lưu Cart (Giỏ hàng)
-Sử dụng Session (getCartInSession): Lưu trữ Cart tạm thời, Nếu Sign out thì Cart được Reset
+Staff: xử lý và cập nhật trạng thái đơn hàng.
 
-**Logic xử lý**
-
-CartInfo: Kiểm tra xem sách tồn tại trong giỏ hay chưa (Nếu chưa phải set số lượng ban đầu là 0).
-
-Sau đó số lượng = số lượng ban đầu của sách đó trong giỏ + số lượng sách mới thêm.
-
-Nếu số lượng <= 0 thì loại bỏ khỏi giỏ, ngược lại thêm mới số lượng đó.
-
-Khi đặt hàng xong: thực hiện xóa cartInfo trong session (method removeCartInSession của classUtils).
-
-# Đánh giá của khách hàng 
-Lấy id_book, username ; Set các giá trị book, user, và thời gian comment của user đó rồi save trong repository.
-
-**Lưu star**: Tạo 1 input trên html, khi ấn Star -> xác định vị trí của ngôi sao và lưu ở input đó (lấy số Star)
-
+Admin: quản lý sách, danh mục, người dùng và dữ liệu hệ thống.
