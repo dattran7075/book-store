@@ -39,11 +39,9 @@ public class CartItemService {
             throw new IllegalArgumentException("Book not found!");
         }
 
-        // Kiểm tra xem sách đã có trong giỏ chưa
         Optional<CartItem> existingItemOpt = cartItemRepository.findByUserAndBook(user, book);
 
         if (existingItemOpt.isPresent()) {
-            // Cập nhật số lượng
             CartItem existingItem = existingItemOpt.get();
             existingItem.setQuantity(existingItem.getQuantity() + quantity);
             existingItem.setUpdatedAt(new Date());

@@ -78,13 +78,11 @@ public class UserController {
         try {
             // ========== CASE 1: UPDATE EXISTING COMMENT ==========
             if (commentId != null && commentId > 0) {
-                // Validate star (bắt buộc)
                 if (star == null || star < 1 || star > 5) {
                     redirectAttributes.addFlashAttribute("error", "Rating must be between 1 and 5 stars");
                     return "redirect:/detail-product?id=" + bookId;
                 }
 
-                // Content là tuỳ chọn, chỉ validate độ dài nếu có nhập
                 if (content != null && content.trim().length() > 5000) {
                     redirectAttributes.addFlashAttribute("error", "Review content cannot exceed 5000 characters");
                     return "redirect:/detail-product?id=" + bookId;
@@ -103,13 +101,6 @@ public class UserController {
 
             // ========== CASE 2: CREATE NEW COMMENT ==========
             else {
-                // Validate star (bắt buộc)
-                if (star == null || star < 1 || star > 5) {
-                    redirectAttributes.addFlashAttribute("error", "Rating must be between 1 and 5 stars");
-                    return "redirect:/detail-product?id=" + bookId;
-                }
-
-                // Content là tuỳ chọn, chỉ validate độ dài nếu có nhập
                 if (content != null && content.trim().length() > 5000) {
                     redirectAttributes.addFlashAttribute("error", "Review content cannot exceed 5000 characters");
                     return "redirect:/detail-product?id=" + bookId;
@@ -118,9 +109,7 @@ public class UserController {
                 try {
                     Comment comment = new Comment();
                     comment.setStar(star);
-                    // Cho phép content rỗng (chỉ đánh sao)
                     comment.setContent(content != null ? content.trim() : "");
-
                     comment = commentService.save(comment, request);
 
                     redirectAttributes.addFlashAttribute("success", "Thank you for your review!");
