@@ -70,7 +70,6 @@ public class CommentService {
         comment.setContent(hasContent ? content.trim() : "");
         comment.setCreated_at(new Date());
         comment.setUpdated_at(new Date());
-        // Auto-approve star-only; content needs review
         comment.setStatus(hasContent ? "PENDING" : "APPROVED");
 
         return commentRepository.save(comment);
@@ -116,15 +115,11 @@ public class CommentService {
         comment.setStar(star);
         comment.setUpdated_at(new Date());
 
-        // Re-evaluate status
         if (!hasContent) {
-            // Star-only → always APPROVED
             comment.setStatus("APPROVED");
         } else if ("APPROVED".equals(prevStatus)) {
-            // Content added/changed after approval → back to PENDING for re-review
             comment.setStatus("PENDING");
         }
-        // PENDING → stays PENDING; HIDDEN → stays HIDDEN (admin manages)
 
         return commentRepository.save(comment);
     }
