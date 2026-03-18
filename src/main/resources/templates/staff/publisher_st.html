@@ -133,8 +133,6 @@
                                 <th>Country</th>
                                 <th>Website</th>
                                 <th>Book Count</th>
-                                <th>Created at</th>
-                                <th>Updated at</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -150,8 +148,6 @@
                                     <span th:if="${publisher.website == null or publisher.website.isEmpty()}">-</span>
                                 </td>
                                 <td th:text="${bookCountMap[publisher.id]}"></td>
-                                <td th:text="${publisher.created_at}"></td>
-                                <td th:text="${publisher.updated_at}"></td>
                             </tr>
                             <tr th:if="${#lists.isEmpty(publisherList)}">
                                 <td colspan="7" style="text-align:center; padding:30px; color:#999;">

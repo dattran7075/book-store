@@ -148,7 +148,7 @@ public class LanguageService {
 
         Language language = new Language();
         language.setName(name.trim());
-        language.setCode(code.trim().toUpperCase());
+        language.setCode(code.trim());
         language.setCreated_at(new Date());
         language.setUpdated_at(new Date());
 

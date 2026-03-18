@@ -1,10 +1,9 @@
 <!doctype html>
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity4">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Book Library | Orders - User</title>
+    <title>Book Library | My Orders</title>
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="apple-touch-icon" href="../apple-touch-icon.png">
@@ -21,7 +20,7 @@
     <script src="../js/vendor/modernizr-2.8.3-respond-1.4.2.min.js"></script>
     <style>
         .promotion-info {
-            font-size: 12px;
+            font-size: 11px;
             color: #FFFFFF;
             font-weight: bold;
         }
@@ -32,7 +31,6 @@
         }
     </style>
 </head>
-
 <body>
 <header id="tg-header" class="tg-header tg-haslayout">
     <div class="tg-topbar">
@@ -41,32 +39,32 @@
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
                     <div class="tg-userlogin">
                         <div>
-                            <li style="list-style:none ;" class="menu-item-has-children"
-                                sec:authorize="isAuthenticated()">
-                                <a href=""> <i id="user_icon" class="fa fa-user"></i> Welcome <span
-                                        class="sr-only"></span></a>
-                                <div class="mega-menu user">
-                                    <ul class="tg-themetabnav " role="tablist">
-                                        <li><a th:href="@{/profile}">Profile<span class="sr-only">(current)</span></a>
-                                        </li>
-                                        <li><a th:href="@{/orders}" sec:authorize="hasRole('USER')">Orders<span
-                                                class="sr-only">(current)</span></a></li>
-                                        <li><a class="tg-userlogout" th:href="@{/logout}">Logout<span class="sr-only">(current)</span></a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </li>
+                            <ul>
+                                <li style="list-style:none;" class="menu-item-has-children"
+                                    sec:authorize="isAuthenticated()">
+                                    <a href="">
+                                        <i id="user_icon" class="fa fa-user"></i>
+                                        Welcome
+                                        <span class="sr-only"></span>
+                                    </a>
+                                    <div class="mega-menu user">
+                                        <ul class="tg-themetabnav" role="tablist">
+                                            <li><a th:href="@{/profile}">Profile<span
+                                                    class="sr-only">(current)</span></a></li>
+                                            <li><a th:href="@{/orders}" sec:authorize="hasRole('USER')">Purchase
+                                                Info<span class="sr-only">(current)</span></a></li>
+                                            <li><a class="tg-userlogout" th:href="@{/logout}">Logout<span
+                                                    class="sr-only">(current)</span></a></li>
+                                        </ul>
+                                    </div>
+                                </li>
+                            </ul>
                             <br>
-                            <a class="nav-link text" th:href="@{/signup}"
-                               style="margin-right: 30px" sec:authorize="!isAuthenticated()">
-                                Sign up<span class="sr-only">(current)</span></a>
-                            <a class="nav-link text" th:href="@{/login}"
-                               sec:authorize="!isAuthenticated()">
-                                Login<span class="sr-only">(current)</span></a>
+                            <a class="nav-link text" th:href="@{/signup}" style="margin-right: 30px"
+                               sec:authorize="!isAuthenticated()">Sign up<span class="sr-only">(current)</span></a>
+                            <a class="nav-link text" th:href="@{/login}" sec:authorize="!isAuthenticated()">Login<span
+                                    class="sr-only">(current)</span></a>
                         </div>
-                    </div>
-                    <div>
-
                     </div>
                 </div>
             </div>
@@ -78,17 +76,6 @@
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
                     <strong class="tg-logo"><a href="index-2.html"><img src="images/logo.png"
                                                                         alt="company name here"></a></strong>
-                    <div class="tg-wishlistandcart">
-                        <div sec:authorize="hasRole('USER')" class="dropdown tg-themedropdown tg-minicartdropdown">
-                            <a id="tg-minicart" class="tg-btnthemedropdown" data-toggle="dropdown" aria-haspopup="true"
-                               aria-expanded="false">
-                                <span class="tg-themebadge"
-                                      th:text="${cartTotalBooks != null ? cartTotalBooks : 0}"></span>
-                                <a th:href="@{view-cart}"><i class="icon-cart"></i>
-                                    <span style="margin-left: 10px;">Cart</span></a>
-                            </a>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -110,16 +97,9 @@
                         <div id="tg-navigation" class="collapse navbar-collapse tg-navigation">
                             <ul>
                                 <li><a th:href="@{/}">Home</a></li>
-                                <li><a th:href="@{/products}" sec:authorize="!hasRole('ADMIN')">Books</a></li>
-                                <li><a th:href="@{/manage-product}" sec:authorize="hasRole('ADMIN')">Books</a></li>
-                                <li><a th:href="@{/manage-category}" sec:authorize="hasRole('ADMIN')">Categories</a>
-                                </li>
-                                <li><a th:href="@{/manage-author}" sec:authorize="hasRole('ADMIN')">Authors</a></li>
-                                <li><a th:href="@{/manage-user}" sec:authorize="hasRole('ADMIN')">Users</a></li>
-                                <li><a th:href="@{/manage-order}" sec:authorize="hasRole('ADMIN')">Orders</a></li>
-                                <li><a th:href="@{/manage-promotion}" sec:authorize="hasRole('ADMIN')">Promotions</a>
-                                </li>
-                                <li><a th:href="@{/statistic}" sec:authorize="hasRole('ADMIN')">Statistics</a></li>
+                                <li><a th:href="@{/products}">Books</a></li>
+                                <li><a th:href="@{/cart}">Cart</a></li>
+                                <li><a th:href="@{/orders}">My Orders</a></li>
                             </ul>
                         </div>
                     </nav>
@@ -128,145 +108,236 @@
         </div>
     </div>
 </header>
+
 <div class="tg-innerbanner tg-haslayout tg-parallax tg-bginnerbanner" data-z-index="-100"
      data-appear-top-offset="600" data-parallax="scroll" data-image-src="../images/parallax/bgparallax-07.jpg">
     <div class="container">
         <div class="row">
             <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
                 <div class="tg-innerbannercontent">
-                    <h1 style="margin-bottom: 20px;">Order information</h1>
+                    <h1 style="margin-bottom: 20px;">My Orders</h1>
                     <ol class="tg-breadcrumb">
                         <li><a href="javascript:void(0);">Home</a></li>
-                        <li class="tg-active">Orders</li>
+                        <li class="tg-active">My Orders</li>
                     </ol>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
 <main id="tg-main" class="tg-main tg-haslayout">
     <div class="tg-sectionspace tg-haslayout" style="padding-top: 50px;">
         <div class="container">
+
+            <!-- Flash messages -->
+            <div th:if="${success}" class="alert alert-success alert-dismissible" role="alert">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span>
+                </button>
+                <span th:text="${success}"></span>
+            </div>
+            <div th:if="${error}" class="alert alert-danger alert-dismissible" role="alert">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span>
+                </button>
+                <span th:text="${error}"></span>
+            </div>
+
             <div class="row">
                 <div>
-                    <div>
-                        <div id="tg-content" class="tg-content">
-                            <div class="tg-products">
-                                <div class="tg-productgrid">
+                    <div id="tg-content" class="tg-content">
+                        <div class="tg-products">
+                            <div class="tg-productgrid">
+                                <div class="row">
+                                    <div style="overflow-x: auto;">
+                                        <table class="table table-bordered">
+                                            <tr>
+                                                <th>No.</th>
+                                                <th>Order ID</th>
+                                                <th>Phone</th>
+                                                <th>Address</th>
+                                                <th>Promotion</th>
+                                                <th>Discount</th>
+                                                <th>Shipping</th>
+                                                <th>Total</th>
+                                                <th>Payment</th>
+                                                <th>Status</th>
+                                                <th>Date</th>
+                                                <th style="min-width: 160px;">Actions</th>
+                                            </tr>
 
-                                    <div class="row">
-                                        <div style="overflow-x: auto;">
-                                            <table class="table table-bordered">
+                                            <th:block th:each="order: ${orderList}">
                                                 <tr>
-                                                    <th>No.</th>
-                                                    <th>Order ID</th>
-                                                    <th>Full name</th>
-                                                    <th>Phone</th>
-                                                    <th>Address</th>
-                                                    <th>Promotions</th>
-                                                    <th>Discount</th>
-                                                    <th>Total</th>
-                                                    <th>Status</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                                <th:block th:each="order, iter : ${orderList}">
-                                                    <tr>
-                                                        <td th:text="${(page - 1) * 10 + iter.index + 1}"></td>
-                                                        <td th:text="${order.id}"></td>
-                                                        <td th:text="${order.user.name}"></td>
-                                                        <td th:text="${order.phone}"></td>
-                                                        <td th:text="${order.user.address}"></td>
+                                                    <td th:text="${orderList.indexOf(order)+1}"></td>
+                                                    <td th:text="${order.id}"></td>
+                                                    <td th:text="${order.phone}"></td>
+                                                    <td th:text="${order.address}"></td>
 
-                                                        <!-- Promotion Codes -->
-                                                        <td>
-                                                            <span th:if="${orderPromotions.get(order.id) != null and !orderPromotions.get(order.id).isEmpty()}"
-                                                                  th:each="code : ${orderPromotions.get(order.id)}"
-                                                                  class="label label-success promotion-info"
-                                                                  style="margin: 2px;"
-                                                                  th:text="${code}"></span>
-                                                            <span th:if="${orderPromotions.get(order.id) == null or orderPromotions.get(order.id).isEmpty()}">-</span>
-                                                        </td>
+                                                    <!-- Promotion -->
+                                                    <td>
+                                                        <span th:if="${order.voucher != null}"
+                                                              class="label label-success promotion-info"
+                                                              th:text="${order.voucher.code}"></span>
+                                                        <span th:if="${order.voucher == null}">-</span>
+                                                    </td>
 
-                                                        <!-- Discount Amount -->
-                                                        <td>
-                                                            <span th:if="${orderDiscounts.get(order.id) != null and orderDiscounts.get(order.id) > 0}"
-                                                                  class="discount-amount"
-                                                                  th:text="'-' + ${#numbers.formatInteger(orderDiscounts.get(order.id), 1, 'COMMA')} + ' VND'"></span>
-                                                            <span th:if="${orderDiscounts.get(order.id) == null or orderDiscounts.get(order.id) == 0}">-</span>
-                                                        </td>
+                                                    <!-- Discount -->
+                                                    <td>
+                                                        <span th:if="${order.discount_amount != null && order.discount_amount > 0}"
+                                                              class="discount-amount"
+                                                              th:text="'-' + ${#numbers.formatInteger(order.discount_amount, 1, 'COMMA')} + ' VND'"></span>
+                                                        <span th:if="${order.discount_amount == null || order.discount_amount == 0}">-</span>
+                                                    </td>
 
-                                                        <!-- Total Cost -->
-                                                        <td>
-                                                            <strong th:text="${#numbers.formatInteger(order.getFinalTotal(), 1, 'COMMA') + ' VND'}"></strong>
-                                                        </td>
+                                                    <!-- Shipping fee -->
+                                                    <td>
+                                                        <span th:if="${order.shipping_fee != null && order.shipping_fee > 0}"
+                                                              th:text="${#numbers.formatInteger(order.shipping_fee, 1, 'COMMA') + ' VND'}"></span>
+                                                        <span th:if="${order.shipping_fee == null || order.shipping_fee == 0}">Free</span>
+                                                    </td>
 
-                                                        <td th:text="${order.status == 'Pending' ? 'Pending' : (order.status == 'In Delivery' ? 'In Delivery' : (order.status == 'Approve' || order.status == 'Approved' || order.status == 'Assigned' ? 'Approved' : (order.status == 'Success' ? 'Completed' : (order.status == 'Cancelled' ? 'Cancelled' : order.status))))}"></td>
-                                                        <td>
-                                                            <a th:href="@{|/order-detail?id=${order.id}|}">
-                                                                <button type="button" class="btn btn-info">Details
-                                                                </button>
-                                                            </a>
-                                                            <button type="button" class="btn btn-danger"
-                                                                    data-toggle="modal"
-                                                                    th:data-target="${'#myModal_delete_'+order.id}">
-                                                                Cancel
+                                                    <!-- Total -->
+                                                    <td>
+                                                        <strong th:text="${#numbers.formatInteger(order.getFinalTotal(), 1, 'COMMA') + ' VND'}"></strong>
+                                                    </td>
+
+                                                    <!-- Payment -->
+                                                    <td>
+                                                        <span th:if="${order.payment_status == 'UNPAID'}"
+                                                              class="label label-danger">UNPAID</span>
+                                                        <span th:if="${order.payment_status == 'PAID'}"
+                                                              class="label label-success">PAID</span>
+                                                    </td>
+
+                                                    <!-- Status -->
+                                                    <td>
+                                                        <!-- Hiển thị Pending cho cả Pending và Assigned -->
+                                                        <span th:if="${order.status == 'Pending' or order.status == 'Assigned'}"
+                                                              class="label label-default">Pending</span>
+                                                        <span th:if="${order.status == 'Approved'}"
+                                                              class="label label-warning"
+                                                              th:text="${order.status}"></span>
+                                                        <span th:if="${order.status == 'Request'}"
+                                                              class="label"
+                                                              style="background-color: #e67e22; color: white;"
+                                                              th:text="${order.status}"></span>
+                                                        <span th:if="${order.status == 'In Delivery'}"
+                                                              class="label label-primary"
+                                                              th:text="${order.status}"></span>
+                                                        <span th:if="${order.status == 'Completed'}"
+                                                              class="label label-success"
+                                                              th:text="${order.status}"></span>
+                                                        <span th:if="${order.status == 'Cancelled'}"
+                                                              class="label label-danger"
+                                                              th:text="${order.status}"></span>
+                                                        <span th:if="${order.status == 'Returned'}" class="label"
+                                                              style="background-color: #34495e; color: white;"
+                                                              th:text="${order.status}"></span>
+                                                    </td>
+
+                                                    <!-- Date -->
+                                                    <td th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy')}"></td>
+
+                                                    <!-- Actions -->
+                                                    <td>
+                                                        <!-- View detail -->
+                                                        <a th:href="@{|/order-detail?id=${order.id}|}">
+                                                            <button type="button" class="btn btn-info btn-sm">
+                                                                <i class="fa fa-eye"></i>
                                                             </button>
-                                                        </td>
-                                                    </tr>
-                                                    <!-- Cancel modal: unique id per order -->
-                                                    <div class="modal fade" th:id="${'myModal_delete_'+order.id}"
-                                                         tabindex="-1" role="dialog"
-                                                         th:attr="aria-labelledby=${'myModalLabel'+order.id}">
-                                                        <div class="modal-dialog" role="document">
-                                                            <div class="modal-content">
-                                                                <div class="modal-header"
-                                                                     th:if="${order.status != null && (order.status.equals('Pending'))}">
-                                                                    <button type="button" class="close"
-                                                                            data-dismiss="modal"
-                                                                            aria-label="Close"><span
-                                                                            aria-hidden="true">&times;</span>
-                                                                    </button>
-                                                                    <h4 class="modal-title"
-                                                                        th:id="${'myModalLabel'+order.id}"
-                                                                        style="text-transform: none;">Are you sure you
-                                                                        want
-                                                                        to cancel this order?</h4>
+                                                        </a>
+
+                                                        <!-- Cancel button - Enabled cho Pending/Assigned và Approved -->
+                                                        <button th:if="${order.status == 'Pending' or order.status == 'Assigned' or order.status == 'Approved'}"
+                                                                type="button" class="btn btn-danger btn-sm"
+                                                                data-toggle="modal"
+                                                                th:data-target="${'#cancelModal_'+order.id}">
+                                                            Cancel
+                                                        </button>
+
+                                                        <!-- Cancel button - Disabled cho Request -->
+                                                        <button th:if="${order.status == 'Request'}"
+                                                                type="button" class="btn btn-danger btn-sm" disabled
+                                                                title="Cancel request is awaiting review">
+                                                            Cancel
+                                                        </button>
+
+                                                        <!-- Cancel button - Disabled cho các trạng thái khác -->
+                                                        <button th:if="${order.status == 'In Delivery' or order.status == 'Completed'
+                                                                      or order.status == 'Cancelled' or order.status == 'Returned'}"
+                                                                type="button" class="btn btn-danger btn-sm" disabled
+                                                                title="Cannot cancel this order">
+                                                            Cancel
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <!-- MODAL: Cancel (Pending/Assigned và Approved dùng chung) -->
+                                                <div th:if="${order.status == 'Pending' or order.status == 'Assigned' or order.status == 'Approved'}"
+                                                     class="modal fade"
+                                                     th:id="${'cancelModal_'+order.id}"
+                                                     tabindex="-1" role="dialog">
+                                                    <div class="modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                        aria-label="Close">
+                                                                    <span aria-hidden="true">&times;</span>
+                                                                </button>
+                                                                <h4 class="modal-title">
+                                                                    <span th:if="${order.status == 'Pending' or order.status == 'Assigned'}">Cancel Order #</span>
+                                                                    <span th:if="${order.status == 'Approved'}">Request Cancellation — Order #</span>
+                                                                    <span th:text="${order.id}"></span>
+                                                                </h4>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <p>
+                                                                    <strong>Total:</strong>
+                                                                    <span th:text="${#numbers.formatInteger(order.getFinalTotal(), 1, 'COMMA') + ' VND'}"></span>
+                                                                </p>
+
+                                                                <!-- Pending/Assigned message -->
+                                                                <div th:if="${order.status == 'Pending' or order.status == 'Assigned'}"
+                                                                     style="color: #a94442; background: #f2dede; padding: 10px; border-radius: 4px; margin-top: 10px;">
+                                                                    <i class="fa fa-warning"></i>
+                                                                    This action will immediately cancel your order and
+                                                                    cannot be undone.
                                                                 </div>
-                                                                <div class="modal-header"
-                                                                     th:if="${order.status != null && !(order.status.equals('Pending'))}">
-                                                                    <button type="button" class="close"
-                                                                            data-dismiss="modal"
-                                                                            aria-label="Close"><span
-                                                                            aria-hidden="true">&times;</span>
-                                                                    </button>
-                                                                    <h4 class="modal-title"
-                                                                        th:id="${'myModalLabel'+order.id}"
-                                                                        style="text-transform: none;">Cannot cancel this
-                                                                        order!</h4>
+
+                                                                <!-- Approved message -->
+                                                                <div th:if="${order.status == 'Approved'}"
+                                                                     style="color: #8a6d3b; background: #fcf8e3; padding: 10px; border-radius: 4px; margin-top: 10px;">
+                                                                    <i class="fa fa-info-circle"></i>
+                                                                    Your order is already approved. A cancellation
+                                                                    request will be sent to staff for review.
                                                                 </div>
-                                                                <div class="modal-body">
-                                                                    <button th:if="${order.status != null && !(order.status.equals('Pending'))}"
-                                                                            type="button" class="btn btn-default"
-                                                                            data-dismiss="modal">OK
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <!-- Pending/Assigned: Direct cancel -->
+                                                                <a th:if="${order.status == 'Pending' or order.status == 'Assigned'}"
+                                                                   th:href="@{|/cancel-order?id=${order.id}|}">
+                                                                    <button type="button" class="btn btn-danger">
+                                                                        <i class="fa fa-times"></i> Yes, cancel it
                                                                     </button>
-                                                                    <button th:if="${order.status != null && (order.status.equals('Pending'))}"
-                                                                            type="button" class="btn btn-default"
-                                                                            data-dismiss="modal">Cancel
+                                                                </a>
+
+                                                                <!-- Approved: Request cancel -->
+                                                                <a th:if="${order.status == 'Approved'}"
+                                                                   th:href="@{|/request-cancel-order?id=${order.id}|}">
+                                                                    <button type="button" class="btn btn-danger">
+                                                                        <i class="fa fa-paper-plane"></i> Submit Request
                                                                     </button>
-                                                                    <a th:if="${order.status != null && (order.status.equals('Pending'))}"
-                                                                       th:href="@{|/delete-order-user?id=${order.id}|}">
-                                                                        <button type="submit" class="btn btn-primary">
-                                                                            Confirm
-                                                                        </button>
-                                                                    </a>
-                                                                </div>
+                                                                </a>
+
+                                                                <button type="button" class="btn btn-default"
+                                                                        data-dismiss="modal">Close
+                                                                </button>
                                                             </div>
                                                         </div>
                                                     </div>
+                                                </div>
 
-                                                </th:block>
-                                            </table>
-                                        </div>
+                                            </th:block>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
@@ -275,35 +346,25 @@
                 </div>
             </div>
         </div>
-        <nav aria-label="Page navigation" style="text-align:center;">
-            <ul class="pagination">
 
+        <nav aria-label="Page navigation" style="text-align: center;">
+            <ul class="pagination">
                 <li th:classappend="${page == 1} ? 'disabled'">
-                    <a th:if="${page > 1}"
-                       th:href="@{/orders(page=${page - 1})}">
-                        &laquo;
-                    </a>
+                    <a th:if="${page > 1}" th:href="@{/orders(page=${page - 1})}">&laquo;</a>
                     <span th:if="${page == 1}">&laquo;</span>
                 </li>
-
-                <li th:each="i : ${#numbers.sequence(1, totalPage)}"
-                    th:classappend="${i == page} ? 'active'">
-                    <a th:href="@{/orders(page=${i})}"
-                       th:text="${i}"></a>
+                <li th:each="i : ${#numbers.sequence(1, totalPage)}" th:classappend="${i == page} ? 'active'">
+                    <a th:href="@{/orders(page=${i})}" th:text="${i}"></a>
                 </li>
-
                 <li th:classappend="${page == totalPage} ? 'disabled'">
-                    <a th:if="${page < totalPage}"
-                       th:href="@{/orders(page=${page + 1})}">
-                        &raquo;
-                    </a>
+                    <a th:if="${page < totalPage}" th:href="@{/orders(page=${page + 1})}">&raquo;</a>
                     <span th:if="${page == totalPage}">&raquo;</span>
                 </li>
-
             </ul>
         </nav>
     </div>
 </main>
+
 <footer id="tg-footer" class="tg-footer tg-haslayout">
     <div class="tg-footerarea">
         <div class="container">
@@ -312,31 +373,23 @@
                     <ul class="tg-clientservices">
                         <li class="tg-devlivery">
                             <span class="tg-clientserviceicon"><i class="icon-rocket"></i></span>
-                            <div class="tg-titlesubtitle">
-                                <h3>Delivery</h3>
-                                <p>Fast nationwide delivery</p>
-                            </div>
+                            <div class="tg-titlesubtitle"><h3>Delivery</h3>
+                                <p>Fast nationwide delivery</p></div>
                         </li>
                         <li class="tg-discount">
                             <span class="tg-clientserviceicon"><i class="icon-tag"></i></span>
-                            <div class="tg-titlesubtitle">
-                                <h3>Pricing</h3>
-                                <p>Attractive and reasonable</p>
-                            </div>
+                            <div class="tg-titlesubtitle"><h3>Price</h3>
+                                <p>Attractive and reasonable</p></div>
                         </li>
                         <li class="tg-quality">
                             <span class="tg-clientserviceicon"><i class="icon-leaf"></i></span>
-                            <div class="tg-titlesubtitle">
-                                <h3>Quality</h3>
-                                <p>Top quality guaranteed</p>
-                            </div>
+                            <div class="tg-titlesubtitle"><h3>Quality</h3>
+                                <p>Top quality products</p></div>
                         </li>
                         <li class="tg-support">
                             <span class="tg-clientserviceicon"><i class="icon-heart"></i></span>
-                            <div class="tg-titlesubtitle">
-                                <h3>24/7 Support</h3>
-                                <p>Serving you at any time</p>
-                            </div>
+                            <div class="tg-titlesubtitle"><h3>24/7 Support</h3>
+                                <p>Service at any time</p></div>
                         </li>
                     </ul>
                 </div>
@@ -346,31 +399,22 @@
                             <strong class="tg-logo"><a href="javascript:void(0);"><img src="../images/flogo.png"
                                                                                        alt="image description"></a></strong>
                             <ul class="tg-contactinfo">
-                                <li>
-                                    <i class="icon-apartment"></i>
+                                <li><i class="icon-apartment"></i>
                                     <address>Ha Dong, Hanoi, Vietnam</address>
                                 </li>
-                                <li>
-                                    <i class="icon-phone-handset"></i>
-                                    <span>
-											<em>0812 567 889</em>
-											<em>+84 1245 6767</em>
-										</span>
+                                <li><i class="icon-phone-handset"></i><span><em>0812 567 889</em><em>+84 1245 6767</em></span>
                                 </li>
-                                <li>
-                                    <i class="icon-clock"></i>
-                                    <span>
-											Serving 7 days a week from 9:00 - 22:00
-										</span>
+                                <li><i class="icon-clock"></i><span>Serving 7 days a week from 9:00 - 22:00</span></li>
+                                <li><i class="icon-envelope"></i><span><em><a href="mailto:support@booklibrary.com">support@booklibrary.com</a></em></span>
                                 </li>
                             </ul>
                             <ul class="tg-socialicons">
-                                <li class="tg-facebook"><a href="javascript:void(0);"><i
-                                        class="fa fa-facebook"></i></a></li>
-                                <li class="tg-twitter"><a href="javascript:void(0);"><i
-                                        class="fa fa-twitter"></i></a></li>
-                                <li class="tg-linkedin"><a href="javascript:void(0);"><i
-                                        class="fa fa-linkedin"></i></a></li>
+                                <li class="tg-facebook"><a href="javascript:void(0);"><i class="fa fa-facebook"></i></a>
+                                </li>
+                                <li class="tg-twitter"><a href="javascript:void(0);"><i class="fa fa-twitter"></i></a>
+                                </li>
+                                <li class="tg-linkedin"><a href="javascript:void(0);"><i class="fa fa-linkedin"></i></a>
+                                </li>
                                 <li class="tg-googleplus"><a href="javascript:void(0);"><i
                                         class="fa fa-google-plus"></i></a></li>
                                 <li class="tg-rss"><a href="javascript:void(0);"><i class="fa fa-rss"></i></a></li>
@@ -379,12 +423,8 @@
                     </div>
                     <div class="col-xs-12 col-sm-6 col-md-6 col-lg-6">
                         <div class="tg-footercol tg-widget tg-widgetnavigation">
-                            <div class="tg-widgettitle">
-                                <h3>We guarantee</h3>
-                            </div>
-
+                            <div class="tg-widgettitle"><h3>We guarantee</h3></div>
                             <div class="tg-widgetcontent">
-
                                 <ul>
                                     <li><a href="javascript:void(0);">Always respect customers</a></li>
                                     <li><a href="javascript:void(0);">Protect necessary information</a></li>
@@ -398,38 +438,25 @@
                 </div>
             </div>
         </div>
-        <div class="tg-footerbar">
-            <a id="tg-btnbacktotop" class="tg-btnbacktotop" href="javascript:void(0);"><i
-                    class="icon-chevron-up"></i></a>
-            <div class="container">
-                <div class="row">
-                    <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                        <span class="tg-paymenttype"><img src="../images/paymenticon.png"
-                                                          alt="../image description"></span>
-                        <span class="tg-copyright">2023 All Rights Reserved By &copy; Book Library</span>
-                    </div>
+    </div>
+    <div class="tg-footerbar">
+        <a id="tg-btnbacktotop" class="tg-btnbacktotop" href="javascript:void(0);"><i class="icon-chevron-up"></i></a>
+        <div class="container">
+            <div class="row">
+                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                    <span class="tg-paymenttype"><img src="../images/paymenticon.png" alt="image description"></span>
+                    <span class="tg-copyright">2023 All Rights Reserved By &copy; Book Library</span>
                 </div>
             </div>
         </div>
     </div>
 </footer>
+
 <script src="../js/vendor/jquery-library.js"></script>
 <script src="../js/vendor/bootstrap.min.js"></script>
 <script src="../js/owl.carousel.min.js"></script>
-<script src="../js/jquery.vide.min.js"></script>
-<script src="../js/countdown.js"></script>
 <script src="../js/jquery-ui.js"></script>
 <script src="../js/parallax.js"></script>
-<script src="../js/countTo.js"></script>
-<script src="../js/appear.js"></script>
-<script src="../js/gmap3.js"></script>
 <script src="../js/main.js"></script>
-<script>
-    function submitForm() {
-        document.querySelector('.tg-formsortshoitems').submit();
-    }
-
-</script>
 </body>
-
 </html>

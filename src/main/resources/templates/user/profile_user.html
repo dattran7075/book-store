@@ -20,6 +20,22 @@
     <link rel="stylesheet" href="../css/color.css">
     <link rel="stylesheet" href="../css/responsive.css">
     <script src="../js/vendor/modernizr-2.8.3-respond-1.4.2.min.js"></script>
+    <style>
+        .btn-toggle-password {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            font-size: 18px;
+            padding: 0;
+        }
+        .btn-toggle-password:hover {
+            color: #666;
+        }
+        .btn-toggle-password.active {
+            color: #d32f2f;
+        }
+    </style>
 </head>
 <body>
 <header id="tg-header" class="tg-header tg-haslayout">
@@ -148,48 +164,53 @@
                     </div>
                     <div>
                         <div class="row">
+                            <!-- LEFT COLUMN: Personal Information -->
                             <div class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-left">
                                 <h2>Personal information</h2>
+
+                                <!-- Full Name Field -->
                                 <div class="form-group">
-                                    <label for="name"><span style="color: red;">*</span><strong>Full
-                                        name</strong></label>
-                                    <input type="text" th:field="*{name}" class="form-control" style="width: 600px; "
+                                    <label for="name"><span style="color: red;">*</span><strong>Full name</strong></label>
+                                    <input type="text" th:field="*{name}" class="form-control" style="width: 600px;"
                                            id="name" name="name" disabled>
                                 </div>
+
+                                <!-- Email Field -->
                                 <div class="form-group" th:if="${user.account != null}">
                                     <label for="email"><span style="color: red;">*</span><strong>Email</strong></label>
                                     <input type="text" th:value="*{account.email}" name="email" class="form-control"
                                            style="width: 600px;" id="email" disabled>
                                 </div>
+
+                                <!-- Phone Field -->
                                 <div class="form-group">
-                                    <label for="phone"><span style="color: red;">*</span><strong>Phone
-                                        number</strong></label>
+                                    <label for="phone"><span style="color: red;">*</span><strong>Phone number</strong></label>
                                     <input type="text" th:field="*{phone}" class="form-control" style="width: 600px;"
                                            id="phone" name="phone" disabled>
                                 </div>
+
+                                <!-- Address Field -->
                                 <div class="form-group">
-                                    <label for="address"><span
-                                            style="color: red;">*</span><strong>Address</strong></label>
+                                    <label for="address"><span style="color: red;">*</span><strong>Address</strong></label>
                                     <input type="text" th:field="*{address}" class="form-control" style="width: 600px;"
                                            id="address" name="address" disabled>
                                 </div>
                             </div>
-                            <div th:if="${user.account != null}"
-                                 class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-right">
+
+                            <!-- RIGHT COLUMN: Account Information -->
+                            <div th:if="${user.account != null}" class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-right">
                                 <h2>Account</h2>
                                 <div class="form-group">
-                                    <label for="username"><span
-                                            style="color: red;">*</span><strong>Username</strong></label>
+                                    <label for="username"><span style="color: red;">*</span><strong>Username</strong></label>
                                     <input type="text" th:value="*{account.username}" class="form-control"
-                                           style="width: 400px; " id="username" disabled>
+                                           style="width: 400px;" id="username" disabled>
                                 </div>
                                 <button sec:authorize="hasRole('USER')" type="button" class="btn btn-warning"
                                         id="editPass-btn" style="display:block;" data-toggle="modal"
                                         data-target="#myModal_edit_password">Change password
                                 </button>
                             </div>
-                            <div th:unless="${user.account != null}"
-                                 class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-right">
+                            <div th:unless="${user.account != null}" class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-right">
                                 <h2>Account</h2>
                                 <div class="form-group">
                                     <label><strong>Username</strong></label>
@@ -200,14 +221,11 @@
                                     <input type="password" class="form-control" style="width: 400px;" value="" disabled>
                                 </div>
                             </div>
-
                         </div>
-                        <!-- <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#myModal_edit">Edit</button> -->
-                        <button type="button" class="btn btn-warning" id="edit-btn" style="display:block;">Edit</button>
 
-                        <button type="submit" class="btn btn-primary" id="save-btn" style="display:block;"
-                                data-toggle="modal" data-target="#myModal_save">Save
-                        </button>
+                        <!-- Edit and Save Buttons -->
+                        <button type="button" class="btn btn-warning" id="edit-btn" style="display:block; margin-top: 20px;">Edit</button>
+                        <button type="submit" class="btn btn-primary" id="save-btn" style="display:none; margin-top: 20px;">Save</button>
                     </div>
                 </form>
             </div>
@@ -215,50 +233,59 @@
     </div>
 </main>
 
-<!-- <div class="modal fade" id="myModal_save" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title" id="myModalLabel" style="text-transform: none;">Are you sure you want to update this information?</h4>
-            </div>
-                <div class="modal-body">
-                    <form>
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="confirm_edit_btn">Confirm</button>
-                </form>
-                </div>
-        </div>
-    </div>
-</div> -->
-
+<!-- Password Change Modal -->
 <div class="modal fade" id="myModal_edit_password" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
      th:if="${user != null && user.account != null}">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
                 </button>
                 <h4 class="modal-title" id="myModalLabel" style="text-transform: none;">Verify password change</h4>
             </div>
             <div class="modal-body">
                 <form id="editForm" th:action="@{/change-password}" method="POST">
                     <input type="hidden" name="username" th:value="${user.account.username}">
+
+                    <!-- Old Password Field -->
                     <div class="form-group">
                         <label><span style="color: red;">*</span>Old password</label>
-                        <input type="password" class="form-control" name="oldPassword" id="oldPassword" required>
-                        <span class="text-danger" id="oldPasswordError" style="display:none;"></span>
-
-                        <label style="margin-top:10px;"><span style="color: red;">*</span>New password</label>
-                        <input type="password" class="form-control" name="newPassword" id="newPassword" required>
-                        <span class="text-danger" id="newPasswordError" style="display:none;"></span>
-
-                        <label style="margin-top:10px;"><span style="color: red;">*</span>Confirm new password</label>
-                        <input type="password" class="form-control" name="confirmNewPassword" id="confirmNewPassword" required>
-                        <span class="text-danger" id="confirmNewPasswordError" style="display:none;"></span>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <input type="password" class="form-control password-input" name="oldPassword" id="oldPassword" required style="padding-right: 45px; flex: 1;">
+                            <button type="button" class="btn-toggle-password" data-target="#oldPassword" style="position: absolute; right: 12px;">
+                                <i class="fa fa-eye"></i>
+                            </button>
+                        </div>
                     </div>
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="confirm_pass_btn">Confirm</button>
+
+                    <!-- New Password Field -->
+                    <div class="form-group">
+                        <label style="margin-top:10px;"><span style="color: red;">*</span>New password</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <input type="password" class="form-control password-input" name="newPassword" id="newPassword" required style="padding-right: 45px; flex: 1;">
+                            <button type="button" class="btn-toggle-password" data-target="#newPassword" style="position: absolute; right: 12px;">
+                                <i class="fa fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Confirm Password Field -->
+                    <div class="form-group">
+                        <label style="margin-top:10px;"><span style="color: red;">*</span>Confirm new password</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <input type="password" class="form-control password-input" name="confirmNewPassword" id="confirmNewPassword" required style="padding-right: 45px; flex: 1;">
+                            <button type="button" class="btn-toggle-password" data-target="#confirmNewPassword" style="position: absolute; right: 12px;">
+                                <i class="fa fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div style="margin-top: 20px;">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="confirm_pass_btn">Confirm</button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -314,22 +341,22 @@
                                 <li>
                                     <i class="icon-phone-handset"></i>
                                     <span>
-                                                <em>0812 567 889</em>
-                                                <em>+84 1245 6767</em>
-                                            </span>
+                                        <em>0812 567 889</em>
+                                        <em>+84 1245 6767</em>
+                                    </span>
                                 </li>
                                 <li>
                                     <i class="icon-clock"></i>
                                     <span>
-                                                Serving 7 days a week from 9:00 - 22:00
-                                            </span>
+                                        Serving 7 days a week from 9:00 - 22:00
+                                    </span>
                                 </li>
                                 <li>
                                     <i class="icon-envelope"></i>
                                     <span>
-                                                <em><a href="mailto:support@domain.com">support@booklibrary.com</a></em>
-                                                <em><a href="mailto:info@domain.com">info@booklibrary.com</a></em>
-                                            </span>
+                                        <em><a href="mailto:support@domain.com">support@booklibrary.com</a></em>
+                                        <em><a href="mailto:info@domain.com">info@booklibrary.com</a></em>
+                                    </span>
                                 </li>
                             </ul>
                             <ul class="tg-socialicons">
@@ -350,9 +377,7 @@
                             <div class="tg-widgettitle">
                                 <h3>We ensure to</h3>
                             </div>
-
                             <div class="tg-widgetcontent">
-
                                 <ul>
                                     <li><a href="javascript:void(0);">Always respect customers</a></li>
                                     <li><a href="javascript:void(0);">Protect necessary information</a></li>
@@ -379,6 +404,7 @@
         </div>
     </div>
 </footer>
+
 <script src="../js/vendor/jquery-library.js"></script>
 <script src="../js/vendor/bootstrap.min.js"></script>
 <script src="../js/owl.carousel.min.js"></script>
@@ -418,41 +444,39 @@
     });
     saveBtn.style.display = 'none';
 </script>
+<!-- Password Toggle Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Password toggle functionality
+        const toggleButtons = document.querySelectorAll('.btn-toggle-password');
 
-<div style="display: none" id="message" th:data-message="${message}"></div>
-<script sec:authorize="hasRole('USER')" th:if="${message != null}">
-    $(document).ready(function () {
-        var message = document.getElementById('message').getAttribute('data-message');
-        if (message && message !== 'Success') {
-            // Mở lại modal và hiển thị lỗi
-            $('#myModal_edit_password').modal('show');
+        toggleButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
 
-            // Map lỗi vào đúng field
-            if (message.toLowerCase().includes('old') || message.toLowerCase().includes('cũ') || message.toLowerCase().includes('incorrect')) {
-                $('#oldPasswordError').text(message).show();
-                $('#oldPassword').addClass('has-error');
-            } else if (message.toLowerCase().includes('match') || message.toLowerCase().includes('confirm')) {
-                $('#confirmNewPasswordError').text(message).show();
-                $('#confirmNewPassword').addClass('has-error');
-            } else if (message.toLowerCase().includes('new') || message.toLowerCase().includes('mới')) {
-                $('#newPasswordError').text(message).show();
-                $('#newPassword').addClass('has-error');
-            } else {
-                // fallback: hiển thị ở old password
-                $('#oldPasswordError').text(message).show();
-            }
-        } else if (message === 'Success') {
-            // Thành công vẫn dùng SweetAlert hoặc inline thông báo tuỳ bạn
-            Swal.fire({
-                position: 'top',
-                icon: 'success',
-                title: 'Password changed successfully!',
-                showConfirmButton: false,
-                timer: 1500,
+                const targetId = this.getAttribute('data-target');
+                const inputField = document.querySelector(targetId);
+                const icon = this.querySelector('i');
+
+                if (inputField) {
+                    if (inputField.type === 'password') {
+                        inputField.type = 'text';
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                        this.classList.add('active');
+                    } else {
+                        inputField.type = 'password';
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                        this.classList.remove('active');
+                    }
+                }
             });
-        }
+        });
     });
 </script>
+
+<div style="display: none" id="message" th:data-message="${message}"></div>
 
 </body>
 

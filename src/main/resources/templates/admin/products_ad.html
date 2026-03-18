@@ -132,13 +132,21 @@
                                                 <button type="button" class="btn btn-primary">Add new book</button>
                                             </a>
                                             <form class="tg-formtheme tg-formsortshoitemss"
-                                                  th:action="@{/manage-product}" method="get">
+                                                  th:action="@{/admin/manage-product}" method="get">
                                                 <input type="hidden" name="page" value="1">
                                                 <select name="sortBy" onchange="this.form.submit()">
-                                                    <option value="">---Choose---</option>
-                                                    <option value="title" th:selected="${sortBy == 'title'}">Title
+                                                    <option value="">---Choose Sort---</option>
+                                                    <option value="title" th:selected="${sortBy == 'title'}">
+                                                        Title: A → Z
                                                     </option>
-                                                    <option value="price" th:selected="${sortBy == 'price'}">Price
+                                                    <option value="title_desc" th:selected="${sortBy == 'title_desc'}">
+                                                        Title: Z → A
+                                                    </option>
+                                                    <option value="price" th:selected="${sortBy == 'price'}">
+                                                        Price: Low → High
+                                                    </option>
+                                                    <option value="price_desc" th:selected="${sortBy == 'price_desc'}">
+                                                        Price: High → Low
                                                     </option>
                                                 </select>
                                             </form>
@@ -162,7 +170,7 @@
                                                              style="width:100px; height: 120px;"/></td>
                                                     <td th:text="${book.category.name}"></td>
                                                     <td th:text="${book.author.name}"></td>
-                                                    <td th:text="${book.price}"></td>
+                                                    <td th:text="${#numbers.formatInteger(book.price, 1, 'COMMA')}"></td>
                                                     <td th:text="${book.number_sold}"></td>
                                                     <td>
                                                         <!-- Nút VIEW -->
@@ -229,9 +237,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="pagination">
-                    <ul class="pagination justify-content-center">
-                        <li class="page-item" th:classappend="${page <= 1} ? 'disabled'">
+                <div style="display:flex; justify-content:center;">
+                    <ul class="pagination">
+                        <li class="page-item" th:classappend="${page == 1} ? 'disabled'">
                             <a class="page-link"
                                th:href="@{/admin/manage-product(page=${page > 1 ? page - 1 : 1}, sortBy=${sortBy})}">
                                 Previous

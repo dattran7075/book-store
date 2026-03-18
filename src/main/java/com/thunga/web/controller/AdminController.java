@@ -34,7 +34,7 @@ public class AdminController {
     @Autowired
     AdminService adminService;
     @Autowired
-    private PromotionService promotionService;
+    private VoucherService voucherService;
     @Autowired
     private StatisticService statisticService;
     @Autowired
@@ -49,6 +49,8 @@ public class AdminController {
     private BookTranslatorService bookTranslatorService;
     @Autowired
     private AccountService accountService;
+    @Autowired
+    private CommentService commentService;
 
     @InitBinder
     public void initBinder(WebDataBinder binder) {
@@ -56,6 +58,7 @@ public class AdminController {
         dateFormat.setLenient(false);
         binder.registerCustomEditor(Date.class, new CustomDateEditor(dateFormat, true));
     }
+
     // =====================================================
     // USER MANAGEMENT
     // =====================================================
@@ -129,15 +132,19 @@ public class AdminController {
             }
         }
 
-        List<String> validSortBy = Arrays.asList("title", "price");
+        List<String> validSortBy = Arrays.asList("title", "title_desc", "price", "price_desc");
         if (sortBy != null) {
             sortBy = sortBy.trim();
-            if (sortBy.isEmpty() || !validSortBy.contains(sortBy)) sortBy = null;
+            if (sortBy.isEmpty() || !validSortBy.contains(sortBy)) {
+                sortBy = null;
+            }
         }
 
-        Page<Book> bookPage = bookService.getBooks(currentPage, 10, sortBy, null, null, null);
+        Page<Book> bookPage = bookService.getFilteredAndSortedBooks(
+                null, null, null, null, sortBy, currentPage - 1, 10);
+
         if (invalidPage || currentPage > bookPage.getTotalPages()) {
-            bookPage = bookService.getBooks(currentPage, 10, sortBy, null, null, null);
+            bookPage = bookService.getFilteredAndSortedBooks(null, null, null, null, sortBy, 0, 10);
             currentPage = 1;
         }
 
@@ -325,7 +332,7 @@ public class AdminController {
             String step = requestData.get("step");
 
             if ("validate".equals(step)) {
-                Map<String, String> errors = adminService.validateAdmin(null,
+                Map<String, String> errors = adminService.validateStaff(null,
                         requestData.get("username"), requestData.get("password"),
                         requestData.get("confirmPassword"), requestData.get("name"),
                         requestData.get("email"), requestData.get("phone"),
@@ -388,7 +395,7 @@ public class AdminController {
             String address = request.getParameter("address");
             String email = request.getParameter("email");
 
-            Map<String, String> errors = adminService.validateAdmin(adminId, null, null, null, name, email, phone, address);
+            Map<String, String> errors = adminService.validateStaff(adminId, null, null, null, name, email, phone, address);
             if (!errors.isEmpty()) {
                 redirectAttributes.addFlashAttribute("errorMessage", errors.values().iterator().next());
                 return "redirect:/admin/edit-staff?id=" + adminId;
@@ -433,28 +440,40 @@ public class AdminController {
                 redirectAttributes.addFlashAttribute("errorMessage", "Order not found");
                 return "redirect:/admin/manage-order";
             }
-            if (!"Pending".equals(order.getStatus()) || order.getAdmin() != null) {
+
+            if (!("Pending".equals(order.getStatus()) || "Assigned".equals(order.getStatus()))) {
                 redirectAttributes.addFlashAttribute("errorMessage",
-                        "Order #" + orderId + " is not eligible for assignment");
+                        "Order #" + orderId + " cannot be reassigned (current status: " + order.getStatus() + ")");
                 return "redirect:/admin/manage-order";
             }
+
             Admin admin = adminService.findById(adminId);
             if (admin == null) {
                 redirectAttributes.addFlashAttribute("errorMessage", "Staff not found");
                 return "redirect:/admin/manage-order";
             }
-            if (adminService.countActiveOrders(admin) >= AdminService.MAX_ACTIVE_ORDERS) {
-                redirectAttributes.addFlashAttribute("errorMessage",
-                        admin.getName() + " has reached the maximum active-order limit (" +
-                                AdminService.MAX_ACTIVE_ORDERS + ")");
-                return "redirect:/admin/manage-order";
+
+            boolean isReassignment = order.getAdmin() != null && order.getAdmin().getId().equals(adminId);
+
+            if (!isReassignment) {
+                if (adminService.countActiveOrders(admin) >= AdminService.MAX_ACTIVE_ORDERS) {
+                    redirectAttributes.addFlashAttribute("errorMessage",
+                            admin.getName() + " has reached the maximum active-order limit (" +
+                                    AdminService.MAX_ACTIVE_ORDERS + ")");
+                    return "redirect:/admin/manage-order";
+                }
             }
+
             order.setAdmin(admin);
             order.setStatus("Assigned");
             order.setUpdated_at(LocalDate.now());
             orderService.save(order);
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "Order #" + orderId + " assigned to " + admin.getName());
+
+            String message = isReassignment ?
+                    "Order #" + orderId + " reassigned to " + admin.getName() :
+                    "Order #" + orderId + " assigned to " + admin.getName();
+            redirectAttributes.addFlashAttribute("successMessage", message);
+
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "An error occurred: " + e.getMessage());
         }
@@ -468,7 +487,9 @@ public class AdminController {
     @GetMapping("/admin/manage-order")
     public String adminManageOrder(Model model, HttpServletRequest request,
                                    @RequestParam(required = false) String page,
-                                   @RequestParam(required = false) String sortBy) {
+                                   @RequestParam(required = false) String sortBy,
+                                   @RequestParam(required = false) String statusFilter,
+                                   @RequestParam(required = false) String paymentFilter) {
         int currentPage = 1;
         boolean invalidPage = false;
 
@@ -482,59 +503,74 @@ public class AdminController {
             }
         }
 
-        Page<Order> orderPage = orderService.findByLimit(currentPage - 1, 10, sortBy);
+        Page<Order> orderPage = orderService.findByLimitWithFilters(
+                currentPage - 1, 10, sortBy, statusFilter, paymentFilter);
+
         if (invalidPage || currentPage > orderPage.getTotalPages()) {
             currentPage = 1;
-            orderPage = orderService.findByLimit(0, 10, sortBy);
+            orderPage = orderService.findByLimitWithFilters(0, 10, sortBy, statusFilter, paymentFilter);
         }
 
-        Map<Integer, List<String>> orderPromotions = new HashMap<>();
+        Map<Integer, String> orderPromotions = new HashMap<>();
         Map<Integer, Double> orderDiscounts = new HashMap<>();
+
         for (Order order : orderPage.getContent()) {
-            List<String> codes = new ArrayList<>();
-            double disc = 0.0;
-            if (order.getOrderDetailList() != null) {
-                for (OrderDetail detail : order.getOrderDetailList()) {
-                    if (detail.getPromotion() != null) {
-                        String code = detail.getPromotion().getCode();
-                        if (!codes.contains(code)) codes.add(code);
-                    }
-                    if (detail.getDiscountAmount() != null) disc += detail.getDiscountAmount();
-                }
+            if (order.getVoucher() != null) {
+                orderPromotions.put(order.getId(), order.getVoucher().getCode());
             }
-            orderPromotions.put(order.getId(), codes);
-            orderDiscounts.put(order.getId(), disc);
+            Double discount = order.getDiscount_amount() != null ? order.getDiscount_amount() : 0.0;
+            orderDiscounts.put(order.getId(), discount);
         }
 
-        Map<Integer, Double> orderFinalTotals = new HashMap<>();
-        for (Order order : orderPage.getContent()) {
-            double finalTotal = 0.0;
-            if (order.getOrderDetailList() != null) {
-                for (OrderDetail detail : order.getOrderDetailList()) {
-                    double cost = detail.getTotal_cost() != null ? detail.getTotal_cost() : 0;
-                    double disc = detail.getDiscountAmount() != null ? detail.getDiscountAmount() : 0;
-                    finalTotal += (cost - disc);
-                }
-            }
-            orderFinalTotals.put(order.getId(), finalTotal);
-        }
+        // Get order counts by status
+        Map<String, Long> statusCounts = orderService.getOrderCountsByStatus();
 
-        model.addAttribute("orderFinalTotals", orderFinalTotals);
         model.addAttribute("orderList", orderPage.getContent());
         model.addAttribute("totalPage", orderPage.getTotalPages());
         model.addAttribute("page", currentPage);
         model.addAttribute("sortBy", sortBy);
+        model.addAttribute("statusFilter", statusFilter);
+        model.addAttribute("paymentFilter", paymentFilter);
         model.addAttribute("orderPromotions", orderPromotions);
         model.addAttribute("eligibleStaff", adminService.findEligibleStaff());
         model.addAttribute("orderDiscounts", orderDiscounts);
+        model.addAttribute("statusCounts", statusCounts);
+
         return "admin/orders_ad";
     }
 
     @GetMapping("/admin/manage-orderDetail")
     public String adminManageOrderDetail(Model model, HttpServletRequest request,
                                          @RequestParam(required = false) Integer id) {
-        model.addAttribute("order", orderService.findById(id));
-        return "admin/order_detail_ad";
+        try {
+            Order order = orderService.findById(id);
+
+            if (order == null) {
+                model.addAttribute("errorMessage", "Order not found");
+                return "redirect:/admin/manage-order";
+            }
+
+            String promotionCode = null;
+            if (order.getVoucher() != null) {
+                promotionCode = order.getVoucher().getCode();
+            }
+
+            Double orderDiscount = order.getDiscount_amount() != null ? order.getDiscount_amount() : 0.0;
+            Double finalTotal = order.getFinalTotal();
+
+            model.addAttribute("order", order);
+            model.addAttribute("promotionCode", promotionCode);
+            model.addAttribute("orderDiscount", orderDiscount);
+            model.addAttribute("finalTotal", finalTotal != null ? finalTotal : 0.0);
+            model.addAttribute("shippingFee", order.getShipping_fee() != null ? order.getShipping_fee() : 0.0);
+
+            return "admin/order_detail_ad";
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("errorMessage", "Error loading order details");
+            return "redirect:/admin/manage-order";
+        }
     }
 
     @PostMapping("/admin/edit-order")
@@ -549,6 +585,86 @@ public class AdminController {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/manage-order";
+    }
+
+    // =====================================================
+    // CANCEL REQUEST — ADMIN
+    // =====================================================
+
+    @PostMapping("/admin/approve-cancel-request")
+    public String adminApproveCancelRequest(@RequestParam Integer orderId,
+                                            RedirectAttributes redirectAttributes) {
+        try {
+            orderService.approveCancelRequest(orderId);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Order #" + orderId + " cancel request approved. Order has been cancelled.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/manage-order";
+    }
+
+    @PostMapping("/admin/reject-cancel-request")
+    public String adminRejectCancelRequest(@RequestParam Integer orderId,
+                                           RedirectAttributes redirectAttributes) {
+        try {
+            orderService.rejectCancelRequest(orderId);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Order #" + orderId + " cancel request rejected. Order restored to Approved.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/manage-order";
+    }
+
+    // =====================================================
+    // CANCEL REQUEST — STAFF
+    // =====================================================
+
+    @PostMapping("/staff/approve-cancel-request")
+    public String staffApproveCancelRequest(@RequestParam Integer orderId,
+                                            Authentication authentication,
+                                            RedirectAttributes redirectAttributes) {
+        try {
+            String username = authentication.getName();
+            Account account = accountService.findByUsername(username);
+            Order order = orderService.findById(orderId);
+
+            if (order.getAdmin() == null || !order.getAdmin().getId().equals(account.getAdmin().getId())) {
+                redirectAttributes.addFlashAttribute("errorMessage", "Not authorized to manage this order.");
+                return "redirect:/staff/orders";
+            }
+
+            orderService.approveCancelRequest(orderId);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Order #" + orderId + " cancel request approved. Order has been cancelled.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/staff/orders";
+    }
+
+    @PostMapping("/staff/reject-cancel-request")
+    public String staffRejectCancelRequest(@RequestParam Integer orderId,
+                                           Authentication authentication,
+                                           RedirectAttributes redirectAttributes) {
+        try {
+            String username = authentication.getName();
+            Account account = accountService.findByUsername(username);
+            Order order = orderService.findById(orderId);
+
+            if (order.getAdmin() == null || !order.getAdmin().getId().equals(account.getAdmin().getId())) {
+                redirectAttributes.addFlashAttribute("errorMessage", "Not authorized to manage this order.");
+                return "redirect:/staff/orders";
+            }
+
+            orderService.rejectCancelRequest(orderId);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Order #" + orderId + " cancel request rejected. Order restored to Approved.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/staff/orders";
     }
 
     // =====================================================
@@ -644,8 +760,7 @@ public class AdminController {
     // =====================================================
 
     @GetMapping("/admin/manage-category")
-    public String adminManageCategory(Model model,
-                                      @RequestParam(required = false) String page) {
+    public String adminManageCategory(Model model, @RequestParam(required = false) String page) {
         int currentPage = 1;
         boolean invalidPage = false;
 
@@ -862,12 +977,16 @@ public class AdminController {
         String website = request.getParameter("website");
         String description = request.getParameter("description");
 
-        Map<String, String> errors = publisherService.validateNewPublisher(name, country, website);
+        Map<String, String> errors = publisherService.validatePublisher(null, name, country, website);
 
         if (!errors.isEmpty()) {
-            if (errors.containsKey("name")) model.addAttribute("addNameError", errors.get("name"));
-            if (errors.containsKey("country")) model.addAttribute("addCountryError", errors.get("country"));
-            if (errors.containsKey("website")) model.addAttribute("addWebsiteError", errors.get("website"));
+            if (errors.containsKey("name"))
+                model.addAttribute("addNameError", errors.get("name"));
+            if (errors.containsKey("country"))
+                model.addAttribute("addCountryError", errors.get("country"));
+            if (errors.containsKey("website"))
+                model.addAttribute("addWebsiteError", errors.get("website"));
+
             model.addAttribute("formName", name);
             model.addAttribute("formCountry", country);
             model.addAttribute("formWebsite", website);
@@ -885,18 +1004,22 @@ public class AdminController {
     public String adminEditPublisher(HttpServletRequest request, Model model,
                                      RedirectAttributes redirectAttributes) {
         try {
-            int id = Integer.parseInt(request.getParameter("id"));
+            Integer id = Integer.parseInt(request.getParameter("id"));
             String name = request.getParameter("name");
             String country = request.getParameter("country");
             String website = request.getParameter("website");
             String description = request.getParameter("description");
 
-            Map<String, String> errors = publisherService.validateEditPublisher(id, name, country, website);
+            Map<String, String> errors = publisherService.validatePublisher(id, name, country, website);
 
             if (!errors.isEmpty()) {
-                if (errors.containsKey("name")) model.addAttribute("editNameError", errors.get("name"));
-                if (errors.containsKey("country")) model.addAttribute("editCountryError", errors.get("country"));
-                if (errors.containsKey("website")) model.addAttribute("editWebsiteError", errors.get("website"));
+                if (errors.containsKey("name"))
+                    model.addAttribute("editNameError", errors.get("name"));
+                if (errors.containsKey("country"))
+                    model.addAttribute("editCountryError", errors.get("country"));
+                if (errors.containsKey("website"))
+                    model.addAttribute("editWebsiteError", errors.get("website"));
+
                 model.addAttribute("editPublisherId", String.valueOf(id));
                 model.addAttribute("formName", name);
                 model.addAttribute("formCountry", country);
@@ -927,6 +1050,39 @@ public class AdminController {
         return "redirect:/admin/manage-publisher";
     }
 
+    @GetMapping("/api/countries")
+    @ResponseBody
+    public List<String> getCountries() {
+        return Arrays.asList(
+                "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Argentina", "Armenia",
+                "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados",
+                "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina",
+                "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cambodia",
+                "Cameroon", "Canada", "Cape Verde", "Central African Republic", "Chad", "Chile", "China",
+                "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic",
+                "Denmark", "Djibouti", "Dominica", "Dominican Republic", "East Timor", "Ecuador", "Egypt",
+                "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Ethiopia", "Fiji", "Finland",
+                "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada",
+                "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", "Haiti", "Honduras", "Hungary",
+                "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Ivory Coast",
+                "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kosovo", "Kuwait",
+                "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein",
+                "Lithuania", "Luxembourg", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta",
+                "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco",
+                "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal",
+                "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia",
+                "Norway", "Oman", "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay",
+                "Peru", "Philippines", "Poland", "Portugal", "Qatar", "Romania", "Russia", "Rwanda",
+                "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa",
+                "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles",
+                "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa",
+                "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland",
+                "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Togo", "Tonga", "Trinidad and Tobago",
+                "Tunisia", "Turkey", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates",
+                "United Kingdom", "United States", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City",
+                "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"
+        );
+    }
     // =====================================================
     // ADMIN SERIES MANAGEMENT (/admin/*)
     // =====================================================
@@ -1183,9 +1339,9 @@ public class AdminController {
             }
         }
 
-        Page<Promotion> promotionPage = promotionService.findByLimit(currentPage - 1, 10, sortBy);
+        Page<Voucher> promotionPage = voucherService.findByLimit(currentPage - 1, 10, sortBy);
         if (invalidPage || currentPage > promotionPage.getTotalPages()) {
-            promotionPage = promotionService.findByLimit(0, 10, sortBy);
+            promotionPage = voucherService.findByLimit(0, 10, sortBy);
             currentPage = 1;
         }
 
@@ -1207,30 +1363,27 @@ public class AdminController {
             LocalDate endDate = LocalDate.parse(request.getParameter("endDate"));
             Integer maxUsage = Integer.valueOf(request.getParameter("maxUsage"));
             Double minOrder = Double.valueOf(request.getParameter("minOrder"));
-            String discountType = request.getParameter("discountType");
 
-            promotionService.validateNewPromotion(code, name, discountValue,
-                    startDate, endDate, maxUsage, minOrder, discountType);
+            voucherService.validateNewVoucher(code, name, discountValue, startDate, endDate, maxUsage, minOrder);
 
-            Promotion promotion = new Promotion();
-            promotion.setCode(code.trim());
-            promotion.setName(name.trim());
-            promotion.setDiscountValue(discountValue);
-            promotion.setStartDate(startDate);
-            promotion.setEndDate(endDate);
-            promotion.setMaxUsage(maxUsage);
-            promotion.setUsedCount(0);
-            promotion.setMinOrder(minOrder);
-            promotion.setDiscountType(discountType);
-            promotion.setStatus("CREATED");
-            promotionService.save(promotion);
+            Voucher voucher = new Voucher();
+            voucher.setCode(code.trim());
+            voucher.setName(name.trim());
+            voucher.setDiscountValue(discountValue);
+            voucher.setStartDate(startDate);
+            voucher.setEndDate(endDate);
+            voucher.setMaxUsage(maxUsage);
+            voucher.setUsedCount(0);
+            voucher.setMinOrder(minOrder);
+            voucher.setStatus("CREATED");
+            voucherService.save(voucher);
 
             redirectAttributes.addFlashAttribute("successMessage", "Promotion created successfully");
             return "redirect:/admin/manage-promotion";
 
         } catch (IllegalArgumentException e) {
             String msg = e.getMessage();
-            if (msg != null && (msg.toLowerCase().contains("code"))) {
+            if (msg != null && msg.toLowerCase().contains("code")) {
                 model.addAttribute("addCodeError", msg);
             } else {
                 model.addAttribute("addGeneralError", msg);
@@ -1259,21 +1412,21 @@ public class AdminController {
             Integer maxUsage = Integer.valueOf(request.getParameter("maxUsage"));
             Double minOrder = Double.valueOf(request.getParameter("minOrder"));
 
-            promotionService.validateEditPromotion(id, name, discountValue,
-                    startDate, endDate, maxUsage, minOrder);
+            voucherService.validateEditVoucher(id, name, discountValue, startDate, endDate, maxUsage, minOrder);
 
-            Promotion promotion = promotionService.findById(id);
-            if (promotion == null) {
+            Voucher voucher = voucherService.findById(id);
+            if (voucher == null) {
                 redirectAttributes.addFlashAttribute("errorMessage", "Promotion not found");
                 return "redirect:/admin/manage-promotion";
             }
-            promotion.setName(name.trim());
-            promotion.setDiscountValue(discountValue);
-            promotion.setStartDate(startDate);
-            promotion.setEndDate(endDate);
-            promotion.setMaxUsage(maxUsage);
-            promotion.setMinOrder(minOrder);
-            promotionService.save(promotion);
+
+            voucher.setName(name.trim());
+            voucher.setDiscountValue(discountValue);
+            voucher.setStartDate(startDate);
+            voucher.setEndDate(endDate);
+            voucher.setMaxUsage(maxUsage);
+            voucher.setMinOrder(minOrder);
+            voucherService.save(voucher);
 
             redirectAttributes.addFlashAttribute("successMessage", "Promotion updated successfully");
             return "redirect:/admin/manage-promotion";
@@ -1289,7 +1442,7 @@ public class AdminController {
     public String adminDeletePromotion(@RequestParam(required = true) Integer id,
                                        RedirectAttributes redirectAttributes) {
         try {
-            promotionService.deletePromotion(id);
+            voucherService.deleteVoucher(id);
             redirectAttributes.addFlashAttribute("successMessage", "Promotion deleted successfully");
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
@@ -1299,27 +1452,91 @@ public class AdminController {
         return "redirect:/admin/manage-promotion";
     }
 
+// =====================================================
+    // ADMIN COMMENT MANAGEMENT (/admin/*)
+    // =====================================================
+
+    @GetMapping("/admin/manage-comment")
+    public String adminManageComment(Model model,
+                                     @RequestParam(required = false) String page,
+                                     @RequestParam(required = false) String statusFilter) {
+        int currentPage = 1;
+        boolean invalidPage = false;
+
+        if (page != null && !page.trim().isEmpty()) {
+            try {
+                currentPage = Integer.parseInt(page.trim());
+                if (currentPage < 1) currentPage = 1;
+            } catch (NumberFormatException e) {
+                invalidPage = true;
+                currentPage = 1;
+            }
+        }
+
+        org.springframework.data.domain.Page<com.thunga.web.entity.Comment> commentPage;
+
+        if (statusFilter != null && !statusFilter.trim().isEmpty()
+                && java.util.List.of("PENDING", "APPROVED", "HIDDEN").contains(statusFilter.trim().toUpperCase())) {
+            statusFilter = statusFilter.trim().toUpperCase();
+            commentPage = commentService.findByStatusPaged(statusFilter, currentPage - 1, 10);
+        } else {
+            statusFilter = null;
+            commentPage = commentService.findAllPaged(currentPage - 1, 10);
+        }
+
+        if (invalidPage || (commentPage.getTotalPages() > 0 && currentPage > commentPage.getTotalPages())) {
+            currentPage = 1;
+            commentPage = (statusFilter != null)
+                    ? commentService.findByStatusPaged(statusFilter, 0, 10)
+                    : commentService.findAllPaged(0, 10);
+        }
+
+        model.addAttribute("commentList", commentPage.getContent());
+        model.addAttribute("totalPage", Math.max(commentPage.getTotalPages(), 1));
+        model.addAttribute("page", currentPage);
+        model.addAttribute("statusFilter", statusFilter);
+        return "admin/comment_ad";
+    }
+
+    @PostMapping("/admin/update-comment-status")
+    public String adminUpdateCommentStatus(@RequestParam Integer commentId,
+                                           @RequestParam String newStatus,
+                                           @RequestParam(required = false) String page,
+                                           @RequestParam(required = false) String statusFilter,
+                                           RedirectAttributes redirectAttributes) {
+        try {
+            commentService.adminUpdateStatus(commentId, newStatus.toUpperCase());
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Comment #" + commentId + " status updated to " + newStatus);
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+
+        String redirect = "redirect:/admin/manage-comment";
+        boolean hasParam = false;
+        if (page != null) {
+            redirect += "?page=" + page;
+            hasParam = true;
+        }
+        if (statusFilter != null) {
+            redirect += (hasParam ? "&" : "?") + "statusFilter=" + statusFilter;
+        }
+        return redirect;
+    }
+
     // =====================================================
     // STATISTICS (/admin/*)
     // =====================================================
 
     @GetMapping("/admin/statistic")
     public String adminStatistic(Model model, HttpServletRequest request) {
-        // Get all statistics data
         Map<String, Double> weeklyRevenue = statisticService.getWeeklyRevenue();
         Map<String, Double> monthlyRevenue = statisticService.getMonthlyRevenue();
         Map<String, Double> yearlyRevenue = statisticService.getYearlyRevenue();
 
-        // Ensure maps are not empty
-        if (weeklyRevenue == null || weeklyRevenue.isEmpty()) {
-            weeklyRevenue = new LinkedHashMap<>();
-        }
-        if (monthlyRevenue == null || monthlyRevenue.isEmpty()) {
-            monthlyRevenue = new LinkedHashMap<>();
-        }
-        if (yearlyRevenue == null || yearlyRevenue.isEmpty()) {
-            yearlyRevenue = new LinkedHashMap<>();
-        }
+        if (weeklyRevenue == null || weeklyRevenue.isEmpty()) weeklyRevenue = new LinkedHashMap<>();
+        if (monthlyRevenue == null || monthlyRevenue.isEmpty()) monthlyRevenue = new LinkedHashMap<>();
+        if (yearlyRevenue == null || yearlyRevenue.isEmpty()) yearlyRevenue = new LinkedHashMap<>();
 
         model.addAttribute("orderStats", statisticService.getOrderStatisticsByStatus());
         model.addAttribute("weeklyRevenue", weeklyRevenue);
@@ -1332,15 +1549,29 @@ public class AdminController {
 
         return "admin/statistic_ad";
     }
+
+    @GetMapping("/admin/statistic/range")
+    @ResponseBody
+    public Map<String, Object> adminStatisticByRange(
+            @RequestParam String from,
+            @RequestParam String to) {
+        try {
+            return statisticService.getRevenueByDateRange(
+                    LocalDate.parse(from), LocalDate.parse(to));
+        } catch (Exception e) {
+            return Map.of("error", e.getMessage());
+        }
+    }
+
     // =====================================================
-// STAFF BOOK MANAGEMENT (/staff/*)
-// =====================================================
+    // STAFF BOOK MANAGEMENT (/staff/*)
+    // =====================================================
 
     @GetMapping("/staff/books")
-    public String staffBooks(Model model,
-                             Authentication authentication,
+    public String staffBooks(Model model, Authentication authentication,
                              @RequestParam(required = false) String page,
-                             @RequestParam(required = false) String sortBy) {
+                             @RequestParam(required = false) String sortBy,
+                             @RequestParam(required = false) String keyword) {
 
         String username = authentication.getName();
         Account account = accountService.findByUsername(username);
@@ -1364,19 +1595,22 @@ public class AdminController {
             }
         }
 
-        List<String> validSortBy = Arrays.asList("title", "price");
-
+        List<String> validSortBy = Arrays.asList("title", "title_desc", "price", "price_desc");
         if (sortBy != null) {
             sortBy = sortBy.trim();
-            if (sortBy.isEmpty() || !validSortBy.contains(sortBy)) {
-                sortBy = null;
-            }
+            if (sortBy.isEmpty() || !validSortBy.contains(sortBy)) sortBy = null;
         }
 
-        Page<Book> bookPage = bookService.getBooks(currentPage, 10, sortBy, null, null, null);
+        if (keyword != null) {
+            keyword = keyword.trim();
+            if (keyword.isEmpty()) keyword = null;
+        }
+
+        Page<Book> bookPage = bookService.getFilteredAndSortedBooks(
+                keyword, null, null, null, sortBy, currentPage - 1, 10);
 
         if (invalidPage || currentPage > bookPage.getTotalPages()) {
-            bookPage = bookService.getBooks(currentPage, 10, sortBy, null, null, null);
+            bookPage = bookService.getFilteredAndSortedBooks(keyword, null, null, null, sortBy, 0, 10);
             currentPage = 1;
         }
 
@@ -1384,18 +1618,14 @@ public class AdminController {
         model.addAttribute("totalPage", bookPage.getTotalPages());
         model.addAttribute("page", currentPage);
         model.addAttribute("sortBy", sortBy);
+        model.addAttribute("keyword", keyword);
         model.addAttribute("currentStaff", currentStaff);
 
         return "staff/books_st";
     }
 
-    /**
-     * VIEW MODE - Staff xem thông tin sách (READ-ONLY)
-     * Hiển thị tất cả thông tin dạng text, không có nút Edit
-     */
     @GetMapping("/staff/book-detail")
-    public String staffBookDetail(Model model,
-                                  Authentication authentication,
+    public String staffBookDetail(Model model, Authentication authentication,
                                   @RequestParam(required = false) Integer id,
                                   @RequestParam(required = false, defaultValue = "view") String mode) {
 
@@ -1409,9 +1639,7 @@ public class AdminController {
 
         Admin currentStaff = account.getAdmin();
 
-        if (id == null) {
-            return "redirect:/staff/books";
-        }
+        if (id == null) return "redirect:/staff/books";
 
         Book book = bookService.findById(id);
         if (book == null) {
@@ -1419,35 +1647,21 @@ public class AdminController {
             return "redirect:/staff/books";
         }
 
-        // Load reference data (chỉ dùng cho VIEW mode để hiển thị)
-        List<Author> authorList = authorService.findAll();
-        List<Category> categoryList = categoryService.findAll();
-        List<Language> languageList = languageService.findAll();
-        List<Publisher> publisherList = publisherService.findAll();
-        List<Series> seriesList = seriesService.findAll();
-        List<Translator> translatorList = translatorService.findAll();
-
-        model.addAttribute("categoryList", categoryList);
-        model.addAttribute("authorList", authorList);
-        model.addAttribute("languageList", languageList);
-        model.addAttribute("publisherList", publisherList);
-        model.addAttribute("seriesList", seriesList);
-        model.addAttribute("translatorList", translatorList);
+        model.addAttribute("categoryList", categoryService.findAll());
+        model.addAttribute("authorList", authorService.findAll());
+        model.addAttribute("languageList", languageService.findAll());
+        model.addAttribute("publisherList", publisherService.findAll());
+        model.addAttribute("seriesList", seriesService.findAll());
+        model.addAttribute("translatorList", translatorService.findAll());
         model.addAttribute("book", book);
         model.addAttribute("currentStaff", currentStaff);
-        model.addAttribute("mode", "view"); // Luôn là VIEW mode
+        model.addAttribute("mode", "view");
 
         return "staff/book_detail_st";
     }
 
-    /**
-     * EDIT STOCK MODE - Staff chỉnh sửa tồn kho (ONLY STOCK EDITABLE)
-     * Hiển thị thông tin sách dạng disabled inputs
-     * Chỉ cho phép edit field: Stock Quantity
-     */
     @GetMapping("/staff/edit-book")
-    public String staffEditBookStock(Model model,
-                                     Authentication authentication,
+    public String staffEditBookStock(Model model, Authentication authentication,
                                      @RequestParam(required = false) Integer id) {
 
         String username = authentication.getName();
@@ -1460,9 +1674,7 @@ public class AdminController {
 
         Admin currentStaff = account.getAdmin();
 
-        if (id == null) {
-            return "redirect:/staff/books";
-        }
+        if (id == null) return "redirect:/staff/books";
 
         Book book = bookService.findById(id);
         if (book == null) {
@@ -1470,31 +1682,19 @@ public class AdminController {
             return "redirect:/staff/books";
         }
 
-        // Load reference data
-        List<Author> authorList = authorService.findAll();
-        List<Category> categoryList = categoryService.findAll();
-        List<Language> languageList = languageService.findAll();
-        List<Publisher> publisherList = publisherService.findAll();
-        List<Series> seriesList = seriesService.findAll();
-        List<Translator> translatorList = translatorService.findAll();
-
-        model.addAttribute("categoryList", categoryList);
-        model.addAttribute("authorList", authorList);
-        model.addAttribute("languageList", languageList);
-        model.addAttribute("publisherList", publisherList);
-        model.addAttribute("seriesList", seriesList);
-        model.addAttribute("translatorList", translatorList);
+        model.addAttribute("categoryList", categoryService.findAll());
+        model.addAttribute("authorList", authorService.findAll());
+        model.addAttribute("languageList", languageService.findAll());
+        model.addAttribute("publisherList", publisherService.findAll());
+        model.addAttribute("seriesList", seriesService.findAll());
+        model.addAttribute("translatorList", translatorService.findAll());
         model.addAttribute("book", book);
         model.addAttribute("currentStaff", currentStaff);
-        model.addAttribute("mode", "edit"); // EDIT mode - only stock editable
+        model.addAttribute("mode", "edit");
 
         return "staff/book_detail_st";
     }
 
-    /**
-     * SAVE STOCK UPDATE
-     * Staff POST stock quantity update
-     */
     @PostMapping("/staff/save")
     public String staffUpdateBookStock(@ModelAttribute Book book,
                                        HttpServletRequest request,
@@ -1520,7 +1720,6 @@ public class AdminController {
                 return "redirect:/staff/books";
             }
 
-            // ONLY update stock quantity
             String stockParam = request.getParameter("stock");
             if (stockParam != null && !stockParam.trim().isEmpty()) {
                 try {
@@ -1551,17 +1750,13 @@ public class AdminController {
             return "redirect:/staff/books";
         }
     }
-// =====================================================
+
+    // =====================================================
     // STAFF ORDER MANAGEMENT (/staff/*)
     // =====================================================
 
-    /**
-     * Staff Orders List - Giống admin, hiển thị tất cả đơn hàng được assign
-     * Bao gồm: Promotions, Discount, Total (với shipping)
-     */
     @GetMapping("/staff/orders")
-    public String staffOrders(Model model,
-                              Authentication authentication,
+    public String staffOrders(Model model, Authentication authentication,
                               @RequestParam(required = false) String page,
                               @RequestParam(required = false) String sortBy) {
 
@@ -1574,7 +1769,6 @@ public class AdminController {
         }
 
         Admin currentStaff = account.getAdmin();
-
         int currentPage = 1;
         boolean invalidPage = false;
 
@@ -1595,35 +1789,17 @@ public class AdminController {
             orderPage = orderService.findByAdminLimit(currentStaff.getId(), 0, 10, sortBy);
         }
 
-        // ========== CALCULATE PROMOTIONS & DISCOUNTS ==========
-        Map<Integer, List<String>> orderPromotions = new HashMap<>();
+        Map<Integer, String> orderPromotions = new HashMap<>();
         Map<Integer, Double> orderDiscounts = new HashMap<>();
-
-        for (Order order : orderPage.getContent()) {
-            List<String> promotionCodes = new ArrayList<>();
-            double totalDiscount = 0.0;
-
-            if (order.getOrderDetailList() != null) {
-                for (OrderDetail detail : order.getOrderDetailList()) {
-                    if (detail.getPromotion() != null) {
-                        String code = detail.getPromotion().getCode();
-                        if (!promotionCodes.contains(code)) {
-                            promotionCodes.add(code);
-                        }
-                    }
-                    if (detail.getDiscountAmount() != null) {
-                        totalDiscount += detail.getDiscountAmount();
-                    }
-                }
-            }
-
-            orderPromotions.put(order.getId(), promotionCodes);
-            orderDiscounts.put(order.getId(), totalDiscount);
-        }
-
-        // ========== CALCULATE FINAL TOTALS (including shipping) ==========
         Map<Integer, Double> orderFinalTotals = new HashMap<>();
+
         for (Order order : orderPage.getContent()) {
+            if (order.getVoucher() != null) {
+                orderPromotions.put(order.getId(), order.getVoucher().getCode());
+            }
+            Double discount = order.getDiscount_amount() != null ? order.getDiscount_amount() : 0.0;
+            orderDiscounts.put(order.getId(), discount);
+
             Double finalTotal = order.getFinalTotal();
             orderFinalTotals.put(order.getId(), finalTotal != null ? finalTotal : 0.0);
         }
@@ -1640,18 +1816,11 @@ public class AdminController {
         return "staff/orders_st";
     }
 
-    /**
-     * Staff Order Detail - Giống admin, hiển thị đầy đủ thông tin
-     * Bao gồm: Shipping fee, Total (subtotal + shipping), Payment info
-     */
     @GetMapping("/staff/order-detail")
-    public String staffOrderDetail(Model model,
-                                   Authentication authentication,
+    public String staffOrderDetail(Model model, Authentication authentication,
                                    @RequestParam(required = false) Integer id) {
 
-        if (id == null) {
-            return "redirect:/staff/orders";
-        }
+        if (id == null) return "redirect:/staff/orders";
 
         String username = authentication.getName();
         Account account = accountService.findByUsername(username);
@@ -1674,44 +1843,24 @@ public class AdminController {
             return "redirect:/staff/orders";
         }
 
-        // ========== CALCULATE PROMOTION & DISCOUNT INFO ==========
-        List<String> promotionCodes = new ArrayList<>();
-        double totalDiscount = 0.0;
+        String promotionCode = null;
+        if (order.getVoucher() != null) promotionCode = order.getVoucher().getCode();
 
-        if (order.getOrderDetailList() != null) {
-            for (OrderDetail detail : order.getOrderDetailList()) {
-                if (detail.getPromotion() != null) {
-                    String code = detail.getPromotion().getCode();
-                    if (!promotionCodes.contains(code)) {
-                        promotionCodes.add(code);
-                    }
-                }
-                if (detail.getDiscountAmount() != null) {
-                    totalDiscount += detail.getDiscountAmount();
-                }
-            }
-        }
-
-        // ========== CALCULATE FINAL TOTAL ==========
+        Double orderDiscount = order.getDiscount_amount() != null ? order.getDiscount_amount() : 0.0;
         Double finalTotal = order.getFinalTotal();
 
         model.addAttribute("order", order);
         model.addAttribute("currentStaff", currentStaff);
-        model.addAttribute("promotionCodes", promotionCodes);
-        model.addAttribute("totalDiscount", totalDiscount);
+        model.addAttribute("promotionCode", promotionCode);
+        model.addAttribute("orderDiscount", orderDiscount);
         model.addAttribute("finalTotal", finalTotal != null ? finalTotal : 0.0);
         model.addAttribute("shippingFee", order.getShipping_fee() != null ? order.getShipping_fee() : 0.0);
 
         return "staff/order_detail_st";
     }
 
-    /**
-     * Staff Update Order Status
-     * Chỉ cho phép update status (giống admin)
-     */
     @PostMapping("/staff/update-order")
-    public String staffUpdateOrder(HttpServletRequest request,
-                                   Authentication authentication,
+    public String staffUpdateOrder(HttpServletRequest request, Authentication authentication,
                                    RedirectAttributes redirectAttributes) {
         try {
             int id = Integer.valueOf(request.getParameter("id"));
@@ -1738,7 +1887,6 @@ public class AdminController {
                 return "redirect:/staff/orders";
             }
 
-            // Use orderService to validate status transition
             orderService.validateStatusTransition(id, newStatus);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Order #" + id + " status updated to '" + newStatus + "' successfully");
@@ -1750,16 +1898,11 @@ public class AdminController {
         }
     }
 
-    /**
-     * Staff Confirm Payment (COD)
-     * Chỉ khi order Completed + payment UNPAID
-     */
     @PostMapping("/staff/confirm-payment")
-    public String staffConfirmPayment(
-            @RequestParam Integer orderId,
-            @RequestParam(required = false) String paymentNote,
-            Authentication authentication,
-            RedirectAttributes redirectAttributes) {
+    public String staffConfirmPayment(@RequestParam Integer orderId,
+                                      @RequestParam(required = false) String paymentNote,
+                                      Authentication authentication,
+                                      RedirectAttributes redirectAttributes) {
         try {
             String username = authentication.getName();
             Account account = accountService.findByUsername(username);
@@ -1777,17 +1920,13 @@ public class AdminController {
                 return "redirect:/staff/orders";
             }
 
-            // Verify this staff is assigned to this order
             if (order.getAdmin() == null || !order.getAdmin().getId().equals(currentStaff.getId())) {
                 redirectAttributes.addFlashAttribute("errorMessage", "You are not authorized to confirm payment for this order");
                 return "redirect:/staff/orders";
             }
 
-            // Use orderService confirmPayment method
-            orderService.confirmPayment(
-                    orderId,
-                    paymentNote != null ? paymentNote : "Shipper confirmed customer paid cash upon delivery"
-            );
+            orderService.confirmPayment(orderId,
+                    paymentNote != null ? paymentNote : "Shipper confirmed customer paid cash upon delivery");
 
             redirectAttributes.addFlashAttribute("successMessage",
                     "Payment confirmed successfully for Order #" + orderId);
@@ -1798,7 +1937,6 @@ public class AdminController {
             return "redirect:/staff/orders";
         }
     }
-
 
     // =====================================================
     // STAFF VIEW-ONLY SECTIONS (/staff/*)
@@ -1929,10 +2067,10 @@ public class AdminController {
             }
         }
 
-        Page<Promotion> promotionPage = promotionService.findByLimit(currentPage - 1, 10, null);
+        Page<Voucher> promotionPage = voucherService.findByLimit(currentPage - 1, 10, null);
         if (invalidPage || currentPage > promotionPage.getTotalPages()) {
             currentPage = 1;
-            promotionPage = promotionService.findByLimit(0, 10, null);
+            promotionPage = voucherService.findByLimit(0, 10, null);
         }
 
         model.addAttribute("promotionList", promotionPage.getContent());

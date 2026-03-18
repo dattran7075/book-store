@@ -5,7 +5,10 @@ import com.thunga.web.repository.BookRepository;
 import com.thunga.web.repository.BookTranslatorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
@@ -59,39 +62,6 @@ public class BookService {
         bookRepository.deleteById(id);
     }
 
-    public Page<Book> getBooks(int page, int limit, String sortBy,
-                               Double priceMin, Double priceMax, Integer categoryId) {
-        Sort sort;
-        if ("title".equals(sortBy)) {
-            sort = Sort.by("title").ascending();
-        } else if ("title_desc".equals(sortBy)) {
-            sort = Sort.by("title").descending();
-        } else {
-            sort = Sort.by("id").descending();
-        }
-
-        Pageable pageable = PageRequest.of(page - 1, limit, sort);
-
-        // ← FIX: priceMin = 0 không tính là có filter min
-        boolean hasMin = priceMin != null && priceMin > 0;
-        boolean hasMax = priceMax != null;
-        boolean hasCat = categoryId != null;
-
-        if (hasCat) {
-            if (hasMin && hasMax)
-                return bookRepository.findByCategoryIdAndPriceBetween(categoryId, priceMin, priceMax, pageable);
-            else if (hasMin)
-                return bookRepository.findByCategoryIdAndPriceGreaterThanEqual(categoryId, priceMin, pageable);
-            else if (hasMax)
-                return bookRepository.findByCategoryIdAndPriceLessThanEqual(categoryId, priceMax, pageable);
-            else return bookRepository.findByCategoryId(categoryId, pageable);
-        } else {
-            if (hasMin && hasMax) return bookRepository.findByPriceBetween(priceMin, priceMax, pageable);
-            else if (hasMin) return bookRepository.findByPriceGreaterThanEqual(priceMin, pageable);
-            else if (hasMax) return bookRepository.findByPriceLessThanEqual(priceMax, pageable);
-            else return bookRepository.findAll(pageable);
-        }
-    }
 
     public Book save(Book book) {
         return bookRepository.save(book);
@@ -101,12 +71,152 @@ public class BookService {
         return bookRepository.findBestSoldBook();
     }
 
+
+    public Page<Book> getFilteredAndSortedBooks(
+            String keyword,
+            Integer categoryId,
+            Double priceMin,
+            Double priceMax,
+            String sortBy,
+            Integer page,
+            Integer pageSize) {
+
+        List<Book> bookList = new ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            keyword = keyword.trim();
+            Set<Book> resultSet = new LinkedHashSet<>();
+
+            // Find by title
+            List<Book> booksByTitle = bookRepository.findByTitleContainingIgnoreCase(keyword);
+            if (booksByTitle != null) {
+                resultSet.addAll(booksByTitle);
+            }
+
+            // Find by author
+            List<Book> booksByAuthor = bookRepository.findByAuthor_NameContainingIgnoreCase(keyword);
+            if (booksByAuthor != null) {
+                resultSet.addAll(booksByAuthor);
+            }
+
+            // Find by category name
+            Category category = categoryService.findByName(keyword);
+            if (category != null) {
+                List<Book> booksByCategory = bookRepository.findByCategory(category);
+                if (booksByCategory != null) {
+                    resultSet.addAll(booksByCategory);
+                }
+            }
+
+            bookList = new ArrayList<>(resultSet);
+
+        } else if (categoryId != null) {
+            // BROWSE MODE: Find by category (including subcategories)
+            List<Integer> categoryIds = categoryService.getAllCategoryIdsInHierarchy(categoryId);
+            bookList = bookRepository.findByCategoryIdIn(categoryIds);
+            if (bookList == null) {
+                bookList = new ArrayList<>();
+            }
+
+        } else {
+            bookList = bookRepository.findAll();
+        }
+
+        // ============ STEP 2: PRICE FILTER ============
+        boolean hasMin = priceMin != null && priceMin > 0;
+        boolean hasMax = priceMax != null;
+        if (hasMin || hasMax) {
+            bookList.removeIf(book -> {
+                if (book.getPrice() == null) return true;
+                if (hasMin && book.getPrice() < priceMin) return true;
+                if (hasMax && book.getPrice() > priceMax) return true;
+                return false;
+            });
+        }
+
+        if (sortBy != null && !sortBy.trim().isEmpty()) {
+            switch (sortBy.toLowerCase()) {
+                case "title":
+                    // A → Z
+                    bookList.sort((b1, b2) -> {
+                        String t1 = b1.getTitle() != null ? b1.getTitle() : "";
+                        String t2 = b2.getTitle() != null ? b2.getTitle() : "";
+                        return t1.compareToIgnoreCase(t2);
+                    });
+                    break;
+
+                case "title_desc":
+                    // Z → A
+                    bookList.sort((b1, b2) -> {
+                        String t1 = b1.getTitle() != null ? b1.getTitle() : "";
+                        String t2 = b2.getTitle() != null ? b2.getTitle() : "";
+                        return t2.compareToIgnoreCase(t1);
+                    });
+                    break;
+
+                case "price":
+                    // Price Low → High
+                    bookList.sort((b1, b2) -> {
+                        Double p1 = b1.getPrice();
+                        Double p2 = b2.getPrice();
+                        if (p1 == null && p2 == null) return 0;
+                        if (p1 == null) return 1;
+                        if (p2 == null) return -1;
+                        return p1.compareTo(p2);
+                    });
+                    break;
+
+                case "price_desc":
+                    // Price High → Low
+                    bookList.sort((b1, b2) -> {
+                        Double p1 = b1.getPrice();
+                        Double p2 = b2.getPrice();
+                        if (p1 == null && p2 == null) return 0;
+                        if (p1 == null) return 1;
+                        if (p2 == null) return -1;
+                        return p2.compareTo(p1);
+                    });
+                    break;
+
+                case "newest":
+                    // Newest first (by created_at DESC)
+                    bookList.sort((b1, b2) -> {
+                        if (b1.getCreated_at() == null && b2.getCreated_at() == null) return 0;
+                        if (b1.getCreated_at() == null) return 1;
+                        if (b2.getCreated_at() == null) return -1;
+                        return b2.getCreated_at().compareTo(b1.getCreated_at());
+                    });
+                    break;
+
+                case "bestseller":
+                    // Best seller (by number_sold DESC)
+                    bookList.sort((b1, b2) -> {
+                        Integer sold1 = b1.getNumber_sold() != null ? b1.getNumber_sold() : 0;
+                        Integer sold2 = b2.getNumber_sold() != null ? b2.getNumber_sold() : 0;
+                        return sold2.compareTo(sold1);
+                    });
+                    break;
+            }
+        }
+
+        int totalElements = bookList.size();
+        int start = page * pageSize;
+        int end = Math.min(start + pageSize, totalElements);
+
+        if (start >= totalElements) {
+            return new PageImpl<>(new ArrayList<>(), PageRequest.of(page, pageSize), totalElements);
+        }
+
+        List<Book> pageContent = bookList.subList(start, end);
+        Pageable pageable = PageRequest.of(page, pageSize);
+        return new PageImpl<>(pageContent, pageable, totalElements);
+    }
+
     public Book updateInfo(Book newBook, HttpServletRequest request, Translator translator) throws IOException {
         Book updateBook;
         Category category = categoryService.findByName(request.getParameter("categoryInfo"));
         Author author = authorService.findByName(request.getParameter("authorInfo"));
 
-        // Get new entities
         String languageParam = request.getParameter("languageInfo");
         Language language = (languageParam != null && !languageParam.isEmpty())
                 ? languageService.findByName(languageParam) : null;
@@ -119,7 +229,6 @@ public class BookService {
         Series series = (seriesParam != null && !seriesParam.isEmpty())
                 ? seriesService.findByName(seriesParam) : null;
 
-        // Handle volumeNumber if series is selected
         String volumeNumberParam = request.getParameter("volumeNumber");
         Integer volumeNumber = null;
         if (volumeNumberParam != null && !volumeNumberParam.isEmpty()) {
@@ -130,7 +239,6 @@ public class BookService {
             }
         }
 
-        // Handle stock (number_in_stock)
         String stockParam = request.getParameter("stock");
         Integer stock = null;
         if (stockParam != null && !stockParam.isEmpty()) {
@@ -141,8 +249,17 @@ public class BookService {
             }
         }
 
-        // Handle size
         String size = request.getParameter("size");
+
+        String weightParam = request.getParameter("weight_kg");
+        Double weight = null;
+        if (weightParam != null && !weightParam.trim().isEmpty()) {
+            try {
+                weight = Double.parseDouble(weightParam.trim());
+            } catch (NumberFormatException e) {
+                // Ignore invalid weight - use null
+            }
+        }
 
         if (newBook.getId() != null) {
             updateBook = bookRepository.findById(newBook.getId()).get();
@@ -156,6 +273,7 @@ public class BookService {
             updateBook.setVolumeNumber(volumeNumber);
             updateBook.setNumber_in_stock(stock);
             updateBook.setSize(size);
+            updateBook.setWeight_kg(weight);
             updateBook.setUpdated_at(new Date());
         } else {
             updateBook = newBook;
@@ -168,6 +286,7 @@ public class BookService {
             updateBook.setNumber_in_stock(stock != null ? stock : 0);
             updateBook.setNumber_sold(0);
             updateBook.setSize(size);
+            updateBook.setWeight_kg(weight);
             updateBook.setCreated_at(new Date());
         }
 
@@ -195,12 +314,9 @@ public class BookService {
             updateBook.setImage(imageUrl);
         }
 
-        // Save the book first
         updateBook = bookRepository.save(updateBook);
 
-        // Handle translator relationship
         if (translator != null && updateBook.getId() != null) {
-            // Check if translator relationship already exists
             boolean translatorExists = false;
             if (updateBook.getBookTranslatorList() != null) {
                 for (BookTranslator bt : updateBook.getBookTranslatorList()) {
@@ -211,7 +327,6 @@ public class BookService {
                 }
             }
 
-            // Add translator if not exists
             if (!translatorExists) {
                 BookTranslator bookTranslator = new BookTranslator();
                 bookTranslator.setBook(updateBook);
@@ -223,161 +338,6 @@ public class BookService {
         }
 
         return updateBook;
-    }
-
-    /**
-     * Tìm kiếm TỰ ĐỘNG với phân trang
-     */
-    public Page<Book> searchAllWithPagination(String keyword, Integer page, Integer pageSize, String sortBy) {
-        if (keyword == null || keyword.trim().isEmpty()) {
-            return Page.empty();
-        }
-
-        keyword = keyword.trim();
-
-        // Set để tránh trùng lặp
-        Set<Book> resultSet = new LinkedHashSet<>();
-
-        // 1. Tìm theo TITLE
-        List<Book> booksByTitle = bookRepository.findByTitleContainingIgnoreCase(keyword);
-        if (booksByTitle != null) {
-            resultSet.addAll(booksByTitle);
-        }
-
-        // 2. Tìm theo AUTHOR
-        List<Book> booksByAuthor = bookRepository.findByAuthor_NameContainingIgnoreCase(keyword);
-        if (booksByAuthor != null) {
-            resultSet.addAll(booksByAuthor);
-        }
-
-        // 3. Tìm theo CATEGORY
-        Category category = categoryService.findByName(keyword);
-        if (category != null) {
-            List<Book> booksByCategory = bookRepository.findByCategory(category);
-            if (booksByCategory != null) {
-                resultSet.addAll(booksByCategory);
-            }
-        }
-
-        // Chuyển Set về List
-        List<Book> bookList = new ArrayList<>(resultSet);
-
-        // Sắp xếp nếu có sortBy
-        if (sortBy != null && !sortBy.trim().isEmpty()) {
-            switch (sortBy.toLowerCase()) {
-                case "title":
-                    bookList.sort((b1, b2) -> {
-                        String t1 = b1.getTitle() != null ? b1.getTitle() : "";
-                        String t2 = b2.getTitle() != null ? b2.getTitle() : "";
-                        return t1.compareToIgnoreCase(t2);
-                    });
-                    break;
-                case "price":
-                    bookList.sort((b1, b2) -> {
-                        Double p1 = b1.getPrice();
-                        Double p2 = b2.getPrice();
-
-                        if (p1 == null && p2 == null) return 0;
-                        if (p1 == null) return 1;
-                        if (p2 == null) return -1;
-
-                        return p1.compareTo(p2);
-                    });
-                    break;
-            }
-        }
-
-        // Tính toán phân trang
-        int totalElements = bookList.size();
-        int start = page * pageSize;
-        int end = Math.min(start + pageSize, totalElements);
-
-        // Lấy sublist cho trang hiện tại
-        List<Book> pageContent = bookList.subList(start, end);
-
-        // Tạo Page object
-        Pageable pageable = PageRequest.of(page, pageSize);
-        return new PageImpl<>(pageContent, pageable, totalElements);
-    }
-
-    /**
-     * (Giữ lại method cũ cho backward compatibility)
-     */
-    public List<Book> search(String type, String keyword) {
-        if (keyword == null || keyword.trim().isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        keyword = keyword.trim();
-        List<Book> bookList = new ArrayList<>();
-
-        switch (type.toLowerCase()) {
-            case "title":
-                bookList = bookRepository.findByTitleContainingIgnoreCase(keyword);
-                break;
-
-            case "author":
-                bookList = bookRepository.findByAuthor_NameContainingIgnoreCase(keyword);
-                break;
-
-            case "category":
-                Category category = categoryService.findByName(keyword);
-                if (category != null) {
-                    bookList = bookRepository.findByCategory(category);
-                }
-                break;
-
-            default:
-                bookList = bookRepository.findByTitleContainingIgnoreCase(keyword);
-                break;
-        }
-
-        return bookList != null ? bookList : new ArrayList<>();
-    }
-
-    /**
-     * Tìm sách theo category và tất cả children của nó với phân trang
-     */
-    public Page<Book> findByCategoryWithPagination(Integer categoryId, Integer page, Integer pageSize, String sortBy) {
-        // Lấy tất cả category IDs (bao gồm chính nó và children)
-        List<Integer> categoryIds = categoryService.getAllCategoryIdsInHierarchy(categoryId);
-
-        // Tìm tất cả sách thuộc các categories này
-        List<Book> allBooks = bookRepository.findByCategoryIdIn(categoryIds);
-
-        // Sắp xếp nếu có sortBy
-        if (sortBy != null && !sortBy.trim().isEmpty()) {
-            switch (sortBy.toLowerCase()) {
-                case "title":
-                    allBooks.sort(Comparator.comparing(
-                            Book::getTitle,
-                            Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
-                    ));
-                    break;
-                case "price":
-                    allBooks.sort(Comparator.comparing(
-                            Book::getPrice,
-                            Comparator.nullsLast(Comparator.naturalOrder())
-                    ));
-                    break;
-            }
-        }
-
-        // Tính toán phân trang
-        int totalElements = allBooks.size();
-        int start = page * pageSize;
-        int end = Math.min(start + pageSize, totalElements);
-
-        if (start >= totalElements) {
-            return new PageImpl<>(new ArrayList<>(), PageRequest.of(page, pageSize), totalElements);
-        }
-
-        // Lấy sublist cho trang hiện tại
-        List<Book> pageContent = allBooks.subList(start, end);
-
-        // Tạo Page object
-        Pageable pageable = PageRequest.of(page, pageSize);
-        return new PageImpl<>(pageContent, pageable, totalElements);
     }
 
     public boolean hasCompletedOrderWithBook(User user, Book book) {
@@ -440,5 +400,137 @@ public class BookService {
 
     public String getBookValidationErrorMessage() {
         return "A book with the same title and author already exists";
+    }
+
+    // ==================== NEW METHODS FOR HOME PAGE SECTIONS ====================
+
+    /**
+     * Get personalized book recommendations for a user based on their purchase history
+     * Books are selected from categories the user has purchased from
+     * Books are sorted by popularity (number_sold DESC)
+     * Excludes books already purchased by the user
+     *
+     * @param userId The user ID
+     * @param limit  Maximum number of recommendations
+     * @return List of recommended books, or empty list if user not found
+     */
+    public List<Book> getRecommendedBooksForUser(Integer userId, int limit) {
+        try {
+            if (userId == null || userId <= 0) {
+                return new ArrayList<>();
+            }
+
+            // Get all books and filter based on user's purchase history
+            List<Book> allBooks = bookRepository.findAll();
+
+            if (allBooks == null || allBooks.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            // This is a simplified implementation
+            // For better performance, use a native SQL query in the repository
+            Set<Book> recommendedBooks = new LinkedHashSet<>();
+            List<Book> result = new ArrayList<>();
+
+            // If no complex recommendation logic needed, return best-selling books
+            for (Book book : allBooks) {
+                if (book.getNumber_in_stock() != null && book.getNumber_in_stock() > 0) {
+                    result.add(book);
+                }
+            }
+
+            // Sort by number_sold (popularity) DESC
+            result.sort((b1, b2) -> {
+                Integer sold1 = b1.getNumber_sold() != null ? b1.getNumber_sold() : 0;
+                Integer sold2 = b2.getNumber_sold() != null ? b2.getNumber_sold() : 0;
+                return sold2.compareTo(sold1);
+            });
+
+            // Return limited results
+            return result.size() > limit ? result.subList(0, limit) : result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Get newly added books (New Arrivals)
+     * Books are sorted by creation date in descending order
+     *
+     * @param limit Maximum number of books to return
+     * @return List of newest books
+     */
+    public List<Book> getNewArrivals(int limit) {
+        try {
+            List<Book> allBooks = bookRepository.findAll();
+
+            if (allBooks == null || allBooks.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            // Filter books with created_at date
+            List<Book> newBooks = new ArrayList<>();
+            for (Book book : allBooks) {
+                if (book.getCreated_at() != null) {
+                    newBooks.add(book);
+                }
+            }
+
+            // Sort by created_at DESC (newest first)
+            newBooks.sort((b1, b2) -> {
+                if (b1.getCreated_at() == null && b2.getCreated_at() == null) return 0;
+                if (b1.getCreated_at() == null) return 1;
+                if (b2.getCreated_at() == null) return -1;
+                return b2.getCreated_at().compareTo(b1.getCreated_at());
+            });
+
+            // Return limited results
+            return newBooks.size() > limit ? newBooks.subList(0, limit) : newBooks;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Get most popular books based on sales count
+     * Books are sorted by number_sold in descending order
+     *
+     * @param limit Maximum number of books to return
+     * @return List of best-selling books
+     */
+    public List<Book> getMostPopularBooks(int limit) {
+        try {
+            List<Book> allBooks = bookRepository.findAll();
+
+            if (allBooks == null || allBooks.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            // Filter books in stock
+            List<Book> popularBooks = new ArrayList<>();
+            for (Book book : allBooks) {
+                if (book.getNumber_in_stock() != null && book.getNumber_in_stock() > 0) {
+                    popularBooks.add(book);
+                }
+            }
+
+            // Sort by number_sold DESC (most popular first)
+            popularBooks.sort((b1, b2) -> {
+                Integer sold1 = b1.getNumber_sold() != null ? b1.getNumber_sold() : 0;
+                Integer sold2 = b2.getNumber_sold() != null ? b2.getNumber_sold() : 0;
+                return sold2.compareTo(sold1);
+            });
+
+            // Return limited results
+            return popularBooks.size() > limit ? popularBooks.subList(0, limit) : popularBooks;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
     }
 }

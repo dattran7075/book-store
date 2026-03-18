@@ -50,7 +50,6 @@ public class StatisticService {
 
         Map<String, Integer> statusMap = new LinkedHashMap<>();
         statusMap.put("Pending", 0);
-        statusMap.put("Assigned", 0);
         statusMap.put("Approved", 0);
         statusMap.put("In Delivery", 0);
         statusMap.put("Completed", 0);
@@ -58,7 +57,7 @@ public class StatisticService {
         statusMap.put("Returned", 0);
 
         for (Order order : allOrders) {
-            if (order.getStatus() != null) {
+            if (order.getStatus() != null && statusMap.containsKey(order.getStatus())) {
                 statusMap.merge(order.getStatus(), 1, Integer::sum);
             }
         }
@@ -292,5 +291,37 @@ public class StatisticService {
         double subtotal = order.getTotal_cost() != null ? order.getTotal_cost() : 0;
         double shipping = order.getShipping_fee() != null ? order.getShipping_fee() : 0;
         return subtotal + shipping;
+    }
+
+    public Map<String, Object> getRevenueByDateRange(LocalDate from, LocalDate to) {
+        if (from == null || to == null || from.isAfter(to))
+            throw new IllegalArgumentException("Invalid date range");
+
+        List<Order> orders = orderRepository.findAll().stream()
+                .filter(this::isRevenueOrder)
+                .filter(o -> {
+                    LocalDate d = o.getCreatedAt();
+                    return d != null && !d.isBefore(from) && !d.isAfter(to);
+                })
+                .collect(Collectors.toList());
+
+        Map<String, Double> dailyRevenue = new LinkedHashMap<>();
+        for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1))
+            dailyRevenue.put(d.toString(), 0.0);
+
+        for (Order o : orders)
+            dailyRevenue.merge(o.getCreatedAt().toString(), calculateOrderRevenue(o), Double::sum);
+
+        long booksSold = orders.stream()
+                .flatMap(o -> o.getOrderDetailList() != null
+                        ? o.getOrderDetailList().stream() : Stream.empty())
+                .mapToLong(d -> d.getNumber() != null ? d.getNumber() : 0).sum();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("dailyRevenue", dailyRevenue);
+        result.put("totalRevenue", orders.stream().mapToDouble(this::calculateOrderRevenue).sum());
+        result.put("orderCount", (long) orders.size());
+        result.put("booksSold", booksSold);
+        return result;
     }
 }

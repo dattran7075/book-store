@@ -1,7 +1,7 @@
 package com.thunga.web.service;
 
-import com.thunga.web.entity.Promotion;
-import com.thunga.web.repository.PromotionRepository;
+import com.thunga.web.entity.Voucher;
+import com.thunga.web.repository.VoucherRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -13,10 +13,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
-public class PromotionSchedulerService {
+public class VoucherSchedulerService {
 
     @Autowired
-    private PromotionRepository promotionRepository;
+    private VoucherRepository voucherRepository;
 
     @Scheduled(cron = "0 * * * * ?")
     @Transactional
@@ -30,25 +30,25 @@ public class PromotionSchedulerService {
         System.out.println("========================================");
 
         // Tìm các promotion cần ACTIVE
-        List<Promotion> toActivate = promotionRepository
+        List<Voucher> toActivate = voucherRepository
                 .findByStatusAndStartDateLessThanEqual("CREATED", currentDate);
 
         System.out.println("Found " + toActivate.size() + " promotions to ACTIVATE");
-        for (Promotion promo : toActivate) {
-            System.out.println("   → Activating: " + promo.getCode() + " (ID: " + promo.getPromotionId() + ")");
+        for (Voucher promo : toActivate) {
+            System.out.println("   → Activating: " + promo.getCode() + " (ID: " + promo.getVoucherId() + ")");
             promo.setStatus("ACTIVE");
-            promotionRepository.save(promo);
+            voucherRepository.save(promo);
         }
 
         // Tìm các promotion cần EXPIRED
-        List<Promotion> toExpire = promotionRepository
+        List<Voucher> toExpire = voucherRepository
                 .findByStatusAndEndDateLessThan("ACTIVE", currentDate);
 
         System.out.println("Found " + toExpire.size() + " promotions to EXPIRE");
-        for (Promotion promo : toExpire) {
-            System.out.println("   → Expiring: " + promo.getCode() + " (ID: " + promo.getPromotionId() + ")");
+        for (Voucher promo : toExpire) {
+            System.out.println("   → Expiring: " + promo.getCode() + " (ID: " + promo.getVoucherId() + ")");
             promo.setStatus("EXPIRED");
-            promotionRepository.save(promo);
+            voucherRepository.save(promo);
         }
 
         System.out.println("Scheduler completed: " + toActivate.size() + " activated, " + toExpire.size() + " expired");

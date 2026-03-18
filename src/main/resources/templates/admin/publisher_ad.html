@@ -20,13 +20,48 @@
     <link rel="stylesheet" href="../css/responsive.css">
     <script src="../js/vendor/modernizr-2.8.3-respond-1.4.2.min.js"></script>
     <style>
-        .modal-body .form-group { margin-bottom: 15px; }
-        .modal-body label { font-weight: bold; display: block; margin-bottom: 5px; }
-        .modal-body input, .modal-body textarea {
-            width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;
+        .modal-body .form-group {
+            margin-bottom: 15px;
         }
-        .modal-body textarea { resize: vertical; min-height: 60px; }
-        .form-error { color: #d9534f; font-size: 12px; margin-top: 5px; }
+
+        .modal-body label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .modal-body input, .modal-body textarea, .modal-body select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .modal-body select {
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        .modal-body select:focus {
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, .25);
+        }
+
+        .modal-body textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .form-error {
+            color: #d9534f;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .is-invalid {
+            border-color: #dc3545 !important;
+        }
     </style>
 </head>
 <body>
@@ -216,7 +251,7 @@
                                                         <h4 class="modal-title" style="text-transform: none;">Edit
                                                             Publisher</h4>
                                                     </div>
-                                                    <form method="post" th:action="@{/edit-publisher}">
+                                                    <form method="post" th:action="@{/admin/edit-publisher}">
                                                         <div class="modal-body">
                                                             <input type="hidden" name="id" th:value="${publisher.id}">
                                                             <div th:with="isThis=${editPublisherId != null and editPublisherId == publisher.id.toString()}">
@@ -236,16 +271,11 @@
                                                                 </div>
                                                                 <div class="form-group">
                                                                     <label>Country</label>
-                                                                    <input type="text" class="form-control"
-                                                                           name="country"
-                                                                           th:value="${isThis and formCountry != null ? formCountry : publisher.country}"
-                                                                           th:classappend="${isThis and editCountryError != null} ? 'is-invalid'">
-                                                                    <div th:if="${isThis and editCountryError != null}"
-                                                                         class="invalid-feedback"
-                                                                         th:text="${editCountryError}"></div>
-                                                                    <small th:if="${!(isThis and editCountryError != null)}"
-                                                                           class="form-text text-muted">Letters
-                                                                        only</small>
+                                                                    <select class="form-control country-select"
+                                                                            name="country"
+                                                                            th:data-current="${publisher.country}">
+                                                                        <option value="">-- Select Country --</option>
+                                                                    </select>
                                                                 </div>
                                                                 <div class="form-group">
                                                                     <label>Website</label>
@@ -309,7 +339,7 @@
                                                                 class="btn btn-default" data-dismiss="modal">Cancel
                                                         </button>
                                                         <a th:if="${bookCountMap[publisher.id] == 0}"
-                                                           th:href="@{/delete-publisher(id=${publisher.id})}">
+                                                           th:href="@{/admin/delete-publisher(id=${publisher.id})}">
                                                             <button type="submit" class="btn btn-primary">Confirm
                                                             </button>
                                                         </a>
@@ -330,14 +360,14 @@
         <nav aria-label="Page navigation" style="text-align: center;">
             <ul class="pagination">
                 <li th:classappend="${page == 1} ? 'disabled'">
-                    <a th:if="${page > 1}" th:href="@{/manage-publisher(page=${page - 1})}">&laquo;</a>
+                    <a th:if="${page > 1}" th:href="@{/admin/manage-publisher(page=${page - 1})}">&laquo;</a>
                     <span th:if="${page == 1}">&laquo;</span>
                 </li>
                 <li th:each="i : ${#numbers.sequence(1, totalPage)}" th:classappend="${i == page} ? 'active'">
-                    <a th:href="@{/manage-publisher(page=${i})}" th:text="${i}"></a>
+                    <a th:href="@{/admin/manage-publisher(page=${i})}" th:text="${i}"></a>
                 </li>
                 <li th:classappend="${page == totalPage} ? 'disabled'">
-                    <a th:if="${page < totalPage}" th:href="@{/manage-publisher(page=${page + 1})}">&raquo;</a>
+                    <a th:if="${page < totalPage}" th:href="@{/admin/manage-publisher(page=${page + 1})}">&raquo;</a>
                     <span th:if="${page == totalPage}">&raquo;</span>
                 </li>
             </ul>
@@ -354,7 +384,7 @@
                 </button>
                 <h4 class="modal-title" style="text-transform: none;">Add New Publisher</h4>
             </div>
-            <form method="post" th:action="@{/create-publisher}">
+            <form method="post" th:action="@{/admin/create-publisher}">
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Name <span style="color: red;">*</span></label>
@@ -367,13 +397,9 @@
                     </div>
                     <div class="form-group">
                         <label>Country</label>
-                        <input type="text" class="form-control" name="country"
-                               th:value="${formCountry}"
-                               th:classappend="${addCountryError != null} ? 'is-invalid'"
-                               placeholder="Enter country">
-                        <div th:if="${addCountryError != null}" class="invalid-feedback"
-                             th:text="${addCountryError}"></div>
-                        <small th:if="${addCountryError == null}" class="form-text text-muted">Letters only</small>
+                        <select class="form-control country-select" name="country">
+                            <option value="">-- Select Country --</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Website</label>
@@ -456,7 +482,53 @@
     var showAddModal = /*[[${showAddModal}]]*/ false;
     var editPublisherId = /*[[${editPublisherId}]]*/ null;
 
+    // Load countries từ API
+    function loadCountries() {
+        fetch('/api/countries')
+            .then(response => response.json())
+            .then(data => {
+                const selects = document.querySelectorAll('.country-select');
+                selects.forEach(select => {
+                    const currentValue = select.getAttribute('data-current') || '';
+
+                    // Clear existing options except the first one
+                    while (select.options.length > 1) {
+                        select.remove(1);
+                    }
+
+                    // Add countries
+                    data.forEach(country => {
+                        const option = document.createElement('option');
+                        option.value = country;
+                        option.textContent = country;
+                        select.appendChild(option);
+                    });
+
+                    // Set selected value if exists
+                    if (currentValue) {
+                        select.value = currentValue;
+                    }
+                });
+            })
+            .catch(error => console.error('Error loading countries:', error));
+    }
+
+    // Load countries khi modal được mở
+    $('#createPublisherModal').on('show.bs.modal', function () {
+        loadCountries();
+    });
+
+    // Load countries cho tất cả edit modals
+    $('[id^="editModal_"]').on('show.bs.modal', function () {
+        setTimeout(function () {
+            loadCountries();
+        }, 100);
+    });
+
+    // Load countries khi document ready
     $(document).ready(function () {
+        loadCountries();
+
         if (showAddModal) {
             $('#createPublisherModal').modal('show');
         }

@@ -103,6 +103,10 @@ public class UserService {
         String newPassword = request.getParameter("newPassword");
         if (newPassword.length() < 6) {
             return "New password must be at least 6 characters";
+        } else if (newPassword.length() > 20) {
+            return "Password must not exceed 20 characters";
+        } else if (!newPassword.matches("^(?=.*[A-Za-z])(?=.*\\d).+$")) {
+            return "Password must contain at least one letter and one number";
         }
 
         String confirmNewPassword = request.getParameter("confirmNewPassword");

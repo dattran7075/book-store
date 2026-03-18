@@ -45,11 +45,18 @@ public class Order {
     @Column(name = "phone")
     private String phone;
 
+    @Column(name = "discount_amount", precision = 10, scale = 3)
+    private Double discount_amount = 0.0;
+
+
     @Column(name = "shipping_fee", precision = 10, scale = 3)
     private Double shipping_fee;
 
     @Column(name = "status")
     private String status;
+
+    @Column(name = "shipping_method")
+    private String shipping_method = "STANDARD";
 
     @Column(name = "payment_method")
     private String payment_method = "COD";
@@ -66,6 +73,10 @@ public class Order {
     @Column(name = "updated_order")
     private LocalDate updated_at;
 
+    @ManyToOne
+    @JoinColumn(name = "voucher_id")
+    private Voucher voucher;
+
     public void addOrderDetail(OrderDetail orderDetail) {
         orderDetailList.add(orderDetail);
         orderDetail.setOrder(this);
@@ -76,6 +87,18 @@ public class Order {
      */
     public Double getFinalTotal() {
         return (total_cost != null ? total_cost : 0) + (shipping_fee != null ? shipping_fee : 0);
+    }
+
+    public Double calculateTotalWeight() {
+        double totalWeight = 0.0;
+        if (orderDetailList != null) {
+            for (OrderDetail detail : orderDetailList) {
+                if (detail.getBook() != null && detail.getBook().getWeight_kg() != null) {
+                    totalWeight += detail.getBook().getWeight_kg() * detail.getNumber();
+                }
+            }
+        }
+        return totalWeight;
     }
 
 }

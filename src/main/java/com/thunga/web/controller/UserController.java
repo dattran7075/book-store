@@ -7,7 +7,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -39,7 +38,7 @@ public class UserController {
     private CommentService commentService;
 
     @Autowired
-    private PromotionService promotionService;
+    private VoucherService voucherService;
 
     @Autowired
     private CartItemService cartItemService;
@@ -68,28 +67,81 @@ public class UserController {
     }
 
     @PostMapping("/save-comment")
-    public String saveComment(Model model, HttpServletRequest request,
-                              @ModelAttribute Comment comment,
-                              RedirectAttributes redirectAttributes) {
+    public String saveOrUpdateComment(
+            @RequestParam(required = false) Integer commentId,
+            @RequestParam Integer bookId,
+            @RequestParam(name = "star", required = false) Integer star,
+            @RequestParam(name = "content", required = false) String content,
+            @RequestParam(name = "username", required = false) String username,
+            HttpServletRequest request,
+            RedirectAttributes redirectAttributes) {
         try {
-            comment = commentService.save(comment, request);
-            redirectAttributes.addFlashAttribute("success", "Thank you for your review!");
-            return "redirect:/detail-product?id=" + comment.getBook().getId();
-        } catch (IllegalStateException e) {
-            // Xử lý lỗi validation (đã comment hoặc chưa mua)
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
-            Integer bookId = Integer.valueOf(request.getParameter("book_id"));
-            return "redirect:/detail-product?id=" + bookId;
+            // ========== CASE 1: UPDATE EXISTING COMMENT ==========
+            if (commentId != null && commentId > 0) {
+                // Validate star (bắt buộc)
+                if (star == null || star < 1 || star > 5) {
+                    redirectAttributes.addFlashAttribute("error", "Rating must be between 1 and 5 stars");
+                    return "redirect:/detail-product?id=" + bookId;
+                }
+
+                // Content là tuỳ chọn, chỉ validate độ dài nếu có nhập
+                if (content != null && content.trim().length() > 5000) {
+                    redirectAttributes.addFlashAttribute("error", "Review content cannot exceed 5000 characters");
+                    return "redirect:/detail-product?id=" + bookId;
+                }
+
+                try {
+                    Comment updatedComment = commentService.updateComment(commentId, content, star, request);
+                    redirectAttributes.addFlashAttribute("success", "Review updated successfully!");
+                    return "redirect:/detail-product?id=" + bookId;
+
+                } catch (IllegalStateException e) {
+                    redirectAttributes.addFlashAttribute("error", e.getMessage());
+                    return "redirect:/detail-product?id=" + bookId;
+                }
+            }
+
+            // ========== CASE 2: CREATE NEW COMMENT ==========
+            else {
+                // Validate star (bắt buộc)
+                if (star == null || star < 1 || star > 5) {
+                    redirectAttributes.addFlashAttribute("error", "Rating must be between 1 and 5 stars");
+                    return "redirect:/detail-product?id=" + bookId;
+                }
+
+                // Content là tuỳ chọn, chỉ validate độ dài nếu có nhập
+                if (content != null && content.trim().length() > 5000) {
+                    redirectAttributes.addFlashAttribute("error", "Review content cannot exceed 5000 characters");
+                    return "redirect:/detail-product?id=" + bookId;
+                }
+
+                try {
+                    Comment comment = new Comment();
+                    comment.setStar(star);
+                    // Cho phép content rỗng (chỉ đánh sao)
+                    comment.setContent(content != null ? content.trim() : "");
+
+                    comment = commentService.save(comment, request);
+
+                    redirectAttributes.addFlashAttribute("success", "Thank you for your review!");
+                    return "redirect:/detail-product?id=" + comment.getBook().getId();
+
+                } catch (IllegalStateException e) {
+                    redirectAttributes.addFlashAttribute("error", e.getMessage());
+                    return "redirect:/detail-product?id=" + bookId;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    redirectAttributes.addFlashAttribute("error", "Error submitting review. Please try again.");
+                    return "redirect:/detail-product?id=" + bookId;
+                }
+            }
+
         } catch (Exception e) {
-            // Xử lý lỗi khác
             e.printStackTrace();
-            redirectAttributes.addFlashAttribute("error", "Error submitting review. Please try again.");
-            Integer bookId = Integer.valueOf(request.getParameter("book_id"));
+            redirectAttributes.addFlashAttribute("error", "Error processing review: " + e.getMessage());
             return "redirect:/detail-product?id=" + bookId;
         }
     }
-
-    // Add this updated method to UserController.java
 
     @GetMapping("/view-cart")
     public String viewCart(Model model, HttpServletRequest request) {
@@ -121,7 +173,7 @@ public class UserController {
 
             model.addAttribute("seriesBundlesInCart", seriesBundlesInCart);
             model.addAttribute("detectedSeriesMap", detectedSeriesMap);
-            model.addAttribute("seriesSetsMap", seriesSetsMap); // ADD THIS
+            model.addAttribute("seriesSetsMap", seriesSetsMap);
 
             addCartInfoToModel(model);
 
@@ -218,17 +270,14 @@ public class UserController {
     public String addSeriesToCart(@RequestParam Integer seriesId,
                                   RedirectAttributes redirectAttributes) {
         try {
-            // Validate series bundle purchase
             seriesService.validateSeriesBundlePurchase(seriesId);
 
-            // Get current user
             User user = userService.getCurrentUserFromContext();
             if (user == null) {
                 redirectAttributes.addFlashAttribute("error", "Please login to add items to cart");
                 return "redirect:/login";
             }
 
-            // Get all available books in the series
             List<Book> availableBooks = seriesService.getAvailableBooksInSeries(seriesId);
 
             if (availableBooks.isEmpty()) {
@@ -236,7 +285,6 @@ public class UserController {
                 return "redirect:/products";
             }
 
-            // Add each book to cart with quantity 1 (or increase by 1 if already exists)
             int addedCount = 0;
             int updatedCount = 0;
 
@@ -244,13 +292,11 @@ public class UserController {
                 CartItem existingItem = cartItemService.findByUserAndBook(user, book);
 
                 if (existingItem != null) {
-                    // Book already in cart - increase quantity by 1
                     existingItem.setQuantity(existingItem.getQuantity() + 1);
                     existingItem.setUpdatedAt(new Date());
                     cartItemService.save(existingItem);
                     updatedCount++;
                 } else {
-                    // Add new item to cart
                     CartItem newItem = new CartItem();
                     newItem.setUser(user);
                     newItem.setBook(book);
@@ -292,8 +338,6 @@ public class UserController {
         }
     }
 
-    // Update these methods in UserController.java
-
     @PostMapping("/purchase")
     public String purchase(HttpServletRequest request, Model model) {
         User user = userService.getCurrentUser(request);
@@ -312,8 +356,8 @@ public class UserController {
             model.addAttribute("cartTotalBooks", 0);
             model.addAttribute("user", user);
 
-            List<Promotion> allPromotions = promotionService.findAll();
-            model.addAttribute("allPromotions", allPromotions);
+            List<Voucher> allVouchers = voucherService.findAll();
+            model.addAttribute("allPromotions", allVouchers);
             model.addAttribute("appliedPromotion", null);
             model.addAttribute("discount", 0.0);
             model.addAttribute("shippingFee", DEFAULT_SHIPPING_FEE);
@@ -323,7 +367,6 @@ public class UserController {
 
         request.getSession().setAttribute("selectedItems", selectedItems);
 
-        // Update quantities
         for (int i = 0; i < cartItems.size(); i++) {
             String sequence = "quantity" + i;
             String quantityParam = request.getParameter(sequence);
@@ -355,15 +398,12 @@ public class UserController {
             }
         }
 
-        // ========== FIX: DETECT SERIES BUNDLE WITH SETS AND CALCULATE DISCOUNT ==========
         Map<Integer, Integer> seriesSetsMap = orderService.detectCompleteSeriesWithSets(selectedCartItems);
         boolean hasSeriesBundle = !seriesSetsMap.isEmpty();
 
         if (hasSeriesBundle) {
-            // Calculate series bundle discount
             Double seriesBundleDiscount = orderService.calculateSeriesBundleDiscount(selectedCartItems, seriesSetsMap);
 
-            // Clear promotion from session
             request.getSession().removeAttribute("appliedPromotion");
             request.getSession().removeAttribute("discount");
 
@@ -371,7 +411,6 @@ public class UserController {
             model.addAttribute("seriesSetsMap", seriesSetsMap);
             model.addAttribute("seriesBundleDiscount", seriesBundleDiscount);
 
-            // Add series info for each detected series
             for (Map.Entry<Integer, Integer> entry : seriesSetsMap.entrySet()) {
                 Integer seriesId = entry.getKey();
                 Integer numberOfSets = entry.getValue();
@@ -381,11 +420,8 @@ public class UserController {
                     model.addAttribute("seriesId", seriesId);
                     model.addAttribute("seriesName", series.getName());
 
-                    // Calculate discount percentage
                     double discountPercentage = numberOfSets >= 2 ? 0.10 : 0.05;
                     model.addAttribute("discountPercentage", discountPercentage);
-
-                    // Break after first series (if there are multiple, show the first one)
                     break;
                 }
             }
@@ -393,14 +429,14 @@ public class UserController {
             model.addAttribute("hasSeriesBundle", false);
             model.addAttribute("seriesBundleDiscount", 0.0);
 
-            List<Promotion> allPromotions = promotionService.findAll();
-            model.addAttribute("allPromotions", allPromotions);
+            List<Voucher> allVouchers = voucherService.findAll();
+            model.addAttribute("allPromotions", allVouchers);
 
-            Promotion appliedPromotion = (Promotion) request.getSession().getAttribute("appliedPromotion");
+            Voucher appliedVoucher = (Voucher) request.getSession().getAttribute("appliedPromotion");
             Double discount = (Double) request.getSession().getAttribute("discount");
             if (discount == null) discount = 0.0;
 
-            model.addAttribute("appliedPromotion", appliedPromotion);
+            model.addAttribute("appliedPromotion", appliedVoucher);
             model.addAttribute("discount", discount);
         }
 
@@ -449,12 +485,10 @@ public class UserController {
             }
         }
 
-        // ========== FIX: DETECT SERIES BUNDLE WITH SETS AND CALCULATE DISCOUNT ==========
         Map<Integer, Integer> seriesSetsMap = orderService.detectCompleteSeriesWithSets(selectedCartItems);
         boolean hasSeriesBundle = !seriesSetsMap.isEmpty();
 
         if (hasSeriesBundle) {
-            // Calculate series bundle discount
             Double seriesBundleDiscount = orderService.calculateSeriesBundleDiscount(selectedCartItems, seriesSetsMap);
 
             model.addAttribute("hasSeriesBundle", true);
@@ -479,13 +513,13 @@ public class UserController {
             model.addAttribute("hasSeriesBundle", false);
             model.addAttribute("seriesBundleDiscount", 0.0);
 
-            List<Promotion> allPromotions = promotionService.findAll();
-            Promotion appliedPromotion = (Promotion) request.getSession().getAttribute("appliedPromotion");
+            List<Voucher> allVouchers = voucherService.findAll();
+            Voucher appliedVoucher = (Voucher) request.getSession().getAttribute("appliedPromotion");
             Double discount = (Double) request.getSession().getAttribute("discount");
             if (discount == null) discount = 0.0;
 
-            model.addAttribute("allPromotions", allPromotions);
-            model.addAttribute("appliedPromotion", appliedPromotion);
+            model.addAttribute("allPromotions", allVouchers);
+            model.addAttribute("appliedPromotion", appliedVoucher);
             model.addAttribute("discount", discount);
         }
 
@@ -518,7 +552,6 @@ public class UserController {
             return "redirect:/view-cart";
         }
 
-        // ========== CHECK FOR SERIES BUNDLE ==========
         List<CartItem> selectedCartItems = new ArrayList<>();
         for (String selectedId : selectedItems) {
             Integer bookId = Integer.valueOf(selectedId);
@@ -542,7 +575,6 @@ public class UserController {
             return "redirect:/purchase";
         }
 
-        // Remove promotion if code is empty
         if (promotionCode == null || promotionCode.trim().isEmpty()) {
             request.getSession().removeAttribute("appliedPromotion");
             request.getSession().removeAttribute("discount");
@@ -551,9 +583,9 @@ public class UserController {
             return "redirect:/purchase";
         }
 
-        Promotion promotion = promotionService.findByCode(promotionCode);
+        Voucher voucher = voucherService.findByCode(promotionCode);
 
-        if (promotion == null) {
+        if (voucher == null) {
             redirectAttributes.addFlashAttribute("error", "Promotion code not found!");
             request.getSession().removeAttribute("appliedPromotion");
             request.getSession().removeAttribute("discount");
@@ -561,16 +593,16 @@ public class UserController {
             return "redirect:/purchase";
         }
 
-        if (!"ACTIVE".equals(promotion.getStatus())) {
+        if (!"ACTIVE".equals(voucher.getStatus())) {
             redirectAttributes.addFlashAttribute("error",
-                    "This promotion is " + promotion.getStatus().toLowerCase() + " and cannot be used!");
+                    "This promotion is " + voucher.getStatus().toLowerCase() + " and cannot be used!");
             request.getSession().removeAttribute("appliedPromotion");
             request.getSession().removeAttribute("discount");
             request.getSession().setAttribute("selectedItems", selectedItems);
             return "redirect:/purchase";
         }
 
-        if (promotion.getUsedCount() >= promotion.getMaxUsage()) {
+        if (voucher.getUsedCount() >= voucher.getMaxUsage()) {
             redirectAttributes.addFlashAttribute("error",
                     "This promotion has reached its usage limit!");
             request.getSession().removeAttribute("appliedPromotion");
@@ -579,7 +611,6 @@ public class UserController {
             return "redirect:/purchase";
         }
 
-        // Calculate order total
         Double orderTotal = 0.0;
         for (String selectedId : selectedItems) {
             Integer bookId = Integer.valueOf(selectedId);
@@ -591,63 +622,27 @@ public class UserController {
             }
         }
 
-        // Check minimum order
-        if (orderTotal < promotion.getMinOrder()) {
+        if (orderTotal < voucher.getMinOrder()) {
             redirectAttributes.addFlashAttribute("error",
-                    "Your order total must be at least " + promotion.getMinOrder() + " VND to use this promotion!");
+                    "Your order total must be at least " + voucher.getMinOrder() + " VND to use this promotion!");
             request.getSession().removeAttribute("appliedPromotion");
             request.getSession().removeAttribute("discount");
             request.getSession().setAttribute("selectedItems", selectedItems);
             return "redirect:/purchase";
         }
 
-        // ========== FIX: HANDLE BOTH DISCOUNT TYPES CORRECTLY ==========
-        String discountType = promotion.getDiscountType();
-        Double totalDiscount = 0.0;
-        boolean hasValidBook = false;
+        Double totalDiscount = voucherService.calculateOrderDiscount(voucher, orderTotal);
 
-        if ("ORDER_FIXED".equals(discountType)) {
-            // ========== ORDER_FIXED: Calculate discount for entire order ==========
-            totalDiscount = promotionService.calculateOrderDiscount(promotion, orderTotal);
-
-            if (totalDiscount > 0) {
-                hasValidBook = true; // Promotion applies to the entire order
-            }
-
-        } else if ("PER_PRODUCT".equals(discountType)) {
-            // ========== PER_PRODUCT: Calculate discount per book ==========
-            for (String selectedId : selectedItems) {
-                Integer bookId = Integer.valueOf(selectedId);
-
-                for (CartItem item : cartItems) {
-                    if (item.getBook().getId().equals(bookId)) {
-                        Double itemDiscountPerUnit = promotionService.calculateDiscountForBook(
-                                promotion,
-                                bookId
-                        );
-
-                        if (itemDiscountPerUnit > 0) {
-                            totalDiscount += (itemDiscountPerUnit * item.getQuantity());
-                            hasValidBook = true;
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Validate that promotion applies
-        if (!hasValidBook || totalDiscount <= 0) {
+        if (totalDiscount <= 0) {
             redirectAttributes.addFlashAttribute("error",
-                    "None of your selected products are eligible for this promotion!");
+                    "This promotion cannot be applied to your order!");
             request.getSession().removeAttribute("appliedPromotion");
             request.getSession().removeAttribute("discount");
             request.getSession().setAttribute("selectedItems", selectedItems);
             return "redirect:/purchase";
         }
 
-        // Save promotion to session
-        request.getSession().setAttribute("appliedPromotion", promotion);
+        request.getSession().setAttribute("appliedPromotion", voucher);
         request.getSession().setAttribute("discount", totalDiscount);
         request.getSession().setAttribute("selectedItems", selectedItems);
 
@@ -658,150 +653,168 @@ public class UserController {
     }
 
     @PostMapping("/confirm")
-    public String confirm(HttpServletRequest request, Model model,
-                          @RequestParam(required = false) String promotionCode,
-                          @RequestParam(required = false) String paymentMethod,
-                          RedirectAttributes redirectAttributes) {
-        User user = userService.getCurrentUser(request);
-        List<CartItem> cartItems = cartItemService.getCartItems(user);
-
-        if (cartItemService.isCartEmpty(user)) {
-            redirectAttributes.addFlashAttribute("error", "Your cart is empty!");
-            return "redirect:/view-cart";
-        }
-
-        String[] selectedItems = request.getParameterValues("selectedItems");
-
-        if (selectedItems == null || selectedItems.length == 0) {
-            selectedItems = (String[]) request.getSession().getAttribute("selectedItems");
-        }
-
-        if (selectedItems == null || selectedItems.length == 0) {
-            redirectAttributes.addFlashAttribute("error", "You haven't selected any products!");
-            return "redirect:/view-cart";
-        }
-
-        // ========== VALIDATE PAYMENT METHOD ==========
-        if (paymentMethod == null || paymentMethod.trim().isEmpty()) {
-            request.getSession().setAttribute("selectedItems", selectedItems);
-            model.addAttribute("error", "Please select a payment method!");
-            model.addAttribute("cartItems", cartItems);
-            return "user/purchase_user";
-        }
-
-        request.getSession().setAttribute("selectedItems", selectedItems);
-
-        String fullname = request.getParameter("fullname");
-        String phone = request.getParameter("phone");
-        String address = request.getParameter("address");
+    public String confirm(
+            HttpServletRequest request,
+            Model model,
+            @RequestParam(required = false) String promotionCode,
+            @RequestParam(required = false) String paymentMethod,
+            @RequestParam(required = false) String shippingMethod,
+            RedirectAttributes redirectAttributes) {
 
         try {
-            orderService.validateCustomerInfo(fullname, phone, address);
-        } catch (IllegalArgumentException e) {
+            User user = userService.getCurrentUser(request);
+            List<CartItem> cartItems = cartItemService.getCartItems(user);
+
+            if (cartItemService.isCartEmpty(user)) {
+                redirectAttributes.addFlashAttribute("error", "Your cart is empty!");
+                return "redirect:/view-cart";
+            }
+
+            String[] selectedItems = request.getParameterValues("selectedItems");
+
+            if (selectedItems == null || selectedItems.length == 0) {
+                selectedItems = (String[]) request.getSession().getAttribute("selectedItems");
+            }
+
+            if (selectedItems == null || selectedItems.length == 0) {
+                redirectAttributes.addFlashAttribute("error", "You haven't selected any products!");
+                return "redirect:/view-cart";
+            }
+
+            if (paymentMethod == null || paymentMethod.trim().isEmpty()) {
+                request.getSession().setAttribute("selectedItems", selectedItems);
+                model.addAttribute("error", "Please select a payment method!");
+                model.addAttribute("cartItems", cartItems);
+                return "user/purchase_user";
+            }
+
+            if (shippingMethod == null || shippingMethod.trim().isEmpty()) {
+                request.getSession().setAttribute("selectedItems", selectedItems);
+                model.addAttribute("error", "Please select a shipping method!");
+                model.addAttribute("cartItems", cartItems);
+                return "user/purchase_user";
+            }
+
+            String normalizedMethod = shippingMethod.toUpperCase().trim();
+            if (!normalizedMethod.equals("STANDARD") &&
+                    !normalizedMethod.equals("EXPRESS") &&
+                    !normalizedMethod.equals("SAME-DAY")) {
+                request.getSession().setAttribute("selectedItems", selectedItems);
+                model.addAttribute("error", "Invalid shipping method!");
+                model.addAttribute("cartItems", cartItems);
+                return "user/purchase_user";
+            }
+
             request.getSession().setAttribute("selectedItems", selectedItems);
-            model.addAttribute("fullnameValue", fullname);
-            model.addAttribute("phoneValue", phone);
-            model.addAttribute("addressValue", address);
 
-            String errorMsg = e.getMessage();
-            if (errorMsg.contains("Full name") || errorMsg.contains("name")) {
-                model.addAttribute("fullnameError", errorMsg);
-            } else if (errorMsg.contains("Phone") || errorMsg.contains("phone")) {
-                model.addAttribute("phoneError", errorMsg);
-            } else if (errorMsg.contains("Address") || errorMsg.contains("address")) {
-                model.addAttribute("addressError", errorMsg);
-            }
+            String fullname = request.getParameter("fullname");
+            String phone = request.getParameter("phone");
+            String address = request.getParameter("address");
 
-            model.addAttribute("cartItems", cartItems);
-            return "user/purchase_user";
-        }
+            try {
+                orderService.validateCustomerInfo(fullname, phone, address);
+            } catch (IllegalArgumentException e) {
+                request.getSession().setAttribute("selectedItems", selectedItems);
+                model.addAttribute("fullnameValue", fullname);
+                model.addAttribute("phoneValue", phone);
+                model.addAttribute("addressValue", address);
 
-        List<CartItem> selectedCartItems = new ArrayList<>();
-        List<Integer> cartItemIds = new ArrayList<>();
-        for (String selectedId : selectedItems) {
-            Integer bookId = Integer.valueOf(selectedId);
-            for (CartItem item : cartItems) {
-                if (item.getBook().getId().equals(bookId)) {
-                    Book book = bookService.findById(item.getBook().getId());
-
-                    if (book == null) {
-                        request.getSession().setAttribute("selectedItems", selectedItems);
-                        redirectAttributes.addFlashAttribute("error", "Book not found!");
-                        return "redirect:/purchase";
-                    }
-
-                    if (book.getNumber_in_stock() == 0) {
-                        request.getSession().setAttribute("selectedItems", selectedItems);
-                        redirectAttributes.addFlashAttribute("error",
-                                "Book '" + book.getTitle() + "' is out of stock!");
-                        return "redirect:/purchase";
-                    }
-
-                    if (book.getNumber_in_stock() < item.getQuantity()) {
-                        request.getSession().setAttribute("selectedItems", selectedItems);
-                        redirectAttributes.addFlashAttribute("error",
-                                "Book '" + book.getTitle() + "' only has " +
-                                        book.getNumber_in_stock() + " copies left!");
-                        return "redirect:/purchase";
-                    }
-
-                    selectedCartItems.add(item);
-                    cartItemIds.add(item.getId());
-                    break;
-                }
-            }
-        }
-
-        try {
-            // Tạo order với promotion và payment method
-            Order order = orderService.createOrderFromSelectedItems(
-                    selectedCartItems,
-                    fullname,
-                    phone,
-                    address,
-                    promotionCode,
-                    paymentMethod,
-                    DEFAULT_SHIPPING_FEE
-            );
-
-            order = orderService.save(order);
-
-            // ========== FIX: LƯU ORDER ID TRƯỚC KHI XÓA CART ==========
-            Integer orderId = order.getId();
-
-            // Xóa promotion khỏi session
-            request.getSession().removeAttribute("appliedPromotion");
-            request.getSession().removeAttribute("discount");
-            request.getSession().removeAttribute("selectedItems");
-
-            for (CartItem item : selectedCartItems) {
-                try {
-                    // Xóa theo User + Book ID
-                    cartItemService.removeCartItemByUserAndBook(user, item.getBook().getId());
-                } catch (Exception e) {
-                    System.out.println("Warning: Could not delete cart item for book " + item.getBook().getId());
+                String errorMsg = e.getMessage();
+                if (errorMsg.contains("Full name") || errorMsg.contains("name")) {
+                    model.addAttribute("fullnameError", errorMsg);
+                } else if (errorMsg.contains("Phone") || errorMsg.contains("phone")) {
+                    model.addAttribute("phoneError", errorMsg);
+                } else if (errorMsg.contains("Address") || errorMsg.contains("address")) {
+                    model.addAttribute("addressError", errorMsg);
                 }
 
+                model.addAttribute("cartItems", cartItems);
+                return "user/purchase_user";
             }
 
-            // ========== FIX: REDIRECT THAY VÌ LẤY CART ITEMS NGAY ==========
-            // Không lấy cartItems ở đây nữa vì sẽ gây lỗi flush
-            redirectAttributes.addFlashAttribute("success",
-                    "Order #" + orderId + " placed successfully!");
-            redirectAttributes.addFlashAttribute("orderId", orderId);
+            List<CartItem> selectedCartItems = new ArrayList<>();
+            List<Integer> cartItemIds = new ArrayList<>();
+            for (String selectedId : selectedItems) {
+                Integer bookId = Integer.valueOf(selectedId);
+                for (CartItem item : cartItems) {
+                    if (item.getBook().getId().equals(bookId)) {
+                        Book book = bookService.findById(item.getBook().getId());
 
-            return "redirect:/order-detail?id=" + orderId;
+                        if (book == null) {
+                            request.getSession().setAttribute("selectedItems", selectedItems);
+                            redirectAttributes.addFlashAttribute("error", "Book not found!");
+                            return "redirect:/purchase";
+                        }
 
-        } catch (IllegalStateException e) {
-            request.getSession().setAttribute("selectedItems", selectedItems);
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
-            return "redirect:/purchase";
+                        if (book.getNumber_in_stock() == 0) {
+                            request.getSession().setAttribute("selectedItems", selectedItems);
+                            redirectAttributes.addFlashAttribute("error",
+                                    "Book '" + book.getTitle() + "' is out of stock!");
+                            return "redirect:/purchase";
+                        }
+
+                        if (book.getNumber_in_stock() < item.getQuantity()) {
+                            request.getSession().setAttribute("selectedItems", selectedItems);
+                            redirectAttributes.addFlashAttribute("error",
+                                    "Book '" + book.getTitle() + "' only has " +
+                                            book.getNumber_in_stock() + " copies left!");
+                            return "redirect:/purchase";
+                        }
+
+                        selectedCartItems.add(item);
+                        cartItemIds.add(item.getId());
+                        break;
+                    }
+                }
+            }
+
+            try {
+                Order order = orderService.createOrderFromSelectedItems(
+                        selectedCartItems,
+                        fullname,
+                        phone,
+                        address,
+                        promotionCode,
+                        paymentMethod,
+                        normalizedMethod
+                );
+
+                order = orderService.save(order);
+
+                Integer orderId = order.getId();
+
+                request.getSession().removeAttribute("appliedPromotion");
+                request.getSession().removeAttribute("discount");
+                request.getSession().removeAttribute("selectedItems");
+
+                for (CartItem item : selectedCartItems) {
+                    try {
+                        cartItemService.removeCartItemByUserAndBook(user, item.getBook().getId());
+                    } catch (Exception e) {
+                        System.out.println("Warning: Could not delete cart item for book " + item.getBook().getId());
+                    }
+                }
+
+                redirectAttributes.addFlashAttribute("showSuccessPopup", true);
+                redirectAttributes.addFlashAttribute("orderId", orderId);
+
+                return "redirect:/order-detail?id=" + orderId;
+
+            } catch (IllegalStateException e) {
+                request.getSession().setAttribute("selectedItems", selectedItems);
+                redirectAttributes.addFlashAttribute("error", e.getMessage());
+                return "redirect:/purchase";
+            } catch (Exception e) {
+                e.printStackTrace();
+                request.getSession().setAttribute("selectedItems", selectedItems);
+                redirectAttributes.addFlashAttribute("error",
+                        "Error processing order: " + e.getMessage());
+                return "redirect:/purchase";
+            }
         } catch (Exception e) {
             e.printStackTrace();
-            request.getSession().setAttribute("selectedItems", selectedItems);
-            redirectAttributes.addFlashAttribute("error",
-                    "Error processing order: " + e.getMessage());
-            return "redirect:/purchase";
+            redirectAttributes.addFlashAttribute("error", "An error occurred!");
+            return "redirect:/view-cart";
         }
     }
 
@@ -833,38 +846,22 @@ public class UserController {
             orderPage = orderService.findByUser(user, 0, 10);
         }
 
-        // **THÊM PHẦN NÀY** - Tạo Map chứa promotion codes và discount amounts
-        Map<Integer, List<String>> orderPromotions = new HashMap<>();
+        Map<Integer, String> orderPromotions = new HashMap<>();
         Map<Integer, Double> orderDiscounts = new HashMap<>();
 
         for (Order order : orderPage.getContent()) {
-            List<String> promotionCodes = new ArrayList<>();
-            double totalDiscount = 0.0;
-
-            if (order.getOrderDetailList() != null) {
-                for (OrderDetail detail : order.getOrderDetailList()) {
-                    if (detail.getPromotion() != null) {
-                        String code = detail.getPromotion().getCode();
-                        if (!promotionCodes.contains(code)) {
-                            promotionCodes.add(code);
-                        }
-                    }
-                    if (detail.getDiscountAmount() != null) {
-                        totalDiscount += detail.getDiscountAmount();
-                    }
-                }
+            if (order.getVoucher() != null) {
+                orderPromotions.put(order.getId(), order.getVoucher().getCode());
             }
 
-            orderPromotions.put(order.getId(), promotionCodes);
-            orderDiscounts.put(order.getId(), totalDiscount);
+            Double discount = order.getDiscount_amount() != null ? order.getDiscount_amount() : 0.0;
+            orderDiscounts.put(order.getId(), discount);
         }
 
         model.addAttribute("orderList", orderPage.getContent());
         model.addAttribute("page", currentPage);
         model.addAttribute("totalPage", orderPage.getTotalPages());
         model.addAttribute("user", user);
-
-        // **THÊM 2 DÒNG NÀY**
         model.addAttribute("orderPromotions", orderPromotions);
         model.addAttribute("orderDiscounts", orderDiscounts);
 
@@ -896,13 +893,25 @@ public class UserController {
                 return "redirect:/orders";
             }
 
-            // ========== SECURITY: Verify order belongs to current user ==========
             if (!order.getUser().getId().equals(currentUser.getId())) {
                 redirectAttributes.addFlashAttribute("error", "Unauthorized access!");
                 return "redirect:/orders";
             }
 
+            Double orderDiscount = order.getDiscount_amount() != null ? order.getDiscount_amount() : 0.0;
+
+            Double finalTotal = order.getFinalTotal();
+
+            String promotionCode = null;
+            if (order.getVoucher() != null) {
+                promotionCode = order.getVoucher().getCode();
+            }
+
             model.addAttribute("order", order);
+            model.addAttribute("orderDiscount", orderDiscount);
+            model.addAttribute("finalTotal", finalTotal != null ? finalTotal : 0.0);
+            model.addAttribute("shippingFee", order.getShipping_fee() != null ? order.getShipping_fee() : 0.0);
+            model.addAttribute("promotionCode", promotionCode);
 
             List<CartItem> cartItems = cartItemService.getCartItems(currentUser);
             Integer totalBooks = cartItemService.calculateTotalBooks(currentUser);
@@ -911,7 +920,7 @@ public class UserController {
             model.addAttribute("cartTotalBooks", totalBooks != null ? totalBooks : 0);
             model.addAttribute("user", currentUser);
 
-            return "admin/order_detail_ad";
+            return "user/orderedDetail_user";
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -920,16 +929,68 @@ public class UserController {
         }
     }
 
-    @GetMapping("/delete-order-user")
-    public String deleteOrder(@RequestParam(required = true) Integer id,
+    // ========== CANCEL ORDER ENDPOINTS ==========
+
+    @GetMapping("/cancel-order")
+    public String cancelOrder(@RequestParam Integer id,
                               RedirectAttributes redirectAttributes) {
         try {
-            orderService.cancelOrder(id);
-            redirectAttributes.addFlashAttribute("success", "Order cancelled successfully!");
+            Order order = orderService.findById(id);
+
+            if (order == null) {
+                redirectAttributes.addFlashAttribute("error", "Order not found!");
+                return "redirect:/orders";
+            }
+
+            User currentUser = userService.getCurrentUserFromContext();
+            if (currentUser == null || !order.getUser().getId().equals(currentUser.getId())) {
+                redirectAttributes.addFlashAttribute("error", "Unauthorized access!");
+                return "redirect:/orders";
+            }
+
+            if ("Pending".equals(order.getStatus()) || "Assigned".equals(order.getStatus())) {
+                // Direct cancel for Pending and Assigned orders
+                orderService.cancelOrder(id);
+                redirectAttributes.addFlashAttribute("success", "Order cancelled successfully!");
+            } else {
+                redirectAttributes.addFlashAttribute("error",
+                        "Only pending orders can be cancelled directly!");
+            }
+
         } catch (IllegalStateException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Error cancelling order!");
+        }
+        return "redirect:/orders";
+    }
+
+    @GetMapping("/request-cancel-order")
+    public String requestCancelOrder(@RequestParam Integer id,
+                                     RedirectAttributes redirectAttributes) {
+        try {
+            Order order = orderService.findById(id);
+
+            if (order == null) {
+                redirectAttributes.addFlashAttribute("error", "Order not found!");
+                return "redirect:/orders";
+            }
+
+            User currentUser = userService.getCurrentUserFromContext();
+            if (currentUser == null || !order.getUser().getId().equals(currentUser.getId())) {
+                redirectAttributes.addFlashAttribute("error", "Unauthorized access!");
+                return "redirect:/orders";
+            }
+
+            orderService.requestCancelOrder(id);
+            redirectAttributes.addFlashAttribute("success",
+                    "Cancel request submitted successfully! Waiting for admin review.");
+
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("error", "Error submitting cancel request!");
         }
         return "redirect:/orders";
     }

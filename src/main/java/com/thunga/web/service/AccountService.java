@@ -310,6 +310,8 @@ public class AccountService implements UserDetailsService {
             errors.put("password", "Password must be at least 6 characters long");
         } else if (password.length() > 20) {
             errors.put("password", "Password must not exceed 20 characters");
+        } else if (!password.matches("^(?=.*[A-Za-z])(?=.*\\d).+$")) {
+            errors.put("password", "Password must contain at least one letter and one number");
         }
 
         // Validate confirmPassword

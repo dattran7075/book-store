@@ -32,12 +32,13 @@
                                 <li style="list-style:none ;" class="menu-item-has-children"
                                     sec:authorize="isAuthenticated()">
                                     <a href=""> <i id="user_icon" class="fa fa-user"></i> Welcome <span
-                                            th:text="${currentStaff.name}"></span></a>
+                                            class="sr-only"></span></a>
                                     <div class="mega-menu user">
                                         <ul class="tg-themetabnav " role="tablist">
                                             <li><a th:href="@{/profile}">Profile<span
-                                                    class="sr-only">(current)</span></a>
-                                            </li>
+                                                    class="sr-only">(current)</span></a></li>
+                                            <li><a th:href="@{/staff/orders}">Orders<span
+                                                    class="sr-only">(current)</span></a></li>
                                             <li><a class="tg-userlogout" th:href="@{/logout}">Logout<span
                                                     class="sr-only">(current)</span></a></li>
                                         </ul>
@@ -76,8 +77,12 @@
                             <div id="tg-navigation" class="collapse navbar-collapse tg-navigation">
                                 <ul>
                                     <li><a th:href="@{/}">Home</a></li>
-                                    <li class="tg-active"><a th:href="@{/staff/books}">Books</a></li>
-                                    <li><a th:href="@{/staff/orders}">My Orders</a></li>
+                                    <li><a th:href="@{/staff/books}">Books</a></li>
+                                    <li><a th:href="@{/staff/orders}">Orders</a></li>
+                                    <li><a th:href="@{/staff/categories}">Categories</a></li>
+                                    <li><a th:href="@{/staff/authors}">Authors</a></li>
+                                    <li><a th:href="@{/staff/publishers}">Publishers</a></li>
+                                    <li><a th:href="@{/staff/languages}">Languages</a></li>
                                 </ul>
                             </div>
                         </nav>
@@ -86,14 +91,13 @@
             </div>
         </div>
     </header>
-
     <div class="tg-innerbanner tg-haslayout tg-parallax tg-bginnerbanner" data-z-index="-100"
          data-appear-top-offset="600" data-parallax="scroll" data-image-src="../images/parallax/bgparallax-07.jpg">
         <div class="container">
             <div class="row">
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
                     <div class="tg-innerbannercontent">
-                        <h1 style="margin-bottom: 20px;">Manage Books</h1>
+                        <h1 style="margin-bottom: 20px;">View Books</h1>
                         <ol class="tg-breadcrumb">
                             <li><a href="javascript:void(0);">Home</a></li>
                             <li class="tg-active">Books</li>
@@ -103,89 +107,109 @@
             </div>
         </div>
     </div>
-
     <main id="tg-main" class="tg-main tg-haslayout">
         <div class="tg-sectionspace tg-haslayout" style="padding-top: 50px;">
             <div class="container">
                 <div class="row">
                     <div>
-                        <!-- Success/Error Messages -->
-                        <div th:if="${successMessage}" class="alert alert-success alert-dismissible" role="alert">
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                            <i class="fa fa-check-circle"></i>
-                            <span th:text="${successMessage}"></span>
-                        </div>
-
-                        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible" role="alert">
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                            <i class="fa fa-exclamation-circle"></i>
-                            <span th:text="${errorMessage}"></span>
-                        </div>
-
                         <div>
                             <div id="tg-content" class="tg-content">
                                 <div class="tg-products">
                                     <div class="tg-productgrid">
-                                        <div class="tg-refinesearchh">
-                                            <form class="tg-formtheme tg-formsortshoitemss"
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <!-- Search Box (LEFT - SMALL) -->
+                                            <form class="tg-formtheme tg-formsearch"
                                                   th:action="@{/staff/books}" method="get">
                                                 <input type="hidden" name="page" value="1">
-                                                <select name="sortBy" onchange="this.form.submit()">
-                                                    <option value="">---Choose---</option>
-                                                    <option value="title" th:selected="${sortBy == 'title'}">Title (A-Z)
+                                                <input type="hidden" name="sortBy" th:value="${sortBy}"
+                                                       th:if="${sortBy}">
+
+                                                <div style="position: relative; width: 250px; display: flex; align-items: center;">
+                                                    <input type="text"
+                                                           name="keyword"
+                                                           placeholder="Search..."
+                                                           th:value="${keyword}"
+                                                           class="form-control"
+                                                           style="width: 100%; padding: 6px 10px 6px 16px; height: 35px; font-size: 13px;">
+                                                    <button type="submit"
+                                                            style="position: absolute; right: 5px; background: none; border: none; color: #666; cursor: pointer; padding: 0; z-index: 2;">
+                                                        <i class="fa fa-search" style="font-size: 16px;"></i>
+                                                    </button>
+                                                </div>
+                                            </form>
+                                            <!-- Sort Dropdown (RIGHT - ALIGNED WITH TABLE) -->
+                                            <form class="tg-formtheme tg-formsortshoitemss"
+                                                  th:action="@{/staff/books}" method="get"
+                                                  style="display: flex; width: auto;">
+                                                <input type="hidden" name="page" value="1">
+                                                <input type="hidden" name="keyword" th:value="${keyword}"
+                                                       th:if="${keyword}">
+                                                <select name="sortBy" onchange="this.form.submit()" class="form-control"
+                                                        style="width: 200px; height: 35px; font-size: 13px;">
+                                                    <option value="">---Choose Sort---</option>
+                                                    <option value="title" th:selected="${sortBy == 'title'}">
+                                                        Title: A → Z
                                                     </option>
-                                                    <option value="price" th:selected="${sortBy == 'price'}">Price
-                                                        (Low-High)
+                                                    <option value="title_desc" th:selected="${sortBy == 'title_desc'}">
+                                                        Title: Z → A
+                                                    </option>
+                                                    <option value="price" th:selected="${sortBy == 'price'}">
+                                                        Price: Low → High
+                                                    </option>
+                                                    <option value="price_desc" th:selected="${sortBy == 'price_desc'}">
+                                                        Price: High → Low
                                                     </option>
                                                 </select>
                                             </form>
                                         </div>
-                                        <div class="row">
+
+                                        <!-- Books Table -->
+                                        <div class="row" style="margin-top: 20px;">
                                             <table class="table table-bordered">
                                                 <thead>
                                                 <tr>
-                                                    <th style="width: 5%;">No.</th>
-                                                    <th style="width: 20%;">Title</th>
-                                                    <th style="width: 10%;">Image</th>
-                                                    <th style="width: 15%;">Category</th>
-                                                    <th style="width: 15%;">Author</th>
-                                                    <th style="width: 5%;">Price</th>
-                                                    <th style="width: 8%;">Stock</th>
-                                                    <th style="width: 8%;">Sold</th>
-                                                    <th style="width: 20%;">Actions</th>
+                                                    <th>No.</th>
+                                                    <th>Title</th>
+                                                    <th>Image</th>
+                                                    <th>Category</th>
+                                                    <th>Author</th>
+                                                    <th>Price</th>
+                                                    <th>Stock</th>
+                                                    <th>Sold</th>
+                                                    <th>Actions</th>
                                                 </tr>
                                                 </thead>
                                                 <tbody>
                                                 <tr th:each="book, iterStat: ${bookList}">
                                                     <td th:text="${(page - 1) * 10 + iterStat.index + 1}"></td>
                                                     <td th:text="${book.title}"></td>
-                                                    <td style="text-align: center;">
-                                                        <img th:src="@{|/bookImage?id=${book.id}|}" alt="Book Cover"
-                                                             style="width: 80px; height: 110px; object-fit: cover;"/>
-                                                    </td>
+                                                    <td><img th:src="@{|/bookImage?id=${book.id}|}" alt=""
+                                                             style="width:100px; height: 120px;"/></td>
                                                     <td th:text="${book.category.name}"></td>
                                                     <td th:text="${book.author.name}"></td>
                                                     <td th:text="${#numbers.formatInteger(book.price, 1, 'COMMA')}"></td>
                                                     <td th:text="${book.number_in_stock}"></td>
                                                     <td th:text="${book.number_sold}"></td>
                                                     <td>
-                                                        <!-- VIEW BUTTON - Only for viewing info (read-only) -->
-                                                        <a th:href="@{/staff/book-detail(id=${book.id})}">
+                                                        <!-- View Button -->
+                                                        <a th:href="@{|/staff/book-detail?id=${book.id}|}">
                                                             <button type="button" class="btn btn-info btn-sm">
-                                                                View
+                                                                <i class="fa fa-eye"></i> View
                                                             </button>
                                                         </a>
-
-                                                        <!-- EDIT STOCK BUTTON - For editing stock only -->
-                                                        <a th:href="@{/staff/edit-book(id=${book.id})}">
+                                                        <!-- Edit Stock Button -->
+                                                        <a th:href="@{|/staff/edit-book?id=${book.id}|}">
                                                             <button type="button" class="btn btn-warning btn-sm">
-                                                                Edit
+                                                                <i class="fa fa-edit"></i> Edit Stock
                                                             </button>
                                                         </a>
+                                                    </td>
+                                                </tr>
+                                                <tr th:if="${#lists.isEmpty(bookList)}">
+                                                    <td colspan="8" style="text-align: center; padding: 20px;">
+                                                        <p th:if="${keyword}">No books found matching "<strong
+                                                                th:text="${keyword}"></strong>"</p>
+                                                        <p th:if="${!keyword}">No books available</p>
                                                     </td>
                                                 </tr>
                                                 </tbody>
@@ -197,26 +221,28 @@
                         </div>
                     </div>
                 </div>
-                <div class="pagination">
-                    <ul class="pagination justify-content-center">
-                        <li class="page-item" th:classappend="${page <= 1} ? 'disabled'">
+
+                <!-- ✅ PAGINATION -->
+                <div style="display:flex; justify-content:center; margin-top: 30px;">
+                    <ul class="pagination">
+                        <li class="page-item" th:classappend="${page == 1} ? 'disabled'">
                             <a class="page-link"
-                               th:href="@{/staff/books(page=${page > 1 ? page - 1 : 1}, sortBy=${sortBy})}">
-                                <i class="fa fa-chevron-left"></i> Previous
+                               th:href="@{/staff/books(page=${page > 1 ? page - 1 : 1}, sortBy=${sortBy}, keyword=${keyword})}">
+                                Previous
                             </a>
                         </li>
                         <li class="page-item"
                             th:each="i : ${#numbers.sequence(1, totalPage)}"
                             th:classappend="${i == page} ? 'active'">
                             <a class="page-link"
-                               th:href="@{/staff/books(page=${i}, sortBy=${sortBy})}"
+                               th:href="@{/staff/books(page=${i}, sortBy=${sortBy}, keyword=${keyword})}"
                                th:text="${i}">
                             </a>
                         </li>
                         <li class="page-item" th:classappend="${page >= totalPage} ? 'disabled'">
                             <a class="page-link"
-                               th:href="@{/staff/books(page=${page < totalPage ? page + 1 : totalPage}, sortBy=${sortBy})}">
-                                Next <i class="fa fa-chevron-right"></i>
+                               th:href="@{/staff/books(page=${page < totalPage ? page + 1 : totalPage}, sortBy=${sortBy}, keyword=${keyword})}">
+                                Next
                             </a>
                         </li>
                     </ul>
@@ -274,15 +300,15 @@
                                     <li>
                                         <i class="icon-phone-handset"></i>
                                         <span>
-												<em>0812 567 889</em>
-												<em>+84 1245 6767</em>
-											</span>
+                                            <em>0812 567 889</em>
+                                            <em>+84 1245 6767</em>
+                                        </span>
                                     </li>
                                     <li>
                                         <i class="icon-clock"></i>
                                         <span>
-												Serving 7 days a week from 9:00 - 22:00
-											</span>
+                                            Serving 7 days a week from 9:00 - 22:00
+                                        </span>
                                     </li>
                                 </ul>
                                 <ul class="tg-socialicons">
@@ -325,6 +351,8 @@
             <div class="container">
                 <div class="row">
                     <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                        <span class="tg-paymenttype"><img src="../images/paymenticon.png"
+                                                          alt="image description"></span>
                         <span class="tg-copyright">2023 All Rights Reserved By &copy; Book Library</span>
                     </div>
                 </div>

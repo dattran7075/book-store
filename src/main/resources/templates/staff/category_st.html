@@ -1,4 +1,5 @@
 <!doctype html>
+<!doctype html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
 <head>
@@ -127,7 +128,6 @@
                                 <th>Category Name</th>
                                 <th>Level</th>
                                 <th>Books</th>
-                                <th>Created at</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -141,7 +141,6 @@
                                         <span th:if="${category.level == 2}" class="label label-warning">Child</span>
                                     </td>
                                     <td th:text="${category.bookList.size()}"></td>
-                                    <td th:text="${#dates.format(category.created_at, 'dd/MM/yyyy')}"></td>
                                 </tr>
                             </th:block>
                             <tr th:if="${#lists.isEmpty(categoryList)}">

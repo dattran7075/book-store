@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Book Library | Admin Profile - Admin</title>
+    <title>Book Library | Staff Profile</title>
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="apple-touch-icon" href="../apple-touch-icon.png">
@@ -66,9 +66,6 @@
                                 Login<span class="sr-only">(current)</span></a>
                         </div>
                     </div>
-                    <div>
-
-                    </div>
                 </div>
             </div>
         </div>
@@ -100,15 +97,12 @@
                         <div id="tg-navigation" class="collapse navbar-collapse tg-navigation">
                             <ul>
                                 <li><a th:href="@{/}">Home</a></li>
-                                <li><a th:href="@{/products}" sec:authorize="!hasRole('ADMIN')">Books</a></li>
-                                <li><a th:href="@{/manage-product}" sec:authorize="hasRole('ADMIN')">Books</a></li>
-                                <li><a th:href="@{/manage-category}" sec:authorize="hasRole('ADMIN')">Categories</a>
+                                <li><a th:href="@{/staff/books}" sec:authorize="hasRole('STAFF')">Books</a></li>
+                                <li><a th:href="@{/staff/orders}" sec:authorize="hasRole('STAFF')">Orders</a></li>
+                                <li><a th:href="@{/staff/categories}" sec:authorize="hasRole('STAFF')">Categories</a>
                                 </li>
-                                <li><a th:href="@{/manage-author}" sec:authorize="hasRole('ADMIN')">Authors</a></li>
-                                <li><a th:href="@{/manage-user}" sec:authorize="hasRole('ADMIN')">Users</a></li>
-                                <li><a th:href="@{/manage-order}" sec:authorize="hasRole('ADMIN')">Orders</a></li>
-                                <li><a th:href="@{/manage-promotion}" sec:authorize="hasRole('ADMIN')">Promotions</a>
-                                <li><a th:href="@{/statistic}" sec:authorize="hasRole('ADMIN')">Statistics</a></li>
+                                <li><a th:href="@{/staff/authors}" sec:authorize="hasRole('STAFF')">Authors</a></li>
+                                <li><a th:href="@{/staff/promotions}" sec:authorize="hasRole('STAFF')">Promotions</a>
                                 </li>
                             </ul>
                         </div>
@@ -118,6 +112,7 @@
         </div>
     </div>
 </header>
+
 <div class="tg-innerbanner tg-haslayout tg-parallax tg-bginnerbanner" data-z-index="-100" data-appear-top-offset="600"
      data-parallax="scroll" data-image-src="../images/parallax/bgparallax-07.jpg">
     <div class="container">
@@ -127,12 +122,14 @@
                     <h1 style="margin-bottom: 20px;">Personal Information</h1>
                     <ol class="tg-breadcrumb">
                         <li><a href="javascript:void(0);">Home</a></li>
+                        <li class="tg-active">Staff Profile</li>
                     </ol>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
 <main id="tg-main" class="tg-main tg-haslayout">
     <div class="tg-sectionspace tg-haslayout">
         <div class="container">
@@ -144,7 +141,8 @@
                             <div class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-left">
                                 <h2>Personal Information</h2>
                                 <div class="form-group">
-                                    <label for="name"><span style="color: red;">*</span><strong>Full name</strong></label>
+                                    <label for="name"><span style="color: red;">*</span><strong>Full
+                                        name</strong></label>
                                     <input type="text" th:field="*{name}" class="form-control" style="width: 600px;"
                                            id="name" disabled>
                                 </div>
@@ -156,22 +154,26 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="phone"><span style="color: red;">*</span><strong>Phone number</strong></label>
+                                    <label for="phone"><span style="color: red;">*</span><strong>Phone
+                                        number</strong></label>
                                     <input type="text" th:field="*{phone}" class="form-control" style="width: 600px;"
                                            id="phone" disabled>
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="address"><span style="color: red;">*</span><strong>Address</strong></label>
+                                    <label for="address"><span
+                                            style="color: red;">*</span><strong>Address</strong></label>
                                     <input type="text" th:field="*{address}" class="form-control" style="width: 600px;"
                                            id="address" disabled>
                                 </div>
                             </div>
 
-                            <div th:if="${admin.account != null}" class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-right">
+                            <div th:if="${admin.account != null}"
+                                 class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-right">
                                 <h2>Account</h2>
                                 <div class="form-group">
-                                    <label for="username"><span style="color: red;">*</span><strong>Username</strong></label>
+                                    <label for="username"><span
+                                            style="color: red;">*</span><strong>Username</strong></label>
                                     <input type="text" th:value="*{account.username}" class="form-control"
                                            style="width: 400px;" id="username" disabled>
                                 </div>
@@ -179,7 +181,8 @@
                                         data-toggle="modal" data-target="#myModal_edit_password">Change password
                                 </button>
                             </div>
-                            <div th:unless="${admin.account != null}" class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-right">
+                            <div th:unless="${admin.account != null}"
+                                 class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-right">
                                 <h2>Account</h2>
                                 <div class="form-group">
                                     <label><strong>Username</strong></label>
@@ -192,8 +195,12 @@
                             </div>
                         </div>
 
-                        <button type="button" class="btn btn-warning" id="edit-btn" style="display:block; margin-top: 20px;">Edit</button>
-                        <button type="submit" class="btn btn-primary" id="save-btn" style="display:none; margin-top: 20px;">Save</button>
+                        <button type="button" class="btn btn-warning" id="edit-btn"
+                                style="display:block; margin-top: 20px;">Edit
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="save-btn"
+                                style="display:none; margin-top: 20px;">Save
+                        </button>
                     </div>
                 </form>
             </div>
@@ -219,8 +226,10 @@
                     <div class="form-group">
                         <label><span style="color: red;">*</span>Old password</label>
                         <div style="position: relative; display: flex; align-items: center;">
-                            <input type="password" class="form-control password-input" name="oldPassword" id="oldPassword" required style="padding-right: 45px; flex: 1;">
-                            <button type="button" class="btn-toggle-password" data-target="#oldPassword" style="position: absolute; right: 12px;">
+                            <input type="password" class="form-control password-input" name="oldPassword"
+                                   id="oldPassword" required style="padding-right: 45px; flex: 1;">
+                            <button type="button" class="btn-toggle-password" data-target="#oldPassword"
+                                    style="position: absolute; right: 12px;">
                                 <i class="fa fa-eye"></i>
                             </button>
                         </div>
@@ -230,8 +239,10 @@
                     <div class="form-group">
                         <label style="margin-top:10px;"><span style="color: red;">*</span>New password</label>
                         <div style="position: relative; display: flex; align-items: center;">
-                            <input type="password" class="form-control password-input" name="newPassword" id="newPassword" required style="padding-right: 45px; flex: 1;">
-                            <button type="button" class="btn-toggle-password" data-target="#newPassword" style="position: absolute; right: 12px;">
+                            <input type="password" class="form-control password-input" name="newPassword"
+                                   id="newPassword" required style="padding-right: 45px; flex: 1;">
+                            <button type="button" class="btn-toggle-password" data-target="#newPassword"
+                                    style="position: absolute; right: 12px;">
                                 <i class="fa fa-eye"></i>
                             </button>
                         </div>
@@ -241,8 +252,10 @@
                     <div class="form-group">
                         <label style="margin-top:10px;"><span style="color: red;">*</span>Confirm new password</label>
                         <div style="position: relative; display: flex; align-items: center;">
-                            <input type="password" class="form-control password-input" name="confirmNewPassword" id="confirmNewPassword" required style="padding-right: 45px; flex: 1;">
-                            <button type="button" class="btn-toggle-password" data-target="#confirmNewPassword" style="position: absolute; right: 12px;">
+                            <input type="password" class="form-control password-input" name="confirmNewPassword"
+                                   id="confirmNewPassword" required style="padding-right: 45px; flex: 1;">
+                            <button type="button" class="btn-toggle-password" data-target="#confirmNewPassword"
+                                    style="position: absolute; right: 12px;">
                                 <i class="fa fa-eye"></i>
                             </button>
                         </div>
@@ -325,10 +338,14 @@
                                 </li>
                             </ul>
                             <ul class="tg-socialicons">
-                                <li class="tg-facebook"><a href="javascript:void(0);"><i class="fa fa-facebook"></i></a></li>
-                                <li class="tg-twitter"><a href="javascript:void(0);"><i class="fa fa-twitter"></i></a></li>
-                                <li class="tg-linkedin"><a href="javascript:void(0);"><i class="fa fa-linkedin"></i></a></li>
-                                <li class="tg-googleplus"><a href="javascript:void(0);"><i class="fa fa-google-plus"></i></a></li>
+                                <li class="tg-facebook"><a href="javascript:void(0);"><i class="fa fa-facebook"></i></a>
+                                </li>
+                                <li class="tg-twitter"><a href="javascript:void(0);"><i class="fa fa-twitter"></i></a>
+                                </li>
+                                <li class="tg-linkedin"><a href="javascript:void(0);"><i class="fa fa-linkedin"></i></a>
+                                </li>
+                                <li class="tg-googleplus"><a href="javascript:void(0);"><i
+                                        class="fa fa-google-plus"></i></a></li>
                                 <li class="tg-rss"><a href="javascript:void(0);"><i class="fa fa-rss"></i></a></li>
                             </ul>
                         </div>
@@ -338,7 +355,6 @@
                             <div class="tg-widgettitle">
                                 <h3>We guarantee</h3>
                             </div>
-
                             <div class="tg-widgetcontent">
                                 <ul>
                                     <li><a href="javascript:void(0);">Always respect customers</a></li>

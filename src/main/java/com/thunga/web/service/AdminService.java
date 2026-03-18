@@ -37,6 +37,9 @@ public class AdminService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private AccountService accountService;
+
     private Map<String, String> otpStorage = new ConcurrentHashMap<>();
     private Map<String, LocalDateTime> otpExpiryStorage = new ConcurrentHashMap<>();
     private static final int OTP_EXPIRY_MINUTES = 5;
@@ -108,25 +111,43 @@ public class AdminService {
 
     public String changePassword(HttpServletRequest request) {
         String username = request.getRemoteUser();
-        Account account = accountRepository.findByUsername(username);
-        if (account == null) {
-            return "Account not found";
-        }
+        Account account = accountService.findByUsername(username);
         String oldPassword = request.getParameter("oldPassword");
+
         if (!passwordEncoder.matches(oldPassword, account.getPassword())) {
             return "Old password is incorrect";
         }
+
         String newPassword = request.getParameter("newPassword");
-        if (newPassword.length() < 5) {
-            return "New password must be at least 5 characters";
+        if (newPassword == null || newPassword.isEmpty()) {
+            return "New password cannot be empty";
         }
+
+        if (newPassword.length() < 6) {
+            return "New password must be at least 6 characters";
+        } else if (newPassword.length() > 20) {
+            return "Password must not exceed 20 characters";
+        } else if (!newPassword.matches("^(?=.*[A-Za-z])(?=.*\\d).+$")) {
+            return "Password must contain at least one letter and one number";
+        }
+
         String confirmNewPassword = request.getParameter("confirmNewPassword");
+        if (confirmNewPassword == null || confirmNewPassword.isEmpty()) {
+            return "Confirm password cannot be empty";
+        }
+
         if (!confirmNewPassword.equals(newPassword)) {
             return "Confirm password does not match";
         }
+
+        if (oldPassword.equals(newPassword)) {
+            return "New password must be different from old password";
+        }
+
         account.setPassword(passwordEncoder.encode(newPassword));
         account.setUpdated_at(new Date());
-        accountRepository.save(account);
+        accountService.save(account);
+
         return "Success";
     }
 
@@ -153,7 +174,7 @@ public class AdminService {
                 .collect(Collectors.toList());
     }
 
-    public Map<String, String> validateAdmin(Integer adminId, String username, String password,
+    public Map<String, String> validateStaff(Integer adminId, String username, String password,
                                              String confirmPassword, String name, String email,
                                              String phone, String address) {
         Map<String, String> errors = new HashMap<>();
@@ -162,9 +183,9 @@ public class AdminService {
         if (!isUpdate) {
             if (username == null || username.trim().isEmpty()) {
                 errors.put("username", "Username must not be empty");
-            } else if (username.length() < 3 || username.length() > 20) {
+            } else if (username.length() < 5 || username.length() > 20) {
                 errors.put("username", "Username must be between 3 and 20 characters");
-            } else if (!username.matches("^(?=.*[A-Za-z])[A-Za-z0-9_]+$")) {
+            } else if (!username.matches("^(?=.*[A-Za-z])[A-Za-z0-9]+$")) {
                 errors.put("username", "Username can only contain letters, numbers");
             } else {
                 Account existingAccount = accountRepository.findByUsername(username);
@@ -178,6 +199,8 @@ public class AdminService {
                 errors.put("password", "Password must be at least 6 characters long");
             } else if (password.length() > 20) {
                 errors.put("password", "Password must not exceed 20 characters");
+            } else if (!password.matches("^(?=.*[A-Za-z])(?=.*\\d).+$")) {
+                errors.put("password", "Password must contain at least one letter and one number");
             }
             if (confirmPassword == null || confirmPassword.trim().isEmpty()) {
                 errors.put("confirmPassword", "Confirm password must not be empty");
@@ -190,7 +213,7 @@ public class AdminService {
             errors.put("name", "Full name must not be empty");
         } else if (name.length() < 2 || name.length() > 50) {
             errors.put("name", "Full name must be between 2 and 50 characters");
-        } else if (!name.matches("^([A-Z][a-z]+)(\\s[A-Z][a-z]+)*$")) {
+        } else if (!name.matches("^[A-Z][a-z]+(\\s[A-Z][a-z]+)*(\\s[A-Z])?$")) {
             errors.put("name", "Full name must be capitalized each word (ex: Nguyen Van A)");
         }
 
@@ -222,9 +245,9 @@ public class AdminService {
 
         if (address == null || address.trim().isEmpty()) {
             errors.put("address", "Address must not be empty");
-        } else if (address.length() < 2 || address.length() > 50) {
-            errors.put("address", "Address must be between 2 and 50 characters");
-        } else if (!address.matches("^(?!.*[.,#/^()'\\-]{2,})(?!-)[A-Za-z0-9\\s.,#/^()'\\-]{2,50}$")) {
+        } else if (address.length() < 6 || address.length() > 200) {
+            errors.put("address", "Address must be between 6 and 200 characters");
+        } else if (!address.matches("^(?!.*[.,#/^()'\\-]{2,})(?!-)[A-Za-z0-9\\s.,#/^()'\\-]+$")) {
             errors.put("address", "Invalid address format (ex: 123 Main St, Chicago)");
         }
 

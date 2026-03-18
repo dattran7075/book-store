@@ -21,13 +21,33 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <script src="../js/vendor/modernizr-2.8.3-respond-1.4.2.min.js"></script>
     <style>
-        .modal-body .form-group { margin-bottom: 15px; }
-        .modal-body label { font-weight: bold; display: block; margin-bottom: 5px; }
-        .modal-body input, .modal-body textarea {
-            width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;
+        .modal-body .form-group {
+            margin-bottom: 15px;
         }
-        .modal-body textarea { resize: vertical; min-height: 60px; }
-        .form-error { color: #d9534f; font-size: 12px; margin-top: 5px; }
+
+        .modal-body label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .modal-body input, .modal-body textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .modal-body textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .form-error {
+            color: #d9534f;
+            font-size: 12px;
+            margin-top: 5px;
+        }
 
         .otp-container {
             display: flex !important;
@@ -35,6 +55,7 @@
             gap: 10px !important;
             margin: 20px 0 !important;
         }
+
         .otp-input {
             width: 50px !important;
             height: 50px !important;
@@ -45,16 +66,39 @@
             border-radius: 8px !important;
             transition: all 0.3s !important;
         }
+
         .otp-input:focus {
             border-color: #667eea !important;
             outline: none !important;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
         }
-        .otp-timer { text-align: center; color: #666; font-size: 14px; margin-top: 10px; }
-        .otp-timer.expired { color: #d9534f; }
-        .resend-otp { color: #667eea; cursor: pointer; text-decoration: underline; }
-        .resend-otp:hover { color: #764ba2; }
-        .resend-otp.disabled { color: #ccc; cursor: not-allowed; text-decoration: none; }
+
+        .otp-timer {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .otp-timer.expired {
+            color: #d9534f;
+        }
+
+        .resend-otp {
+            color: #667eea;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .resend-otp:hover {
+            color: #764ba2;
+        }
+
+        .resend-otp.disabled {
+            color: #ccc;
+            cursor: not-allowed;
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
@@ -282,9 +326,6 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
                 <h4 class="modal-title" id="createStaffModalLabel" style="text-transform: none;">Add New Staff
                     Member</h4>
             </div>
@@ -301,8 +342,7 @@
                         <div class="form-group">
                             <label for="staff_username">Username <span style="color: red;">*</span></label>
                             <input type="text" class="form-control" id="staff_username" name="username"
-                                   placeholder="Enter username (3-20 characters)" required>
-                            <small class="form-text text-muted">Letters, numbers, and underscore only</small>
+                                   placeholder="Enter username" required>
                         </div>
                         <div class="form-group">
                             <label for="staff_email">Email <span style="color: red;">*</span></label>
@@ -312,18 +352,17 @@
                         <div class="form-group">
                             <label for="staff_phone">Phone Number <span style="color: red;">*</span></label>
                             <input type="text" class="form-control" id="staff_phone" name="phone"
-                                   placeholder="Enter phone (10 digits starting with 0)" pattern="0\d{9}" required>
-                            <small class="form-text text-muted">Format: 0xxxxxxxxx (10 digits)</small>
+                                   placeholder="Enter phone" pattern="0\d{9}" required>
                         </div>
                         <div class="form-group">
                             <label for="staff_address">Address <span style="color: red;">*</span></label>
-                            <textarea class="form-control" id="staff_address" name="address"
-                                      placeholder="Enter address (5-255 characters)" required></textarea>
+                            <input type="text" class="form-control" id="staff_address" name="address"
+                                   placeholder="Enter address" required>
                         </div>
                         <div class="form-group">
                             <label for="staff_password">Password <span style="color: red;">*</span></label>
                             <input type="password" class="form-control" id="staff_password" name="password"
-                                   placeholder="Enter password (6-20 characters)" required>
+                                   placeholder="Enter password" required>
                         </div>
                         <div class="form-group">
                             <label for="staff_confirmPassword">Confirm Password <span
@@ -486,7 +525,7 @@
 <script src="../js/main.js"></script>
 
 <script>
-    (function() {
+    (function () {
         'use strict';
 
         const StaffManager = {
@@ -494,42 +533,42 @@
             countdownTimer: null,
             timeLeft: 300,
 
-            init: function() {
+            init: function () {
                 const self = this;
 
-                $('#addStaffBtn').on('click', function() {
+                $('#addStaffBtn').on('click', function () {
                     $('#createStaffModal').modal('show');
                 });
 
-                $('#createStaffForm').on('submit', function(e) {
+                $('#createStaffForm').on('submit', function (e) {
                     e.preventDefault();
                     self.handleFormSubmit();
                 });
 
-                $('#verifyOtpBtn').on('click', function() {
+                $('#verifyOtpBtn').on('click', function () {
                     self.handleOtpVerification();
                 });
 
-                $('#backToFormBtn').on('click', function() {
+                $('#backToFormBtn').on('click', function () {
                     self.backToForm();
                 });
 
-                $('#resendOtpLink').on('click', function() {
+                $('#resendOtpLink').on('click', function () {
                     if (!$(this).hasClass('disabled')) {
                         self.resendOtp();
                     }
                 });
 
-                $('#createStaffModal').on('show.bs.modal', function() {
+                $('#createStaffModal').on('show.bs.modal', function () {
                     self.createOtpInputs();
                 });
 
-                $('#createStaffModal').on('hidden.bs.modal', function() {
+                $('#createStaffModal').on('hidden.bs.modal', function () {
                     self.resetModal();
                 });
             },
 
-            createOtpInputs: function() {
+            createOtpInputs: function () {
                 const container = $('#otpContainer');
                 container.empty();
 
@@ -547,11 +586,11 @@
                 this.setupOtpInputHandlers();
             },
 
-            setupOtpInputHandlers: function() {
+            setupOtpInputHandlers: function () {
                 const inputs = $('.otp-input');
                 inputs.off('input keydown paste');
 
-                inputs.on('input', function() {
+                inputs.on('input', function () {
                     const val = this.value.replace(/[^0-9]/g, '');
                     this.value = val;
 
@@ -563,7 +602,7 @@
                     }
                 });
 
-                inputs.on('keydown', function(e) {
+                inputs.on('keydown', function (e) {
                     if (e.keyCode === 8 && !this.value) {
                         const index = parseInt($(this).data('index'));
                         if (index > 0) {
@@ -572,12 +611,12 @@
                     }
                 });
 
-                inputs.first().on('paste', function(e) {
+                inputs.first().on('paste', function (e) {
                     e.preventDefault();
                     const pastedData = e.originalEvent.clipboardData.getData('text');
                     const digits = pastedData.replace(/[^0-9]/g, '').slice(0, 6);
 
-                    inputs.each(function(index) {
+                    inputs.each(function (index) {
                         $(this).val(digits[index] || '');
                     });
 
@@ -587,7 +626,7 @@
                 });
             },
 
-            handleFormSubmit: function() {
+            handleFormSubmit: function () {
                 const self = this;
 
                 this.formData = {
@@ -609,7 +648,7 @@
                     method: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify(this.formData),
-                    success: function(response) {
+                    success: function (response) {
                         if (response.success) {
                             self.showOtpForm();
                             Swal.fire({
@@ -623,18 +662,18 @@
                             Swal.fire('Error', response.message, 'error');
                         }
                     },
-                    error: function() {
+                    error: function () {
                         Swal.fire('Error', 'Failed to send OTP. Please try again.', 'error');
                     },
-                    complete: function() {
+                    complete: function () {
                         $('#sendOtpBtn').prop('disabled', false).text('Send OTP');
                     }
                 });
             },
 
-            handleOtpVerification: function() {
+            handleOtpVerification: function () {
                 const self = this;
-                const otp = $('.otp-input').map(function() {
+                const otp = $('.otp-input').map(function () {
                     return $(this).val();
                 }).get().join('');
 
@@ -654,7 +693,7 @@
                         step: 'verify',
                         otp: otp
                     })),
-                    success: function(response) {
+                    success: function (response) {
                         if (response.success) {
                             self.stopCountdown();
                             $('#createStaffModal').modal('hide');
@@ -663,7 +702,7 @@
                                 title: 'Success!',
                                 text: response.message,
                                 showConfirmButton: true
-                            }).then(function() {
+                            }).then(function () {
                                 window.location.reload();
                             });
                         } else {
@@ -671,34 +710,34 @@
                             self.clearOtpInputs();
                         }
                     },
-                    error: function() {
+                    error: function () {
                         Swal.fire('Error', 'An error occurred. Please try again.', 'error');
                     },
-                    complete: function() {
+                    complete: function () {
                         $('#verifyOtpBtn').prop('disabled', false).text('Verify');
                     }
                 });
             },
 
-            showOtpForm: function() {
+            showOtpForm: function () {
                 $('#staffInfoForm').hide();
                 $('#otpVerificationForm').show();
                 $('#otpEmailDisplay').text(this.formData.email);
                 this.startCountdown();
 
-                setTimeout(function() {
+                setTimeout(function () {
                     $('.otp-input').first().focus();
                 }, 100);
             },
 
-            backToForm: function() {
+            backToForm: function () {
                 this.stopCountdown();
                 $('#otpVerificationForm').hide();
                 $('#staffInfoForm').show();
                 this.clearOtpInputs();
             },
 
-            startCountdown: function() {
+            startCountdown: function () {
                 const self = this;
                 this.timeLeft = 300;
                 $('#resendOtpLink').addClass('disabled');
@@ -708,7 +747,7 @@
                     clearInterval(this.countdownTimer);
                 }
 
-                this.countdownTimer = setInterval(function() {
+                this.countdownTimer = setInterval(function () {
                     self.timeLeft--;
                     const minutes = Math.floor(self.timeLeft / 60);
                     const seconds = self.timeLeft % 60;
@@ -725,14 +764,14 @@
                 }, 1000);
             },
 
-            stopCountdown: function() {
+            stopCountdown: function () {
                 if (this.countdownTimer) {
                     clearInterval(this.countdownTimer);
                     this.countdownTimer = null;
                 }
             },
 
-            resendOtp: function() {
+            resendOtp: function () {
                 const self = this;
                 $('#resendOtpLink').addClass('disabled');
 
@@ -741,7 +780,7 @@
                     method: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify(this.formData),
-                    success: function(response) {
+                    success: function (response) {
                         if (response.success) {
                             Swal.fire({
                                 icon: 'success',
@@ -758,12 +797,12 @@
                 });
             },
 
-            clearOtpInputs: function() {
+            clearOtpInputs: function () {
                 $('.otp-input').val('');
                 $('.otp-input').first().focus();
             },
 
-            resetModal: function() {
+            resetModal: function () {
                 this.stopCountdown();
                 $('#staffInfoForm').show();
                 $('#otpVerificationForm').hide();
@@ -773,7 +812,7 @@
             }
         };
 
-        $(document).ready(function() {
+        $(document).ready(function () {
             StaffManager.init();
         });
 

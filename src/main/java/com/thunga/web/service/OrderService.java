@@ -23,7 +23,7 @@ public class OrderService {
     private BookService bookService;
 
     @Autowired
-    private PromotionService promotionService;
+    private VoucherService voucherService;
 
     @Autowired
     private SeriesService seriesService;
@@ -36,15 +36,59 @@ public class OrderService {
         return orderRepository.findById(id).get();
     }
 
-    /**
-     * NEW: Detect complete series and count how many sets
-     * Returns Map<SeriesId, NumberOfCompleteSets>
-     * <p>
-     * Logic:
-     * - Tìm minimum quantity của các cuốn trong series
-     * - Nếu min = 1 → 1 bộ → giảm 5%
-     * - Nếu min >= 2 → ≥2 bộ → giảm 10%
-     */
+    // ========== SHIPPING CALCULATION METHODS ==========
+
+    public double calculateOrderShipping(double orderAmount, String shippingType, double weightKg) {
+        if (orderAmount < 0) {
+            throw new IllegalArgumentException("Order amount must be greater than or equal to 0");
+        }
+        if (weightKg <= 0) {
+            throw new IllegalArgumentException("Weight must be greater than 0 kg");
+        }
+        if (shippingType == null || shippingType.isEmpty()) {
+            throw new IllegalArgumentException("Shipping type must not be null or empty");
+        }
+
+        double shippingFee;
+
+        switch (shippingType.toUpperCase().trim()) {
+            case "STANDARD":
+                shippingFee = 15000 + weightKg * 5000;
+                break;
+            case "EXPRESS":
+                shippingFee = 25000 + weightKg * 8000;
+                break;
+            case "SAME-DAY":
+                shippingFee = 40000 + weightKg * 12000;
+                break;
+            default:
+                throw new IllegalArgumentException("Shipping type must be STANDARD, EXPRESS, or SAME-DAY");
+        }
+
+        if (orderAmount >= 500000) {
+            shippingFee = 0;
+        }
+
+        return shippingFee;
+    }
+
+    public double getMaxWeight(String shippingMethod) {
+        if (shippingMethod == null) return 0;
+
+        switch (shippingMethod.toUpperCase().trim()) {
+            case "STANDARD":
+                return 50.0;
+            case "EXPRESS":
+                return 30.0;
+            case "SAME-DAY":
+                return 20.0;
+            default:
+                return 0;
+        }
+    }
+
+    // ========== SERIES DETECTION METHODS ==========
+
     public Map<Integer, Integer> detectCompleteSeriesWithSets(List<CartItem> cartItems) {
         if (cartItems == null || cartItems.isEmpty()) {
             return new HashMap<>();
@@ -52,7 +96,6 @@ public class OrderService {
 
         Map<Integer, Integer> seriesSetsMap = new HashMap<>();
 
-        // Group cart items by series
         Map<Integer, List<CartItem>> itemsBySeries = new HashMap<>();
         for (CartItem item : cartItems) {
             if (item.getBook().getSeries() != null) {
@@ -61,41 +104,34 @@ public class OrderService {
             }
         }
 
-        // Check each series
         for (Map.Entry<Integer, List<CartItem>> entry : itemsBySeries.entrySet()) {
             Integer seriesId = entry.getKey();
             List<CartItem> seriesItems = entry.getValue();
 
             try {
-                // Check if this series can be purchased as bundle
                 if (!seriesService.canPurchaseFullSeries(seriesId)) {
                     continue;
                 }
 
-                // Get required books
                 List<Book> requiredBooks = seriesService.getAvailableBooksInSeries(seriesId);
                 Set<Integer> requiredBookIds = requiredBooks.stream()
                         .map(Book::getId)
                         .collect(Collectors.toSet());
 
-                // Get book IDs in cart
-                Set<Integer> cartBookIds = seriesItems.stream()
-                        .map(item -> item.getBook().getId())
-                        .collect(Collectors.toSet());
+                Map<Integer, Integer> bookQuantityMap = new HashMap<>();
+                for (CartItem item : seriesItems) {
+                    Integer bookId = item.getBook().getId();
+                    bookQuantityMap.put(bookId, item.getQuantity());
+                }
 
-                // Check if user has all volumes
-                if (cartBookIds.containsAll(requiredBookIds)) {
-                    // Find minimum quantity across all volumes
-                    int minQuantity = Integer.MAX_VALUE;
-                    for (CartItem item : seriesItems) {
-                        if (requiredBookIds.contains(item.getBook().getId())) {
-                            minQuantity = Math.min(minQuantity, item.getQuantity());
-                        }
-                    }
+                int numberOfCompleteSets = Integer.MAX_VALUE;
+                for (Integer requiredBookId : requiredBookIds) {
+                    int quantityInCart = bookQuantityMap.getOrDefault(requiredBookId, 0);
+                    numberOfCompleteSets = Math.min(numberOfCompleteSets, quantityInCart);
+                }
 
-                    if (minQuantity > 0) {
-                        seriesSetsMap.put(seriesId, minQuantity);
-                    }
+                if (numberOfCompleteSets > 0) {
+                    seriesSetsMap.put(seriesId, numberOfCompleteSets);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -105,34 +141,24 @@ public class OrderService {
         return seriesSetsMap;
     }
 
-    /**
-     * Calculate discount percentage based on number of sets
-     * 1 set → 5%
-     * ≥2 sets → 10% (maximum)
-     */
     private double calculateSeriesDiscountPercentage(int numberOfSets) {
         if (numberOfSets >= 2) {
-            return 0.10; // 10% for 2+ sets
+            return 0.10;
         } else if (numberOfSets == 1) {
-            return 0.05; // 5% for 1 set
+            return 0.05;
         }
         return 0.0;
     }
 
-    /**
-     * Calculate series bundle discount for selected items
-     */
     public Double calculateSeriesBundleDiscount(
             List<CartItem> selectedCartItems,
-            Map<Integer, Integer> seriesSetsMap
-    ) {
+            Map<Integer, Integer> seriesSetsMap) {
         if (seriesSetsMap == null || seriesSetsMap.isEmpty()) {
             return 0.0;
         }
 
         double totalDiscount = 0.0;
 
-        // Group items by series
         Map<Integer, List<CartItem>> itemsBySeries = new HashMap<>();
         for (CartItem item : selectedCartItems) {
             if (item.getBook().getSeries() != null) {
@@ -143,18 +169,15 @@ public class OrderService {
             }
         }
 
-        // Calculate discount for each series
         for (Map.Entry<Integer, Integer> entry : seriesSetsMap.entrySet()) {
             Integer seriesId = entry.getKey();
             Integer numberOfSets = entry.getValue();
 
-            // Determine discount percentage
-            double discountPercentage = numberOfSets >= 2 ? 0.10 : 0.05;
+            double discountPercentage = calculateSeriesDiscountPercentage(numberOfSets);
 
             List<CartItem> seriesItems = itemsBySeries.get(seriesId);
             if (seriesItems == null) continue;
 
-            // Calculate subtotal for complete sets only
             double seriesSubtotal = 0.0;
             for (CartItem item : seriesItems) {
                 int discountedQuantity = Math.min(item.getQuantity(), numberOfSets);
@@ -167,32 +190,36 @@ public class OrderService {
         return Math.round(totalDiscount * 10.0) / 10.0;
     }
 
-    /**
-     * Tạo Order từ CartItem với promotion, payment method và shipping fee support
-     * <p>
-     * PRIORITY LOGIC:
-     * 1. Series Bundle (5%-10% discount) - CANNOT combine with promotion
-     * - 1 bộ → 5%
-     * - ≥2 bộ → 10%
-     * 2. Promotion codes - ONLY for orders WITHOUT series bundle
-     * <p>
-     * IMPORTANT: Only complete sets get discount. Extra copies are charged full price.
-     */
+    // ========== CREATE ORDER METHOD ==========
+
     @Transactional
     public Order createOrderFromSelectedItems(
             List<CartItem> selectedItems,
             String fullname,
             String phone,
             String address,
-            String promotionCode,
+            String voucherCode,
             String paymentMethod,
-            Double shippingFee) {
+            String shippingMethod) {
 
         if (selectedItems == null || selectedItems.isEmpty()) {
             throw new IllegalStateException("No items selected!");
         }
 
         validateCustomerInfo(fullname, phone, address);
+
+        if (shippingMethod == null || shippingMethod.trim().isEmpty()) {
+            throw new IllegalArgumentException("Shipping method cannot be empty");
+        }
+
+        String normalizedMethod = shippingMethod.toUpperCase().trim();
+        if (!normalizedMethod.equals("STANDARD") &&
+                !normalizedMethod.equals("EXPRESS") &&
+                !normalizedMethod.equals("SAME-DAY")) {
+            throw new IllegalArgumentException(
+                    "Invalid shipping method: " + shippingMethod +
+                            ". Must be STANDARD, EXPRESS, or SAME-DAY");
+        }
 
         Order order = new Order();
         order.setUser(selectedItems.get(0).getUser());
@@ -201,52 +228,41 @@ public class OrderService {
         order.setAddress(address);
         order.setStatus("Pending");
         order.setCreatedAt(LocalDate.now());
-        // ========== SET PAYMENT METHOD AND SHIPPING FEE ==========
         order.setPayment_method(paymentMethod != null ? paymentMethod : "COD");
         order.setPayment_status("UNPAID");
-        order.setShipping_fee(shippingFee != null ? shippingFee : 20000.0);
+        order.setShipping_method(normalizedMethod);
 
         double totalCost = 0.0;
 
-        // ========== STEP 1: DETECT SERIES BUNDLE WITH SETS ==========
         Map<Integer, Integer> seriesSetsMap = detectCompleteSeriesWithSets(selectedItems);
         boolean isSeriesBundle = !seriesSetsMap.isEmpty();
 
-        // ========== STEP 2: HANDLE PROMOTION ==========
-        Promotion promotion = null;
+        Voucher voucher = null;
+        boolean voucherApplied = false;
 
-        // ONLY allow promotion when NO series bundle
-        if (!isSeriesBundle && promotionCode != null && !promotionCode.trim().isEmpty()) {
-            promotion = promotionService.findByCode(promotionCode);
+        if (!isSeriesBundle && voucherCode != null && !voucherCode.trim().isEmpty()) {
+            voucher = voucherService.findByCode(voucherCode);
 
-            if (promotion == null) {
-                throw new IllegalStateException("Promotion code not found!");
+            if (voucher == null) {
+                throw new IllegalStateException("Voucher code not found!");
             }
 
-            if (!"ACTIVE".equals(promotion.getStatus())) {
-                throw new IllegalStateException("Promotion is not active!");
+            if (!"ACTIVE".equals(voucher.getStatus())) {
+                throw new IllegalStateException("Voucher is not active!");
             }
 
-            if (promotion.getUsedCount() >= promotion.getMaxUsage()) {
-                throw new IllegalStateException("Promotion has reached its usage limit!");
+            if (voucher.getUsedCount() >= voucher.getMaxUsage()) {
+                throw new IllegalStateException("Voucher has reached its usage limit!");
             }
-        } else if (isSeriesBundle && promotionCode != null && !promotionCode.trim().isEmpty()) {
-            // BLOCK promotion if series bundle detected
+        } else if (isSeriesBundle && voucherCode != null && !voucherCode.trim().isEmpty()) {
             int maxSets = Collections.max(seriesSetsMap.values());
             String discountMsg = maxSets >= 2 ? "10%" : "5%";
             throw new IllegalStateException(
-                    "Promotion codes cannot be used with series bundles. " +
+                    "Vouchers cannot be used with series bundles. " +
                             "You are already receiving a " + discountMsg + " series discount!");
         }
 
-        boolean promotionApplied = false;
-
-        // ========== STEP 3: PROCESS BASED ON PRIORITY ==========
-
         if (isSeriesBundle) {
-            // ========== CASE 1: SERIES BUNDLE (5%-10% DISCOUNT) ==========
-
-            // Group selected items by series
             Map<Integer, List<CartItem>> itemsBySeries = new HashMap<>();
             List<CartItem> nonSeriesItems = new ArrayList<>();
 
@@ -260,7 +276,6 @@ public class OrderService {
                 }
             }
 
-            // Process each series bundle
             for (Map.Entry<Integer, Integer> seriesEntry : seriesSetsMap.entrySet()) {
                 Integer seriesId = seriesEntry.getKey();
                 Integer numberOfSets = seriesEntry.getValue();
@@ -271,10 +286,8 @@ public class OrderService {
                 List<CartItem> seriesCartItems = itemsBySeries.get(seriesId);
                 if (seriesCartItems == null) continue;
 
-                // Calculate total for complete sets only
                 double seriesSubtotalForDiscount = 0.0;
                 for (CartItem item : seriesCartItems) {
-                    // Only count quantity up to numberOfSets (complete sets)
                     int discountedQuantity = Math.min(item.getQuantity(), numberOfSets);
                     seriesSubtotalForDiscount += item.getBook().getPrice() * discountedQuantity;
                 }
@@ -282,13 +295,11 @@ public class OrderService {
                 double totalSeriesDiscount = seriesSubtotalForDiscount * discountPercentage;
                 double remainingDiscount = totalSeriesDiscount;
 
-                // Process each book in series
                 for (int i = 0; i < seriesCartItems.size(); i++) {
                     CartItem cartItem = seriesCartItems.get(i);
                     Book book = bookService.findById(cartItem.getBook().getId());
                     Integer totalQuantity = cartItem.getQuantity();
 
-                    // Validate stock
                     if (book.getNumber_in_stock() < totalQuantity) {
                         throw new IllegalStateException(
                                 "Book '" + book.getTitle() + "' only has " +
@@ -302,37 +313,28 @@ public class OrderService {
                     double itemTotal = book.getPrice() * totalQuantity;
                     orderDetail.setTotal_cost(itemTotal);
 
-                    // Calculate discount
-                    // Only first numberOfSets get discount
                     int discountedQuantity = Math.min(totalQuantity, numberOfSets);
                     double discountableAmount = book.getPrice() * discountedQuantity;
 
                     double itemDiscount;
                     if (i == seriesCartItems.size() - 1) {
-                        // Last item gets remaining discount to avoid rounding errors
                         itemDiscount = remainingDiscount;
                     } else {
-                        // Proportional discount based on discountable amount
                         itemDiscount = (discountableAmount / seriesSubtotalForDiscount) * totalSeriesDiscount;
                         itemDiscount = Math.round(itemDiscount * 10.0) / 10.0;
                         remainingDiscount -= itemDiscount;
                     }
 
-                    // Mark as series bundle
                     orderDetail.setSeries(series);
                     orderDetail.setIsFullSeries(true);
-                    orderDetail.setPromotion(null);
-                    orderDetail.setDiscountAmount(itemDiscount);
-
                     orderDetail.setCreated_at(new Date());
                     orderDetail.setUpdated_at(new Date());
 
                     order.addOrderDetail(orderDetail);
-                    totalCost += (itemTotal - itemDiscount);
+                    totalCost += itemTotal;
                 }
             }
 
-            // Process non-series items (no discount)
             for (CartItem cartItem : nonSeriesItems) {
                 Book book = bookService.findById(cartItem.getBook().getId());
                 Integer quantity = cartItem.getQuantity();
@@ -351,9 +353,6 @@ public class OrderService {
                 orderDetail.setTotal_cost(itemTotal);
                 orderDetail.setSeries(null);
                 orderDetail.setIsFullSeries(false);
-                orderDetail.setPromotion(null);
-                orderDetail.setDiscountAmount(0.0);
-
                 orderDetail.setCreated_at(new Date());
                 orderDetail.setUpdated_at(new Date());
 
@@ -361,82 +360,30 @@ public class OrderService {
                 totalCost += itemTotal;
             }
 
-        } else if (promotion != null) {
-            // ========== CASE 2: PROMOTION (NO SERIES BUNDLE) ==========
+            Double seriesBundleDiscount = calculateSeriesBundleDiscount(selectedItems, seriesSetsMap);
+            order.setDiscount_amount(seriesBundleDiscount);
 
-            // Calculate order total before discount
+        } else if (voucher != null) {
             double orderTotalBeforeDiscount = 0.0;
             for (CartItem cartItem : selectedItems) {
                 Book book = bookService.findById(cartItem.getBook().getId());
                 orderTotalBeforeDiscount += book.getPrice() * cartItem.getQuantity();
             }
 
-            // Check min order
-            if (orderTotalBeforeDiscount < promotion.getMinOrder()) {
+            if (orderTotalBeforeDiscount < voucher.getMinOrder()) {
                 throw new IllegalStateException(
                         "Your order total (" + String.format("%.1f", orderTotalBeforeDiscount) +
-                                " VND) must be at least " + String.format("%.1f", promotion.getMinOrder()) +
-                                " VND to use this promotion!");
+                                " VND) must be at least " + String.format("%.1f", voucher.getMinOrder()) +
+                                " VND to use this voucher!");
             }
 
-            String discountType = promotion.getDiscountType();
+            double orderDiscount = voucherService.calculateOrderDiscount(voucher, orderTotalBeforeDiscount);
 
-            if ("ORDER_FIXED".equals(discountType)) {
-                // ========== TYPE 1: FIXED DISCOUNT FOR ENTIRE ORDER ==========
-                double orderDiscount = promotionService.calculateOrderDiscount(
-                        promotion,
-                        orderTotalBeforeDiscount
-                );
+            if (orderDiscount > 0) {
+                double remainingDiscount = orderDiscount;
 
-                if (orderDiscount > 0) {
-                    double remainingDiscount = orderDiscount;
-
-                    for (int i = 0; i < selectedItems.size(); i++) {
-                        CartItem cartItem = selectedItems.get(i);
-                        Book book = bookService.findById(cartItem.getBook().getId());
-                        Integer quantity = cartItem.getQuantity();
-
-                        if (book.getNumber_in_stock() < quantity) {
-                            throw new IllegalStateException(
-                                    "Book '" + book.getTitle() + "' only has " +
-                                            book.getNumber_in_stock() + " copies left!");
-                        }
-
-                        OrderDetail orderDetail = new OrderDetail();
-                        orderDetail.setBook(book);
-                        orderDetail.setNumber(quantity);
-
-                        double itemTotal = book.getPrice() * quantity;
-                        orderDetail.setTotal_cost(itemTotal);
-
-                        double itemDiscount;
-                        if (i == selectedItems.size() - 1) {
-                            itemDiscount = remainingDiscount;
-                        } else {
-                            double itemDiscountRatio = itemTotal / orderTotalBeforeDiscount;
-                            itemDiscount = itemDiscountRatio * orderDiscount;
-                            itemDiscount = Math.round(itemDiscount * 10.0) / 10.0;
-                            remainingDiscount -= itemDiscount;
-                        }
-
-                        orderDetail.setSeries(null);
-                        orderDetail.setIsFullSeries(false);
-                        orderDetail.setPromotion(promotion);
-                        orderDetail.setDiscountAmount(itemDiscount);
-
-                        orderDetail.setCreated_at(new Date());
-                        orderDetail.setUpdated_at(new Date());
-
-                        order.addOrderDetail(orderDetail);
-                        totalCost += (itemTotal - itemDiscount);
-                    }
-
-                    promotionApplied = true;
-                }
-
-            } else if ("PER_PRODUCT".equals(discountType)) {
-                // ========== TYPE 2: DISCOUNT PER SPECIFIC PRODUCT ==========
-                for (CartItem cartItem : selectedItems) {
+                for (int i = 0; i < selectedItems.size(); i++) {
+                    CartItem cartItem = selectedItems.get(i);
                     Book book = bookService.findById(cartItem.getBook().getId());
                     Integer quantity = cartItem.getQuantity();
 
@@ -453,21 +400,14 @@ public class OrderService {
                     double itemTotal = book.getPrice() * quantity;
                     orderDetail.setTotal_cost(itemTotal);
 
-                    double discountPerUnit = promotionService.calculateDiscountForBook(
-                            promotion,
-                            book.getId()
-                    );
-
-                    double itemDiscount = 0.0;
-                    if (discountPerUnit > 0) {
-                        itemDiscount = discountPerUnit * quantity;
-                        itemDiscount = Math.round(itemDiscount * 10.0) / 10.0;
-                        orderDetail.setPromotion(promotion);
-                        orderDetail.setDiscountAmount(itemDiscount);
-                        promotionApplied = true;
+                    double itemDiscount;
+                    if (i == selectedItems.size() - 1) {
+                        itemDiscount = remainingDiscount;
                     } else {
-                        orderDetail.setPromotion(null);
-                        orderDetail.setDiscountAmount(0.0);
+                        double itemDiscountRatio = itemTotal / orderTotalBeforeDiscount;
+                        itemDiscount = itemDiscountRatio * orderDiscount;
+                        itemDiscount = Math.round(itemDiscount * 10.0) / 10.0;
+                        remainingDiscount -= itemDiscount;
                     }
 
                     orderDetail.setSeries(null);
@@ -476,23 +416,18 @@ public class OrderService {
                     orderDetail.setUpdated_at(new Date());
 
                     order.addOrderDetail(orderDetail);
-                    totalCost += (itemTotal - itemDiscount);
+                    totalCost += itemTotal;
                 }
+
+                voucherApplied = true;
+                order.setDiscount_amount(orderDiscount);
             }
 
-            // Check if promotion was supposed to apply but didn't
-            if (!promotionApplied) {
-                if ("PER_PRODUCT".equals(promotion.getDiscountType())) {
-                    throw new IllegalStateException(
-                            "None of your selected products are eligible for this promotion!");
-                } else {
-                    throw new IllegalStateException(
-                            "Cannot apply this promotion to your order!");
-                }
+            if (!voucherApplied) {
+                throw new IllegalStateException("Cannot apply this voucher to your order!");
             }
 
         } else {
-            // ========== CASE 3: NO DISCOUNT ==========
             for (CartItem cartItem : selectedItems) {
                 Book book = bookService.findById(cartItem.getBook().getId());
                 Integer quantity = cartItem.getQuantity();
@@ -511,19 +446,38 @@ public class OrderService {
                 orderDetail.setTotal_cost(itemTotal);
                 orderDetail.setSeries(null);
                 orderDetail.setIsFullSeries(false);
-                orderDetail.setPromotion(null);
-                orderDetail.setDiscountAmount(0.0);
-
                 orderDetail.setCreated_at(new Date());
                 orderDetail.setUpdated_at(new Date());
 
                 order.addOrderDetail(orderDetail);
                 totalCost += itemTotal;
             }
+
+            order.setDiscount_amount(0.0);
         }
 
-        // Round total cost to 1 decimal place (subtotal only, NOT including shipping)
+        if (voucher != null) {
+            order.setVoucher(voucher);
+        }
+
+        double totalWeight = order.calculateTotalWeight();
+
+        if (totalWeight <= 0) {
+            throw new IllegalStateException("Unable to calculate order weight. Please ensure all books have weight information.");
+        }
+
+        double maxWeight = getMaxWeight(normalizedMethod);
+        if (totalWeight > maxWeight) {
+            throw new IllegalStateException(
+                    "Order weight (" + String.format("%.2f", totalWeight) + "kg) exceeds limit for " +
+                            normalizedMethod + " (" + maxWeight + "kg max). Please choose a different shipping method.");
+        }
+
+        double shippingFee = calculateOrderShipping(totalCost, normalizedMethod, totalWeight);
+
+        order.setShipping_fee(shippingFee);
         order.setTotal_cost(Math.round(totalCost * 10.0) / 10.0);
+
         return order;
     }
 
@@ -532,16 +486,13 @@ public class OrderService {
         boolean isNewOrder = (order.getId() == null);
 
         if (isNewOrder) {
-            // Validate stock
             if (order.getOrderDetailList() != null && !order.getOrderDetailList().isEmpty()) {
                 for (OrderDetail orderDetail : order.getOrderDetailList()) {
                     Book book = bookService.findById(orderDetail.getBook().getId());
                     Integer quantity = orderDetail.getNumber();
 
                     if (quantity == null || quantity <= 0) {
-                        throw new IllegalStateException(
-                                "Invalid quantity for book: " + book.getTitle()
-                        );
+                        throw new IllegalStateException("Invalid quantity for book: " + book.getTitle());
                     }
 
                     if (book.getNumber_in_stock() < quantity) {
@@ -554,32 +505,21 @@ public class OrderService {
 
             Order savedOrder = orderRepository.save(order);
 
-            // Update stock and increment used_count for promotion
             if (savedOrder.getOrderDetailList() != null) {
-                boolean promotionUsed = false;
-                Promotion usedPromotion = null;
-
                 for (OrderDetail orderDetail : savedOrder.getOrderDetailList()) {
                     Book book = orderDetail.getBook();
                     Integer quantity = orderDetail.getNumber();
 
-                    // Update stock
                     book.setNumber_in_stock(book.getNumber_in_stock() - quantity);
                     book.setNumber_sold(book.getNumber_sold() + quantity);
                     book.setUpdated_at(new Date());
                     bookService.save(book);
-
-                    // Save promotion to increment used_count (only once per order)
-                    if (orderDetail.getPromotion() != null && !promotionUsed) {
-                        usedPromotion = orderDetail.getPromotion();
-                        promotionUsed = true;
-                    }
                 }
+            }
 
-                // Increment used_count once for entire order
-                if (usedPromotion != null) {
-                    promotionService.applyPromotion(usedPromotion);
-                }
+            if (savedOrder.getVoucher() != null) {
+                voucherService.applyVoucher(savedOrder.getVoucher());
+                voucherService.save(savedOrder.getVoucher());
             }
 
             return savedOrder;
@@ -588,12 +528,14 @@ public class OrderService {
         }
     }
 
+
     @Transactional
     public void cancelOrder(Integer orderId) {
         Order order = findById(orderId);
 
-        if (!"Pending".equals(order.getStatus())) {
-            throw new IllegalStateException("Only pending orders can be cancelled!");
+        // Cho phép cancel cả Pending và Assigned
+        if (!"Pending".equals(order.getStatus()) && !"Assigned".equals(order.getStatus())) {
+            throw new IllegalStateException("Only pending or assigned orders can be cancelled!");
         }
 
         order.setStatus("Cancelled");
@@ -613,6 +555,68 @@ public class OrderService {
 
         orderRepository.save(order);
     }
+    // ========== CANCEL REQUEST METHODS ==========
+
+    @Transactional
+    public void requestCancelOrder(Integer orderId) {
+        Order order = findById(orderId);
+
+        if (!"Approved".equals(order.getStatus())) {
+            throw new IllegalStateException(
+                    "Cancel requests can only be submitted for Approved orders. " +
+                            "Current status: " + order.getStatus());
+        }
+
+        order.setStatus("Request");
+        order.setUpdated_at(LocalDate.now());
+        orderRepository.save(order);
+    }
+
+    @Transactional
+    public void approveCancelRequest(Integer orderId) {
+        Order order = findById(orderId);
+
+        if (!"Request".equals(order.getStatus())) {
+            throw new IllegalStateException("This order has no pending cancel request.");
+        }
+
+        // Restore stock
+        if (order.getOrderDetailList() != null) {
+            for (OrderDetail detail : order.getOrderDetailList()) {
+                Book book = bookService.findById(detail.getBook().getId());
+                book.setNumber_in_stock(book.getNumber_in_stock() + detail.getNumber());
+                book.setNumber_sold(Math.max(0, book.getNumber_sold() - detail.getNumber()));
+                book.setUpdated_at(new Date());
+                bookService.save(book);
+            }
+        }
+
+        // Reverse voucher usage nếu có
+        if (order.getVoucher() != null) {
+            Voucher voucher = order.getVoucher();
+            voucher.setUsedCount(Math.max(0, voucher.getUsedCount() - 1));
+            voucherService.save(voucher);
+        }
+
+        order.setStatus("Cancelled");
+        order.setUpdated_at(LocalDate.now());
+        orderRepository.save(order);
+    }
+
+    @Transactional
+    public void rejectCancelRequest(Integer orderId) {
+        Order order = findById(orderId);
+
+        if (!"Request".equals(order.getStatus())) {
+            throw new IllegalStateException("This order has no pending cancel request.");
+        }
+
+        order.setStatus("Approved");
+        order.setUpdated_at(LocalDate.now());
+        orderRepository.save(order);
+    }
+
+    // ========== PAGINATION ==========
 
     public Page<Order> findByLimit(Integer page, Integer limit, String sortBy) {
         Pageable paging = PageRequest.of(page, limit);
@@ -636,6 +640,8 @@ public class OrderService {
                 PageRequest.of(page, limit, Sort.by("createdAt").descending())
         );
     }
+
+    // ========== VALIDATION ==========
 
     public void validateCustomerInfo(String fullname, String phone, String address) {
         if (fullname == null || fullname.trim().isEmpty()) {
@@ -672,58 +678,48 @@ public class OrderService {
         Order order = findById(orderId);
         String currentStatus = order.getStatus();
 
-        // ========== VALIDATION 1: Check for self-transition ==========
         if (currentStatus.equals(newStatus)) {
             throw new IllegalStateException(
                     "Order is already in '" + newStatus + "' status. No changes needed.");
         }
 
-        // ========== VALIDATION 2: Check valid transition ==========
         boolean isValidTransition = false;
 
         switch (currentStatus) {
             case "Pending":
-                // Pending → Approved, Cancelled
                 isValidTransition = "Approved".equals(newStatus) || "Cancelled".equals(newStatus);
                 break;
-
             case "Assigned":
-                // Assigned → Approved, Cancelled
                 isValidTransition = "Approved".equals(newStatus) || "Cancelled".equals(newStatus);
                 break;
-
             case "Approved":
-                // Approved → In Delivery, Cancelled
-                isValidTransition = "In Delivery".equals(newStatus) || "Cancelled".equals(newStatus);
+                isValidTransition = "In Delivery".equals(newStatus) || "Cancelled".equals(newStatus)
+                        || "Request".equals(newStatus);
                 break;
-
+            case "Request":
+                isValidTransition = "Approved".equals(newStatus) || "Cancelled".equals(newStatus);
+                break;
             case "In Delivery":
-                // In Delivery → Completed, Returned
                 isValidTransition = "Completed".equals(newStatus) || "Returned".equals(newStatus);
                 break;
-
             case "Completed":
             case "Cancelled":
             case "Returned":
-                // Terminal states - cannot change
                 isValidTransition = false;
                 break;
         }
 
-        // ========== Throw error if invalid ==========
         if (!isValidTransition) {
             throw new IllegalArgumentException(
                     "Cannot change status from '" + currentStatus + "' to '" + newStatus + "'");
         }
 
-        // ========== RESTORE STOCK IF CANCELLED OR RETURNED ==========
         if ("Cancelled".equals(newStatus) || "Returned".equals(newStatus)) {
             if (order.getOrderDetailList() != null && !order.getOrderDetailList().isEmpty()) {
                 for (OrderDetail orderDetail : order.getOrderDetailList()) {
                     Book book = orderDetail.getBook();
                     Integer quantity = orderDetail.getNumber();
 
-                    // Restore stock
                     book.setNumber_in_stock(book.getNumber_in_stock() + quantity);
                     book.setNumber_sold(Math.max(0, book.getNumber_sold() - quantity));
                     book.setUpdated_at(new Date());
@@ -733,10 +729,8 @@ public class OrderService {
             }
         }
 
-        // ========== UPDATE: All validations passed, change status ==========
         order.setStatus(newStatus);
 
-        // If status is Returned, set payment_status to UNPAID
         if ("Returned".equals(newStatus)) {
             order.setPayment_status("UNPAID");
         }
@@ -745,38 +739,22 @@ public class OrderService {
         orderRepository.save(order);
     }
 
-    /**
-     * Confirm payment for a completed order
-     * Updates payment_status to PAID and stores payment note
-     * <p>
-     * Business Rules:
-     * - Order must be in "Completed" status
-     * - Payment must currently be "UNPAID"
-     * - Payment note is optional (default message used if empty)
-     *
-     * @param orderId     Order ID to confirm payment for
-     * @param paymentNote Payment confirmation note (optional)
-     * @throws IllegalStateException if order not Completed or already PAID
-     */
     @Transactional
     public void confirmPayment(Integer orderId, String paymentNote) {
         Order order = findById(orderId);
 
-        // ========== VALIDATION 1: Check order status ==========
         if (!"Completed".equals(order.getStatus())) {
             throw new IllegalStateException(
                     "Payment can only be confirmed for Completed orders. " +
                             "Current status: " + order.getStatus());
         }
 
-        // ========== VALIDATION 2: Check payment not already confirmed ==========
         if ("PAID".equals(order.getPayment_status())) {
             throw new IllegalStateException(
                     "This order payment has already been confirmed! " +
                             "Payment status is already PAID.");
         }
 
-        // ========== UPDATE: Confirm payment ==========
         order.setPayment_status("PAID");
         order.setPayment_note(paymentNote != null ? paymentNote.trim() :
                 "Shipper confirmed customer paid cash upon delivery");
@@ -785,4 +763,40 @@ public class OrderService {
         orderRepository.save(order);
     }
 
+    public Page<Order> findByLimitWithFilters(Integer page, Integer limit, String sortBy,
+                                              String statusFilter, String paymentFilter) {
+        Pageable paging;
+        if (sortBy != null && !sortBy.trim().isEmpty()) {
+            paging = PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, sortBy));
+        } else {
+            paging = PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+        }
+
+        // Apply filters
+        if ((statusFilter != null && !statusFilter.trim().isEmpty()) &&
+                (paymentFilter != null && !paymentFilter.trim().isEmpty())) {
+            return orderRepository.findByStatusAndPaymentStatus(statusFilter, paymentFilter, paging);
+        } else if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+            return orderRepository.findByStatus(statusFilter, paging);
+        } else if (paymentFilter != null && !paymentFilter.trim().isEmpty()) {
+            return orderRepository.findByPaymentStatus(paymentFilter, paging);
+        } else {
+            return orderRepository.findAll(paging);
+        }
+    }
+
+    public Long countByStatus(String status) {
+        return orderRepository.countByStatus(status);
+    }
+
+    public Map<String, Long> getOrderCountsByStatus() {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        counts.put("Pending", orderRepository.countByStatus("Pending"));
+        counts.put("Approved", orderRepository.countByStatus("Approved"));
+        counts.put("In Delivery", orderRepository.countByStatus("In Delivery"));
+        counts.put("Completed", orderRepository.countByStatus("Completed"));
+        counts.put("Cancelled", orderRepository.countByStatus("Cancelled"));
+        counts.put("Returned", orderRepository.countByStatus("Returned"));
+        return counts;
+    }
 }

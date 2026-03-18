@@ -47,26 +47,42 @@ public class PublisherService {
     }
 
     /**
-     * Validate new publisher.
-     * Returns Map<fieldName, errorMessage> — empty = valid.
+     * Unified validation for both create and edit publisher.
+     *
+     * @param id      Publisher ID (null for create, non-null for edit)
+     * @param name    Publisher name
+     * @param country Publisher country
+     * @param website Publisher website
+     * @return Map<fieldName, errorMessage> — empty = valid
      */
-    public Map<String, String> validateNewPublisher(String name, String country, String website) {
+    public Map<String, String> validatePublisher(Integer id, String name, String country, String website) {
         Map<String, String> errors = new LinkedHashMap<>();
 
+        // ========== NAME VALIDATION ==========
         if (name == null || name.trim().isEmpty()) {
             errors.put("name", "Publisher name cannot be empty");
         } else if (!name.trim().matches("[\\p{L}0-9 .,'\\-&]+")) {
             errors.put("name", "Publisher name must contain letters only (no special characters)");
-        } else if (findByName(name.trim()) != null) {
-            errors.put("name", "Publisher already exists");
-        }
-
-        if (country != null && !country.trim().isEmpty()) {
-            if (!country.trim().matches("[\\p{L} \\-]+")) {
-                errors.put("country", "Country must contain letters only");
+        } else {
+            // Check for duplicate name
+            Publisher existing = findByName(name.trim());
+            if (existing != null) {
+                // If creating (id is null) or editing a different publisher (id doesn't match)
+                if (id == null || !existing.getId().equals(id)) {
+                    errors.put("name", "Publisher already exists");
+                }
             }
         }
 
+        // ========== COUNTRY VALIDATION ==========
+        // Country is now a dropdown, so validation is optional
+        // Empty country is allowed
+        if (country != null && !country.trim().isEmpty()) {
+            // Optional: Add validation if needed (currently not enforced)
+            // For now, we trust the dropdown to only contain valid countries
+        }
+
+        // ========== WEBSITE VALIDATION ==========
         if (website != null && !website.trim().isEmpty()) {
             if (!website.trim().matches("^(https?://)([\\w\\-]+\\.)+[\\w]{2,}(/.*)?$")) {
                 errors.put("website", "Website must be a valid URL (e.g., https://example.com)");
@@ -77,36 +93,19 @@ public class PublisherService {
     }
 
     /**
-     * Validate edit publisher.
-     * Returns Map<fieldName, errorMessage> — empty = valid.
+     * @deprecated Use validatePublisher(id, name, country, website) instead
      */
+    @Deprecated
+    public Map<String, String> validateNewPublisher(String name, String country, String website) {
+        return validatePublisher(null, name, country, website);
+    }
+
+    /**
+     * @deprecated Use validatePublisher(id, name, country, website) instead
+     */
+    @Deprecated
     public Map<String, String> validateEditPublisher(Integer id, String name, String country, String website) {
-        Map<String, String> errors = new LinkedHashMap<>();
-
-        if (name == null || name.trim().isEmpty()) {
-            errors.put("name", "Publisher name cannot be empty");
-        } else if (!name.trim().matches("[\\p{L}0-9 .,'\\-&]+")) {
-            errors.put("name", "Publisher name must contain letters only (no special characters)");
-        } else {
-            Publisher existing = findByName(name.trim());
-            if (existing != null && !existing.getId().equals(id)) {
-                errors.put("name", "Publisher already exists");
-            }
-        }
-
-        if (country != null && !country.trim().isEmpty()) {
-            if (!country.trim().matches("[\\p{L} \\-]+")) {
-                errors.put("country", "Country must contain letters only");
-            }
-        }
-
-        if (website != null && !website.trim().isEmpty()) {
-            if (!website.trim().matches("^(https?://)([\\w\\-]+\\.)+[\\w]{2,}(/.*)?$")) {
-                errors.put("website", "Website must be a valid URL (e.g., https://example.com)");
-            }
-        }
-
-        return errors;
+        return validatePublisher(id, name, country, website);
     }
 
     public void deletePublisher(Integer id) {

@@ -33,13 +33,6 @@ public class OrderDetail {
     private Double total_cost;
 
     @ManyToOne
-    @JoinColumn(name = "promotion_id")
-    private Promotion promotion;
-
-    @Column(name = "discount_amount", precision = 10, scale = 2)
-    private Double discountAmount = 0.0;
-
-    @ManyToOne
     @JoinColumn(name = "series_id")
     private Series series;
 

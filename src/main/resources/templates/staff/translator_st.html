@@ -13,9 +13,6 @@
     <link rel="stylesheet" href="../css/color.css">
     <link rel="stylesheet" href="../css/responsive.css">
     <script src="../js/vendor/modernizr-2.8.3-respond-1.4.2.min.js"></script>
-    <style>
-        .bio-preview { max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    </style>
 </head>
 <body>
 <header id="tg-header" class="tg-header tg-haslayout">
@@ -135,8 +132,6 @@
                                 <th>Name</th>
                                 <th>Biography</th>
                                 <th>Book Count</th>
-                                <th>Created at</th>
-                                <th>Updated at</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -149,8 +144,6 @@
                                     </div>
                                 </td>
                                 <td th:text="${bookCountMap[translator.id]}"></td>
-                                <td th:text="${translator.created_at}"></td>
-                                <td th:text="${translator.updated_at}"></td>
                             </tr>
                             <tr th:if="${#lists.isEmpty(translatorList)}">
                                 <td colspan="6" style="text-align:center; padding:30px; color:#999;">

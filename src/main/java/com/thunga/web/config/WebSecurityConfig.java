@@ -40,7 +40,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         // ============================================================
         http.authorizeRequests()
                 .antMatchers("/", "/signup", "/login", "/products", "/search",
-                        "/detail-product", "/bookImage").permitAll();
+                        "/detail-product", "/bookImage", "/error").permitAll();
 
         // ============================================================
         // USER ENDPOINTS (only users)
@@ -63,6 +63,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         http.authorizeRequests()
                 .antMatchers("/admin/**")
                 .access("hasRole('ADMIN')");
+
 
         // ============================================================
         // STAFF ENDPOINTS (/staff/*)

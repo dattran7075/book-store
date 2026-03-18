@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>403 - Access Forbidden</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Lato:wght@300;400&display=swap');
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --ink: #1a1a2e;
+            --paper: #f5f0e8;
+            --accent: #b94040;
+            --muted: #7a7a8a;
+            --light-line: rgba(26, 26, 46, 0.1);
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            background-color: var(--paper);
+            color: var(--ink);
+            font-family: 'Lato', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: repeating-linear-gradient(
+                    0deg, transparent, transparent 39px,
+                    var(--light-line) 39px, var(--light-line) 40px
+            );
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-decoration {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .spine {
+            position: absolute;
+            width: 18px;
+            border-radius: 2px;
+            opacity: 0.12;
+        }
+
+        .spine:nth-child(1) {
+            height: 180px;
+            background: #b94040;
+            left: 4%;
+            top: 10%;
+            transform: rotate(-8deg);
+        }
+
+        .spine:nth-child(2) {
+            height: 220px;
+            background: #4a7fa5;
+            left: 7%;
+            top: 30%;
+            transform: rotate(5deg);
+        }
+
+        .spine:nth-child(3) {
+            height: 140px;
+            background: #8b4a6b;
+            left: 11%;
+            top: 60%;
+            transform: rotate(-3deg);
+        }
+
+        .spine:nth-child(4) {
+            height: 200px;
+            background: #5a8a5a;
+            left: 85%;
+            top: 8%;
+            transform: rotate(7deg);
+        }
+
+        .spine:nth-child(5) {
+            height: 160px;
+            background: #b94040;
+            left: 89%;
+            top: 35%;
+            transform: rotate(-6deg);
+        }
+
+        .spine:nth-child(6) {
+            height: 240px;
+            background: #4a7fa5;
+            left: 93%;
+            top: 55%;
+            transform: rotate(4deg);
+        }
+
+        .spine:nth-child(7) {
+            height: 120px;
+            background: #1a1a2e;
+            left: 2%;
+            top: 75%;
+            transform: rotate(9deg);
+        }
+
+        .spine:nth-child(8) {
+            height: 190px;
+            background: #8b4a6b;
+            left: 96%;
+            top: 20%;
+            transform: rotate(-5deg);
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 3rem 2rem;
+            max-width: 560px;
+        }
+
+        /* Lock illustration */
+        .lock-illustration {
+            width: 100px;
+            height: 120px;
+            margin: 0 auto 2.5rem;
+            position: relative;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-12px);
+            }
+        }
+
+        .lock-body {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 55px;
+            background: linear-gradient(135deg, #b94040 0%, #d96060 50%, #b94040 100%);
+            border-radius: 6px;
+            box-shadow: 0 6px 24px rgba(185, 64, 64, 0.35);
+        }
+
+        .lock-body::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 16px;
+            height: 22px;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 8px;
+        }
+
+        /* keyhole */
+        .lock-body::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -45%);
+            width: 12px;
+            height: 18px;
+            background: rgba(26, 26, 46, 0.5);
+            border-radius: 6px 6px 3px 3px;
+        }
+
+        .lock-shackle {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 44px;
+            height: 52px;
+            border: 10px solid var(--ink);
+            border-bottom: none;
+            border-radius: 22px 22px 0 0;
+            opacity: 0.85;
+        }
+
+        /* Error number */
+        .error-number {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(5rem, 18vw, 8rem);
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: -4px;
+            color: var(--ink);
+            position: relative;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+
+        .error-number::after {
+            content: '403';
+            position: absolute;
+            inset: 0;
+            color: var(--accent);
+            clip-path: polygon(0 60%, 100% 55%, 100% 100%, 0 100%);
+        }
+
+        .ornament {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            justify-content: center;
+            margin: 1.2rem 0;
+        }
+
+        .ornament-line {
+            flex: 1;
+            max-width: 80px;
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--accent));
+        }
+
+        .ornament-line:last-child {
+            background: linear-gradient(to left, transparent, var(--accent));
+        }
+
+        .ornament-diamond {
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            transform: rotate(45deg);
+            flex-shrink: 0;
+        }
+
+        .error-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.2rem, 4vw, 1.6rem);
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.02em;
+        }
+
+        .error-message {
+            font-family: 'Lato', sans-serif;
+            font-weight: 300;
+            font-size: 1rem;
+            color: var(--muted);
+            line-height: 1.7;
+            margin-bottom: 2.5rem;
+            max-width: 380px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .btn-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.9rem 2.5rem;
+            background: var(--ink);
+            color: var(--paper);
+            text-decoration: none;
+            font-family: 'Lato', sans-serif;
+            font-weight: 400;
+            font-size: 0.9rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            border: 2px solid var(--ink);
+            position: relative;
+            overflow: hidden;
+            transition: color 0.35s ease;
+        }
+
+        .btn-home::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--accent);
+            transform: translateX(-100%);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 0;
+        }
+
+        .btn-home:hover::before {
+            transform: translateX(0);
+        }
+
+        .btn-home:hover {
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .btn-home span, .btn-home svg {
+            position: relative;
+            z-index: 1;
+        }
+
+        .stamp {
+            display: inline-block;
+            margin-top: 2.5rem;
+            padding: 0.4rem 1rem;
+            border: 1.5px dashed var(--muted);
+            font-family: 'Lato', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 300;
+            color: var(--muted);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            opacity: 0.6;
+        }
+
+        .container > * {
+            animation: rise 0.7s ease both;
+        }
+
+        .container > *:nth-child(1) {
+            animation-delay: 0.05s;
+        }
+
+        .container > *:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .container > *:nth-child(3) {
+            animation-delay: 0.22s;
+        }
+
+        .container > *:nth-child(4) {
+            animation-delay: 0.30s;
+        }
+
+        .container > *:nth-child(5) {
+            animation-delay: 0.37s;
+        }
+
+        .container > *:nth-child(6) {
+            animation-delay: 0.44s;
+        }
+
+        .container > *:nth-child(7) {
+            animation-delay: 0.50s;
+        }
+
+        @keyframes rise {
+            from {
+                opacity: 0;
+                transform: translateY(24px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="bg-decoration">
+    <div class="spine"></div>
+    <div class="spine"></div>
+    <div class="spine"></div>
+    <div class="spine"></div>
+    <div class="spine"></div>
+    <div class="spine"></div>
+    <div class="spine"></div>
+    <div class="spine"></div>
+</div>
+
+<div class="container">
+
+    <!-- Lock illustration -->
+    <div class="lock-illustration">
+        <div class="lock-shackle"></div>
+        <div class="lock-body"></div>
+    </div>
+
+    <!-- 403 -->
+    <div class="error-number">403</div>
+
+    <!-- Ornamental divider -->
+    <div class="ornament">
+        <div class="ornament-line"></div>
+        <div class="ornament-diamond"></div>
+        <div class="ornament-diamond"></div>
+        <div class="ornament-diamond"></div>
+        <div class="ornament-line"></div>
+    </div>
+
+    <!-- Title -->
+    <h1 class="error-title">Access Forbidden</h1>
+
+    <!-- Message -->
+    <p class="error-message">
+        You do not have permission to access this page.
+        Please contact your administrator or return to the homepage.
+    </p>
+
+    <!-- Home button -->
+    <a href="/" class="btn-home">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span>Back to Home</span>
+    </a>
+
+    <!-- Stamp -->
+    <div class="stamp">Book Library &mdash; Access denied</div>
+
+</div>
+
+</body>
+</html>

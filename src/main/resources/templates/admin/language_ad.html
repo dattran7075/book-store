@@ -237,7 +237,7 @@
                                                         <h4 class="modal-title" style="text-transform: none;">Edit
                                                             Language</h4>
                                                     </div>
-                                                    <form method="post" th:action="@{/edit-language}">
+                                                    <form method="post" th:action="@{/admin/edit-language}">
                                                         <div class="modal-body">
                                                             <input type="hidden" name="id" th:value="${language.id}">
                                                             <div th:with="isThis=${editLanguageId != null and editLanguageId == language.id.toString()}">
@@ -309,7 +309,7 @@
                                                                 data-dismiss="modal">Cancel
                                                         </button>
                                                         <a th:if="${bookCountMap[language.id] == 0}"
-                                                           th:href="@{/delete-language(id=${language.id})}">
+                                                           th:href="@{/admin/delete-language(id=${language.id})}">
                                                             <button type="submit" class="btn btn-primary">Confirm
                                                             </button>
                                                         </a>
@@ -330,14 +330,14 @@
         <nav aria-label="Page navigation" style="text-align: center;">
             <ul class="pagination">
                 <li th:classappend="${page == 1} ? 'disabled'">
-                    <a th:if="${page > 1}" th:href="@{/manage-language(page=${page - 1})}">&laquo;</a>
+                    <a th:if="${page > 1}" th:href="@{/admin/manage-language(page=${page - 1})}">&laquo;</a>
                     <span th:if="${page == 1}">&laquo;</span>
                 </li>
                 <li th:each="i : ${#numbers.sequence(1, totalPage)}" th:classappend="${i == page} ? 'active'">
-                    <a th:href="@{/manage-language(page=${i})}" th:text="${i}"></a>
+                    <a th:href="@{/admin/manage-language(page=${i})}" th:text="${i}"></a>
                 </li>
                 <li th:classappend="${page == totalPage} ? 'disabled'">
-                    <a th:if="${page < totalPage}" th:href="@{/manage-language(page=${page + 1})}">&raquo;</a>
+                    <a th:if="${page < totalPage}" th:href="@{/admin/manage-language(page=${page + 1})}">&raquo;</a>
                     <span th:if="${page == totalPage}">&raquo;</span>
                 </li>
             </ul>
@@ -355,7 +355,7 @@
                 </button>
                 <h4 class="modal-title" style="text-transform: none;">Add New Language</h4>
             </div>
-            <form method="post" th:action="@{/create-language}">
+            <form method="post" th:action="@{/admin/create-language}">
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Name <span style="color: red;">*</span></label>

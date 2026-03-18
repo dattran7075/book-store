@@ -57,6 +57,9 @@ public class Book {
     @Column(name = "price")
     private Double price;
 
+    @Column(name = "weight_kg", precision = 10, scale = 2)
+    private Double weight_kg;
+
     @Column(name = "number_page")
     private Integer number_page;
 
@@ -91,9 +94,6 @@ public class Book {
 
     @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<BookTranslator> bookTranslatorList;
-
-    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<PromotionBook> promotionBookList;
 
     @Transient
     private MultipartFile fileData;

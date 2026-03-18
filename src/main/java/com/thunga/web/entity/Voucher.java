@@ -3,7 +3,6 @@ package com.thunga.web.entity;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 import javax.persistence.*;
 import java.time.LocalDate;
@@ -13,13 +12,13 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "promotion")
-public class Promotion {
+@Table(name = "voucher")
+public class Voucher {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "promotion_id")
-    private Integer promotionId;
+    @Column(name = "voucher_id")
+    private Integer voucherId;
 
     @Column(name = "code", nullable = false, unique = true, length = 50)
     private String code;
@@ -45,15 +44,11 @@ public class Promotion {
     @Column(name = "min_order")
     private Double minOrder;
 
-    @Column(name = "discount_type", nullable = false, length = 20)
-    private String discountType;
-
     @Column(name = "status", nullable = false, length = 20)
     private String status;
 
-    @OneToMany(mappedBy = "promotion", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude
-    private List<PromotionBook> promotionBooks;
+    @OneToMany(mappedBy = "voucher", fetch = FetchType.LAZY)
+    private List<Order> orderList;
 
     @Transient
     public String getDisplayStatus() {

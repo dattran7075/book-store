@@ -3,7 +3,9 @@ package com.thunga.web.controller;
 import com.thunga.web.entity.*;
 import com.thunga.web.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.servlet.error.ErrorController;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -11,13 +13,14 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.RequestDispatcher;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.*;
 
 @Controller
-public class MainController {
+public class MainController implements ErrorController {
 
     @Autowired
     private BookService bookService;
@@ -72,9 +75,20 @@ public class MainController {
 
     @GetMapping("/")
     public String homePage(Model model, HttpServletRequest request, Authentication authentication) {
-        Page<Book> bookPage = bookService.getBooks(1, 6, null, null, null, null);
+        // Books you should know
+        Page<Book> bookPage = bookService.getFilteredAndSortedBooks(
+                null, null, null, null, null, 0, 6);
         model.addAttribute("bookList", bookPage.toList());
 
+        // Ngay sau: model.addAttribute("bookList", bookPage.toList());
+        List<Book> bookListItems = bookPage.toList();
+        Map<Integer, Double> bookListRatings = new HashMap<>();
+        for (Book book : bookListItems) {
+            bookListRatings.put(book.getId(), commentService.getAverageRating(book));
+        }
+        model.addAttribute("bookListRatings", bookListRatings);
+
+        // Best sold book
         Book bestSoldBook = null;
         try {
             bestSoldBook = bookService.findBestSoldBook();
@@ -82,6 +96,71 @@ public class MainController {
             e.printStackTrace();
         }
         model.addAttribute("bestSoldBook", bestSoldBook);
+
+        // New Arrivals
+        List<Book> newArrivals = new ArrayList<>();
+        try {
+            Page<Book> newArrivalsPage = bookService.getFilteredAndSortedBooks(
+                    null, null, null, null, "newest", 0, 8);
+            newArrivals = newArrivalsPage.toList();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        model.addAttribute("newArrivals", newArrivals);
+
+        // ✅ Calculate ratings for New Arrivals using Map
+        Map<Integer, Double> newArrivalsRatings = new HashMap<>();
+        for (Book book : newArrivals) {
+            Double avgRating = commentService.getAverageRating(book);
+            newArrivalsRatings.put(book.getId(), avgRating);
+        }
+        model.addAttribute("newArrivalsRatings", newArrivalsRatings);
+
+        // Top Rated Books with Reviews
+        List<Comment> topRatings = new ArrayList<>();
+        try {
+            topRatings = commentService.getTopRatedComments(3);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        model.addAttribute("topRatings", topRatings);
+
+        // Recommended for you
+        List<Book> recommendedBooks = new ArrayList<>();
+        if (authentication != null && authentication.isAuthenticated()) {
+            try {
+                String username = authentication.getName();
+                Account account = accountService.findByUsername(username);
+                if (account != null) {
+                    User user = userService.findByAccount(account);
+                    if (user != null) {
+                        recommendedBooks = bookService.getRecommendedBooksForUser(user.getId(), 10);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        // If no recommendations, get best-sellers
+        if (recommendedBooks.isEmpty()) {
+            try {
+                Page<Book> bestsellersPage = bookService.getFilteredAndSortedBooks(
+                        null, null, null, null, "bestseller", 0, 10);
+                recommendedBooks = bestsellersPage.toList();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        model.addAttribute("recommendedBooks", recommendedBooks);
+
+        // ✅ Calculate ratings for Recommended Books using Map
+        Map<Integer, Double> recommendedRatings = new HashMap<>();
+        for (Book book : recommendedBooks) {
+            Double avgRating = commentService.getAverageRating(book);
+            recommendedRatings.put(book.getId(), avgRating);
+        }
+        model.addAttribute("recommendedRatings", recommendedRatings);
 
         addCartInfoToModel(model);
 
@@ -435,14 +514,14 @@ public class MainController {
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) Double priceMin,
             @RequestParam(required = false) Double priceMax,
-            @RequestParam(required = false) String pricePreset
-    ) {
+            @RequestParam(required = false) String pricePreset) {
+
+        if (page < 1) page = 1;
+
         if (sortBy != null) {
             sortBy = sortBy.trim();
             if (sortBy.isEmpty()) sortBy = null;
         }
-
-        if (page < 1) page = 1;
 
         if (pricePreset != null && !pricePreset.isEmpty() && priceMin == null && priceMax == null) {
             switch (pricePreset) {
@@ -469,11 +548,28 @@ public class MainController {
             }
         }
 
-        Page<Book> bookPage = bookService.getBooks(page, limit, sortBy, priceMin, priceMax, categoryId);
+        Page<Book> bookPage = bookService.getFilteredAndSortedBooks(
+                null,          // keyword = null (no search)
+                categoryId,    // category filter
+                priceMin,
+                priceMax,
+                sortBy,
+                page - 1,      // Convert to 0-based index
+                limit
+        );
 
+        // Handle page out of range
         if (page > bookPage.getTotalPages() && bookPage.getTotalPages() > 0) {
             page = 1;
-            bookPage = bookService.getBooks(page, limit, sortBy, priceMin, priceMax, categoryId);
+            bookPage = bookService.getFilteredAndSortedBooks(
+                    null,
+                    categoryId,
+                    priceMin,
+                    priceMax,
+                    sortBy,
+                    0,
+                    limit
+            );
         }
 
         model.addAttribute("bookList", bookPage.getContent());
@@ -488,6 +584,7 @@ public class MainController {
 
         addCartInfoToModel(model);
 
+        // Get sidebar categories
         List<Category> sidebarCategories = categoryService.getCategoriesForSidebar(categoryId);
         model.addAttribute("sidebarCategories", sidebarCategories);
         model.addAttribute("selectedCategoryId", categoryId);
@@ -496,11 +593,15 @@ public class MainController {
     }
 
     @GetMapping("/search")
-    public String searchProduct(Model model,
-                                HttpServletRequest request,
-                                @RequestParam(required = false) String keyword,
-                                @RequestParam(value = "page", required = false) String pageParam,
-                                @RequestParam(required = false) String sortBy) {
+    public String searchProduct(
+            Model model,
+            HttpServletRequest request,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(value = "page", required = false) String pageParam,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) Double priceMin,
+            @RequestParam(required = false) Double priceMax,
+            @RequestParam(required = false) String pricePreset) {
 
         if (keyword == null || keyword.trim().isEmpty()) {
             return "redirect:/products";
@@ -522,24 +623,75 @@ public class MainController {
             page = 1;
         }
 
-        Page<Book> bookPage = bookService.searchAllWithPagination(keyword, page - 1, pageSize, sortBy);
+        if (sortBy != null) {
+            sortBy = sortBy.trim();
+            if (sortBy.isEmpty()) sortBy = null;
+        }
 
+        // ✅ Handle price preset
+        if (pricePreset != null && !pricePreset.isEmpty() && priceMin == null && priceMax == null) {
+            switch (pricePreset) {
+                case "0-150000":
+                    priceMin = 0.0;
+                    priceMax = 150000.0;
+                    break;
+                case "150000-300000":
+                    priceMin = 150000.0;
+                    priceMax = 300000.0;
+                    break;
+                case "300000-500000":
+                    priceMin = 300000.0;
+                    priceMax = 500000.0;
+                    break;
+                case "500000-700000":
+                    priceMin = 500000.0;
+                    priceMax = 700000.0;
+                    break;
+                case "700000+":
+                    priceMin = 700000.0;
+                    priceMax = null;
+                    break;
+            }
+        }
+
+        Page<Book> bookPage = bookService.getFilteredAndSortedBooks(
+                keyword,       // keyword search
+                null,          // categoryId = null (no category filter)
+                priceMin,
+                priceMax,
+                sortBy,
+                page - 1,      // Convert to 0-based index
+                pageSize
+        );
+
+        // Handle page out of range
         if (page > bookPage.getTotalPages() && bookPage.getTotalPages() > 0) {
             page = 1;
-            bookPage = bookService.searchAllWithPagination(keyword, 0, pageSize, sortBy);
+            bookPage = bookService.getFilteredAndSortedBooks(
+                    keyword,
+                    null,
+                    priceMin,
+                    priceMax,
+                    sortBy,
+                    0,
+                    pageSize
+            );
         }
 
         model.addAttribute("bookList", bookPage.getContent());
         model.addAttribute("keyword", keyword);
         model.addAttribute("searchResultCount", bookPage.getTotalElements());
         model.addAttribute("sortBy", sortBy);
+        model.addAttribute("priceMin", priceMin);
+        model.addAttribute("priceMax", priceMax);
+        model.addAttribute("pricePreset", pricePreset);
 
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", bookPage.getTotalPages());
         model.addAttribute("totalElements", bookPage.getTotalElements());
 
         addCartInfoToModel(model);
-        return "products";
+        return "products";  // Reuse template
     }
 
     @GetMapping("/detail-product")
@@ -547,43 +699,53 @@ public class MainController {
         Book book = bookService.findById(id);
 
         if (book != null) {
-            if (book.getPublisher() != null) {
-                book.getPublisher().getName();
-            }
-            if (book.getSeries() != null) {
-                book.getSeries().getName();
-            }
-            if (book.getLanguage() != null) {
-                book.getLanguage().getName();
-            }
+            if (book.getPublisher() != null) book.getPublisher().getName();
+            if (book.getSeries() != null) book.getSeries().getName();
+            if (book.getLanguage() != null) book.getLanguage().getName();
             if (book.getBookTranslatorList() != null && !book.getBookTranslatorList().isEmpty()) {
-                for (BookTranslator bt : book.getBookTranslatorList()) {
-                    bt.getTranslator().getName();
-                }
+                for (BookTranslator bt : book.getBookTranslatorList()) bt.getTranslator().getName();
             }
         }
 
         model.addAttribute("book", book);
-        model.addAttribute("comment", new Comment());
 
+        // ── Comment attributes ───────────────────────────────────────────────
         String username = request.getRemoteUser();
         boolean canReview = false;
         boolean hasCommented = false;
+        Comment myComment = null;
+        boolean isUserRole = false;
 
         if (username != null) {
             Account account = accountService.findByUsername(username);
             User user = userService.findByAccount(account);
             model.addAttribute("username", username);
 
+            // Only USER role gets tabs — ADMIN sees guest view
+            isUserRole = "USER".equals(account.getRole());
             canReview = bookService.hasCompletedOrderWithBook(user, book);
             hasCommented = commentService.hasUserCommented(user, book);
+
+            // My comment (any status) – for My Review tab
+            myComment = commentService.getMyCommentForBook(user, book).orElse(null);
+
+            // If already has a comment, cannot write a new one
+            if (myComment != null) canReview = false;
         }
 
-        model.addAttribute("canReview", canReview);
+        // Approved comments – visible to everyone
+        model.addAttribute("approvedComments", commentService.getApprovedCommentsByBook(book));
+        model.addAttribute("myComment", myComment);
         model.addAttribute("hasCommented", hasCommented);
+        model.addAttribute("canReview", canReview);
+        model.addAttribute("isUserRole", isUserRole);
+
+        // Empty Comment object for the write-review form
+        model.addAttribute("comment", new Comment());
 
         addCartInfoToModel(model);
 
+        // ── Sidebar categories ───────────────────────────────────────────────
         List<Category> categoryList = categoryService.findAll();
         model.addAttribute("categoryList", categoryList);
 
@@ -592,10 +754,10 @@ public class MainController {
         model.addAttribute("sidebarCategories", sidebarCategories);
         model.addAttribute("selectedCategoryId", categoryId);
 
+        // ── Series books (related products) ─────────────────────────────────
         List<Book> seriesBooks = new ArrayList<>();
         if (book.getSeries() != null) {
             seriesBooks = bookService.findBySeriesExcludingCurrent(book.getSeries().getId(), book.getId());
-
             seriesBooks.sort((b1, b2) -> {
                 if (b1.getVolumeNumber() == null && b2.getVolumeNumber() == null) return 0;
                 if (b1.getVolumeNumber() == null) return 1;
@@ -605,6 +767,7 @@ public class MainController {
         }
         model.addAttribute("seriesBooks", seriesBooks);
 
+        // ── Series bundle section ────────────────────────────────────────────
         if (book.getSeries() != null) {
             Integer seriesId = book.getSeries().getId();
             Series series = book.getSeries();
@@ -678,7 +841,7 @@ public class MainController {
             } else if ("ROLE_STAFF".equals(roleVal)) {
                 Admin admin = adminService.findByAccount(account);
                 if (admin != null) {
-                    model.addAttribute("staff", admin);
+                    model.addAttribute("admin", admin);
                     return "staff/profile_st";
                 } else {
                     return "redirect:/login?error=Staff information not found!";
@@ -718,5 +881,69 @@ public class MainController {
         String message = userService.changePassword(request);
         request.getSession().setAttribute("message", message);
         return "redirect:/profile";
+    }
+
+    @PostMapping("/verify-old-password")
+    @ResponseBody
+    public Map<String, Boolean> verifyOldPassword(@RequestBody Map<String, String> requestData) {
+        Map<String, Boolean> response = new HashMap<>();
+
+        try {
+            String oldPassword = requestData.get("oldPassword");
+
+            if (oldPassword == null || oldPassword.isEmpty()) {
+                response.put("isValid", false);
+                return response;
+            }
+
+            String username = null;
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated()) {
+                username = auth.getName();
+            }
+
+            if (username == null) {
+                response.put("isValid", false);
+                return response;
+            }
+
+            Account account = accountService.findByUsername(username);
+            if (account == null) {
+                response.put("isValid", false);
+                return response;
+            }
+
+            boolean isValid = passwordEncoder.matches(oldPassword, account.getPassword());
+            response.put("isValid", isValid);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.put("isValid", false);
+        }
+
+        return response;
+    }
+
+    @GetMapping("/error")
+    public String handleError(HttpServletRequest request) {
+        Object status = request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE);
+
+        if (status != null) {
+            int statusCode = Integer.parseInt(status.toString());
+
+            if (statusCode == HttpStatus.NOT_FOUND.value()) {
+                return "error/error404";
+            }
+
+            if (statusCode == HttpStatus.FORBIDDEN.value()) {
+                return "error/error403";
+            }
+
+            if (statusCode == HttpStatus.INTERNAL_SERVER_ERROR.value()) {
+                return "error/error500";
+            }
+        }
+
+        return "error/error404";
     }
 }

@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comment Management – Admin</title>
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/normalize.css">
+    <link rel="stylesheet" href="/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/css/icomoon.css">
+    <link rel="stylesheet" href="/css/jquery-ui.css">
+    <link rel="stylesheet" href="/css/owl.carousel.css">
+    <link rel="stylesheet" href="/css/transitions.css">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/color.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <style>
+        /* ── Base ─────────────────────────────────────────────────────────── */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #f4f6f9;
+            color: #2d3748;
+            margin: 0;
+        }
+
+        .page-wrapper {
+            padding: 28px 32px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* ── Page title ───────────────────────────────────────────────────── */
+        .page-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title i {
+            color: #5cb85c;
+            font-size: 20px;
+        }
+
+        /* ── Stat cards ───────────────────────────────────────────────────── */
+        .stats-row {
+            display: flex !important;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: nowrap;
+        }
+
+        .stat-card {
+            flex: 1;
+            min-width: 0;
+            background: #fff;
+            border-radius: 12px;
+            padding: 18px 22px;
+            border: 1px solid #e8ecf0;
+            display: flex !important;
+            flex-direction: column;
+            gap: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            transition: box-shadow .2s, transform .15s;
+        }
+
+        .stat-card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, .09);
+            transform: translateY(-2px);
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .stat-card.active {
+            border-color: #5cb85c;
+            box-shadow: 0 0 0 2px #5cb85c33;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .stat-card.total .stat-value,
+        .stat-card.stat-total .stat-value {
+            color: #2d3748;
+        }
+
+        .stat-card.pending .stat-value,
+        .stat-card.stat-pending .stat-value {
+            color: #d69e2e;
+        }
+
+        .stat-card.approved .stat-value,
+        .stat-card.stat-approved .stat-value {
+            color: #38a169;
+        }
+
+        .stat-card.hidden .stat-value,
+        .stat-card.stat-hidden .stat-value {
+            color: #e53e3e;
+        }
+
+        /* Override Bootstrap/main.css .hidden display:none */
+        .stat-card.hidden,
+        .stat-card.stat-hidden {
+            display: flex !important;
+        }
+
+        /* ── Filter tabs ──────────────────────────────────────────────────── */
+        .filter-bar {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e8ecf0;
+            padding: 0 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            overflow-x: auto;
+        }
+
+        .filter-tab {
+            padding: 14px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #718096;
+            border-bottom: 3px solid transparent;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: color .2s, border-color .2s;
+        }
+
+        .filter-tab:hover {
+            color: #2d3748;
+            text-decoration: none;
+        }
+
+        .filter-tab.active {
+            color: #5cb85c;
+            border-bottom-color: #5cb85c;
+        }
+
+        /* ── Spam detection panel ─────────────────────────────────────────── */
+        .spam-panel {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e8ecf0;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .spam-panel-header {
+            padding: 16px 20px;
+            font-weight: 700;
+            font-size: 13px;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .spam-tabs {
+            display: flex;
+            border-bottom: 1px solid #f0f0f0;
+            padding: 0 20px;
+        }
+
+        .spam-tab {
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #718096;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: color .2s, border-color .2s;
+            white-space: nowrap;
+        }
+
+        .spam-tab.active {
+            color: #5cb85c;
+            border-bottom-color: #5cb85c;
+        }
+
+        .spam-tab-body {
+            padding: 16px 20px;
+            display: none;
+        }
+
+        .spam-tab-body.active {
+            display: block;
+        }
+
+        /* tag input */
+        .tag-input-wrapper {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .tag-input {
+            flex: 1;
+            padding: 8px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        .tag-input:focus {
+            border-color: #5cb85c;
+        }
+
+        .btn-add-tag {
+            padding: 8px 20px;
+            background: #5cb85c;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .2s;
+        }
+
+        .btn-add-tag:hover {
+            background: #4cae4c;
+        }
+
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .tag-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .tag-chip.offensive {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .tag-chip.spam {
+            background: #fefcbf;
+            color: #b7791f;
+        }
+
+        .tag-chip.irrelevant {
+            background: #bee3f8;
+            color: #2b6cb0;
+        }
+
+        .tag-chip .remove-tag {
+            cursor: pointer;
+            opacity: .7;
+            font-size: 12px;
+        }
+
+        .tag-chip .remove-tag:hover {
+            opacity: 1;
+        }
+
+        .spam-summary {
+            font-size: 13px;
+            color: #718096;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .spam-summary b {
+            color: #2d3748;
+        }
+
+        /* ── Table ────────────────────────────────────────────────────────── */
+        .table-card {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e8ecf0;
+            overflow: hidden;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        thead {
+            background: #f7f9fc;
+        }
+
+        th {
+            padding: 13px 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            color: #718096;
+            border-bottom: 1px solid #e8ecf0;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f0f4f8;
+            vertical-align: middle;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: #fbfcff;
+        }
+
+        /* ── Status badges ────────────────────────────────────────────────── */
+        .badge-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .4px;
+            text-transform: uppercase;
+        }
+
+        .badge-approved {
+            background: #c6f6d5;
+            color: #276749;
+        }
+
+        .badge-pending {
+            background: #fefcbf;
+            color: #975a16;
+        }
+
+        .badge-hidden {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        /* ── Violation badges ─────────────────────────────────────────────── */
+        .viol-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .viol-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .3px;
+        }
+
+        .viol-offensive {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .viol-spam {
+            background: #fefcbf;
+            color: #975a16;
+        }
+
+        .viol-irrelevant {
+            background: #bee3f8;
+            color: #2b6cb0;
+        }
+
+        .viol-clean {
+            color: #a0aec0;
+            font-size: 12px;
+        }
+
+        /* ── Content toggle ───────────────────────────────────────────────── */
+        .content-wrapper {
+            position: relative;
+        }
+
+        .btn-toggle-content {
+            width: 100%;
+            padding: 7px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f7f9fc;
+            color: #5cb85c;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: background .2s;
+        }
+
+        .btn-toggle-content:hover {
+            background: #edf7ed;
+        }
+
+        .content-text {
+            display: none;
+            margin-top: 8px;
+            padding: 10px 12px;
+            background: #f7f9fc;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #4a5568;
+            line-height: 1.6;
+            border-left: 3px solid #5cb85c;
+        }
+
+        .content-text.visible {
+            display: block;
+        }
+
+        .highlight-offensive {
+            background: #fed7d7;
+            border-radius: 3px;
+            padding: 0 2px;
+            color: #c53030;
+            font-weight: 600;
+        }
+
+        .highlight-spam {
+            background: #fefcbf;
+            border-radius: 3px;
+            padding: 0 2px;
+            color: #975a16;
+            font-weight: 600;
+        }
+
+        .highlight-irrelevant {
+            background: #bee3f8;
+            border-radius: 3px;
+            padding: 0 2px;
+            color: #2b6cb0;
+            font-weight: 600;
+        }
+
+        .no-content-label {
+            color: #a0aec0;
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        /* ── Stars ────────────────────────────────────────────────────────── */
+        .star-display {
+            color: #e2e8f0;
+            font-size: 15px;
+            white-space: nowrap;
+        }
+
+        .star-display .filled {
+            color: #f6ad55;
+        }
+
+        /* ── Edit button ──────────────────────────────────────────────────── */
+        .btn-edit {
+            padding: 6px 16px;
+            border: 1px solid #e2711d;
+            border-radius: 8px;
+            background: #f97316;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .15s;
+            white-space: nowrap;
+        }
+
+        .btn-edit:hover {
+            background: #ea6c0a;
+            color: #fff;
+            border-color: #ea6c0a;
+        }
+
+        /* ── Pagination ───────────────────────────────────────────────────── */
+        .pagination-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 18px;
+        }
+
+        .pg-btn {
+            padding: 6px 13px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #fff;
+            color: #4a5568;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all .15s;
+        }
+
+        .pg-btn:hover {
+            background: #edf7ed;
+            border-color: #5cb85c;
+            color: #5cb85c;
+            text-decoration: none;
+        }
+
+        .pg-btn.active {
+            background: #5cb85c;
+            color: #fff;
+            border-color: #5cb85c;
+        }
+
+        .pg-btn.disabled {
+            pointer-events: none;
+            opacity: .4;
+        }
+
+        /* ── Modal ────────────────────────────────────────────────────────── */
+        .modal-header {
+            background: #5cb85c;
+            color: #fff;
+        }
+
+        .modal-header .close {
+            color: #fff;
+            opacity: .8;
+        }
+
+        .modal-header .close:hover {
+            opacity: 1;
+        }
+
+        .status-select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        .status-select:focus {
+            border-color: #5cb85c;
+        }
+
+        .comment-preview {
+            background: #f7f9fc;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 16px;
+        }
+
+        .comment-preview .meta {
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 6px;
+        }
+
+        .comment-preview .body {
+            font-size: 14px;
+            color: #2d3748;
+        }
+
+        .transition-note {
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: #fffbeb;
+            border-radius: 8px;
+            border-left: 3px solid #f6ad55;
+            font-size: 13px;
+            color: #744210;
+        }
+
+        /* edited badge */
+        .edited-badge {
+            display: inline-block;
+            padding: 2px 7px;
+            background: #fed7d7;
+            color: #c53030;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-left: 6px;
+        }
+
+        /* ── Responsive ───────────────────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .page-wrapper {
+                padding: 16px;
+            }
+
+            .stats-row {
+                gap: 10px;
+            }
+
+            th, td {
+                padding: 10px 12px;
+            }
+        }
+
+        /* ── Header override to not conflict ─────────────────────────────── */
+        body {
+            margin: 0;
+            background: #f4f6f9;
+        }
+
+        .tg-header {
+            position: relative;
+            z-index: 1000;
+        }
+
+        .tg-navigationarea {
+            position: relative;
+            z-index: 1000;
+            overflow: visible;
+        }
+
+        .tg-nav, .tg-navigation, #tg-navigation {
+            overflow: visible !important;
+        }
+
+        .mega-menu, .sub-menu {
+            z-index: 99999 !important;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════════════════════════════════ -->
+<div id="tg-wrapper" class="tg-wrapper tg-haslayout">
+    <header id="tg-header" class="tg-header tg-haslayout">
+        <div class="tg-topbar">
+            <div class="container">
+                <div class="row">
+                    <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                        <div class="tg-userlogin">
+                            <div>
+                                <li style="list-style:none;" class="menu-item-has-children"
+                                    sec:authorize="isAuthenticated()">
+                                    <a href=""><i id="user_icon" class="fa fa-user"></i> Welcome <span
+                                            class="sr-only"></span></a>
+                                    <div class="mega-menu user">
+                                        <ul class="tg-themetabnav" role="tablist">
+                                            <li><a th:href="@{/profile}">Profile</a></li>
+                                            <li><a class="tg-userlogout" th:href="@{/logout}">Logout</a></li>
+                                        </ul>
+                                    </div>
+                                </li>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tg-middlecontainer" style="padding:10px;">
+            <div class="container">
+                <div class="row">
+                    <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                        <strong class="tg-logo"><a href="/"><img src="/images/logo.png" alt="Book Library"></a></strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tg-navigationarea">
+            <div class="container">
+                <div class="row">
+                    <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                        <nav id="tg-nav" class="tg-nav">
+                            <div class="navbar-header">
+                                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+                                        data-target="#tg-navigation" aria-expanded="false">
+                                    <span class="sr-only">Toggle navigation</span>
+                                    <span class="icon-bar"></span><span class="icon-bar"></span><span
+                                        class="icon-bar"></span>
+                                </button>
+                            </div>
+                            <div id="tg-navigation" class="collapse navbar-collapse tg-navigation">
+                                <ul>
+                                    <li><a th:href="@{/}">Home</a></li>
+                                    <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-product}">Books</a>
+                                    </li>
+                                    <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-category}">Categories</a>
+                                    </li>
+                                    <li sec:authorize="hasRole('ADMIN')"><a
+                                            th:href="@{/admin/manage-author}">Authors</a></li>
+                                    <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-user}">Users</a>
+                                    </li>
+                                    <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-order}">Orders</a>
+                                    </li>
+                                    <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-promotion}">Promotions</a>
+                                    </li>
+                                    <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-comment}"
+                                                                            style="font-weight:700;">Reviews</a></li>
+                                    <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/statistic}">Statistics</a>
+                                    </li>
+                                    <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-staff}">Staff</a>
+                                    </li>
+                                    <li class="menu-item-has-children" sec:authorize="hasRole('ADMIN')">
+                                        <a href="javascript:void(0);"><i class="fa fa-bars"></i></a>
+                                        <div class="mega-menu">
+                                            <ul>
+                                                <li><a th:href="@{/admin/manage-series}"><i class="fa fa-book"></i>
+                                                    Series</a></li>
+                                                <li><a th:href="@{/admin/manage-language}"><i class="fa fa-flag"></i>
+                                                    Language</a></li>
+                                                <li><a th:href="@{/admin/manage-publisher}"><i
+                                                        class="fa fa-briefcase"></i> Publisher</a></li>
+                                                <li><a th:href="@{/admin/manage-translator}"><i class="fa fa-users"></i>
+                                                    Translator</a></li>
+                                                <li><a th:href="@{/admin/manage-comment}"><i class="fa fa-comments"></i>
+                                                    Reviews</a></li>
+                                            </ul>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ── Inner Banner ──────────────────────────────────────────────────── -->
+    <div class="tg-innerbanner tg-haslayout tg-parallax tg-bginnerbanner"
+         data-z-index="-100" data-appear-top-offset="600"
+         data-parallax="scroll" data-image-src="/images/parallax/bgparallax-07.jpg">
+        <div class="container">
+            <div class="row">
+                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                    <div class="tg-innerbannercontent">
+                        <h1>Comment Management</h1>
+                        <ol class="tg-breadcrumb">
+                            <li><a th:href="@{/}">Home</a></li>
+                            <li><a href="javascript:void(0);">Admin</a></li>
+                            <li class="active">Comments</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-wrapper">
+
+        <!-- Page title -->
+        <div class="page-title">
+            <i class="fa fa-comments"></i>
+            Book Comment Management – Spam Detection
+        </div>
+
+        <!-- ── Stat cards ─────────────────────────────────────────────────────── -->
+        <div class="stats-row">
+            <a th:href="@{/admin/manage-comment}" class="stat-card stat-total"
+               th:classappend="${statusFilter == null} ? ' active' : ''">
+                <span class="stat-label">Total Comments</span>
+                <span class="stat-value" th:text="${totalComments}">0</span>
+            </a>
+            <a th:href="@{/admin/manage-comment(statusFilter='PENDING')}" class="stat-card stat-pending"
+               th:classappend="${statusFilter == 'PENDING'} ? ' active' : ''">
+                <span class="stat-label">Pending Review</span>
+                <span class="stat-value" th:text="${pendingCount}">0</span>
+            </a>
+            <a th:href="@{/admin/manage-comment(statusFilter='APPROVED')}" class="stat-card stat-approved"
+               th:classappend="${statusFilter == 'APPROVED'} ? ' active' : ''">
+                <span class="stat-label">Approved</span>
+                <span class="stat-value" th:text="${approvedCount}">0</span>
+            </a>
+            <a th:href="@{/admin/manage-comment(statusFilter='HIDDEN')}" class="stat-card stat-hidden"
+               th:classappend="${statusFilter == 'HIDDEN'} ? ' active' : ''">
+                <span class="stat-label">Hidden</span>
+                <span class="stat-value" th:text="${hiddenCount}">0</span>
+            </a>
+        </div>
+
+        <!-- ── Spam detection panel ───────────────────────────────────────────── -->
+        <div class="spam-panel">
+            <div class="spam-panel-header">
+                <i class="fa fa-shield"></i>
+                Spam Detection Configuration
+            </div>
+
+            <div class="spam-tabs">
+                <div class="spam-tab active" data-target="tab-offensive">Offensive Words</div>
+                <div class="spam-tab" data-target="tab-adlink">Ad / Spam Links</div>
+                <div class="spam-tab" data-target="tab-irrelevant">Irrelevant Words</div>
+            </div>
+
+            <!-- Tab 1: Offensive words -->
+            <div class="spam-tab-body active" id="tab-offensive">
+                <p style="font-size:13px; color:#718096; margin-bottom:10px;">
+                    Offensive words will be highlighted in red inside comment content.
+                </p>
+                <div class="tag-input-wrapper">
+                    <input type="text" id="offensive-input" class="tag-input" placeholder="Enter offensive word..."
+                           onkeydown="if(event.key==='Enter'){addTag('offensive');event.preventDefault();}">
+                    <button class="btn-add-tag" onclick="addTag('offensive')">Add</button>
+                </div>
+                <div class="tag-list" id="offensive-tags"></div>
+                <div class="spam-summary" id="offensive-summary"></div>
+            </div>
+
+            <!-- Tab 2: Ad/spam links -->
+            <div class="spam-tab-body" id="tab-adlink">
+                <p style="font-size:13px; color:#718096; margin-bottom:10px;">
+                    Ad-related or spam link keywords will be highlighted in yellow.
+                </p>
+                <div class="tag-input-wrapper">
+                    <input type="text" id="adlink-input" class="tag-input" placeholder="Enter ad/spam keyword..."
+                           onkeydown="if(event.key==='Enter'){addTag('adlink');event.preventDefault();}">
+                    <button class="btn-add-tag" onclick="addTag('adlink')">Add</button>
+                </div>
+                <div class="tag-list" id="adlink-tags"></div>
+                <div class="spam-summary" id="adlink-summary"></div>
+            </div>
+
+            <!-- Tab 3: Irrelevant words -->
+            <div class="spam-tab-body" id="tab-irrelevant">
+                <p style="font-size:13px; color:#718096; margin-bottom:10px;">
+                    Words unrelated to book content will be highlighted in blue.
+                </p>
+                <div class="tag-input-wrapper">
+                    <input type="text" id="irrelevant-input" class="tag-input" placeholder="Enter irrelevant word..."
+                           onkeydown="if(event.key==='Enter'){addTag('irrelevant');event.preventDefault();}">
+                    <button class="btn-add-tag" onclick="addTag('irrelevant')">Add</button>
+                </div>
+                <div class="tag-list" id="irrelevant-tags"></div>
+                <div class="spam-summary" id="irrelevant-summary"></div>
+            </div>
+        </div>
+
+        <!-- ── Filter tabs ─────────────────────────────────────────────────────── -->
+        <div class="filter-bar">
+            <a th:href="@{/admin/manage-comment}" class="filter-tab"
+               th:classappend="${statusFilter == null} ? ' active' : ''">
+                All
+            </a>
+            <a th:href="@{/admin/manage-comment(statusFilter='PENDING')}" class="filter-tab"
+               th:classappend="${statusFilter == 'PENDING'} ? ' active' : ''">
+                Pending
+            </a>
+            <a th:href="@{/admin/manage-comment(statusFilter='APPROVED')}" class="filter-tab"
+               th:classappend="${statusFilter == 'APPROVED'} ? ' active' : ''">
+                Approved
+            </a>
+            <a th:href="@{/admin/manage-comment(statusFilter='HIDDEN')}" class="filter-tab"
+               th:classappend="${statusFilter == 'HIDDEN'} ? ' active' : ''">
+                Hidden
+            </a>
+        </div>
+
+        <!-- ── Comment table ──────────────────────────────────────────────────── -->
+        <div class="table-card">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                    <tr>
+                        <th style="width:60px;">ID</th>
+                        <th style="width:130px;">User</th>
+                        <th style="width:130px;">Book</th>
+                        <th style="width:90px;">Rating</th>
+                        <th>Comment</th>
+                        <th style="width:160px;">Violations</th>
+                        <th style="width:110px;">Status</th>
+                        <th style="width:80px;">Action</th>
+                    </tr>
+                    </thead>
+                    <tbody id="commentTableBody">
+                    <tr th:each="comment : ${commentList}"
+                        th:data-content="${comment.content}"
+                        th:data-id="${comment.id}">
+                        <!-- ID -->
+                        <td style="font-weight:700; color:#718096;" th:text="${comment.id}"></td>
+
+                        <!-- User -->
+                        <td>
+                            <div style="font-weight:600; font-size:13px;"
+                                 th:text="${comment.user != null ? comment.user.name : 'N/A'}"></div>
+                            <div style="font-size:11px; color:#a0aec0;"
+                                 th:text="${comment.user != null and comment.user.account != null ? comment.user.account.username : ''}"></div>
+                        </td>
+
+                        <!-- Book -->
+                        <td>
+                            <div style="font-weight:600; font-size:13px;"
+                                 th:text="${comment.book != null ? comment.book.title : 'N/A'}"></div>
+                        </td>
+
+                        <!-- Stars -->
+                        <td>
+                            <div class="star-display">
+                                <span th:classappend="${comment.star != null and comment.star >= 1} ? 'filled' : ''"
+                                      class="fa fa-star"></span>
+                                <span th:classappend="${comment.star != null and comment.star >= 2} ? 'filled' : ''"
+                                      class="fa fa-star"></span>
+                                <span th:classappend="${comment.star != null and comment.star >= 3} ? 'filled' : ''"
+                                      class="fa fa-star"></span>
+                                <span th:classappend="${comment.star != null and comment.star >= 4} ? 'filled' : ''"
+                                      class="fa fa-star"></span>
+                                <span th:classappend="${comment.star != null and comment.star >= 5} ? 'filled' : ''"
+                                      class="fa fa-star"></span>
+                                <span style="font-size:12px; color:#4a5568; margin-left:4px;">★ <b
+                                        th:text="${comment.star}"></b></span>
+                            </div>
+                        </td>
+
+                        <!-- Content -->
+                        <td style="max-width:320px;">
+                            <div th:if="${comment.content != null and !comment.content.trim().isEmpty()}"
+                                 class="content-wrapper">
+                                <button class="btn-toggle-content" onclick="toggleContent(this)">View</button>
+                                <div class="content-text"
+                                     th:data-raw="${comment.content}"
+                                     th:text="${comment.content}">
+                                </div>
+                            </div>
+                            <span th:if="${comment.content == null or comment.content.trim().isEmpty()}"
+                                  class="no-content-label">Star rating only</span>
+                        </td>
+
+                        <!-- Violations (computed by JS) -->
+                        <td>
+                            <div class="viol-list viol-cell"
+                                 th:data-content="${comment.content != null ? comment.content : ''}">
+                                <!-- populated by JS -->
+                            </div>
+                        </td>
+
+                        <!-- Status -->
+                        <td>
+                            <span th:if="${comment.status == 'APPROVED'}"
+                                  class="badge-status badge-approved">APPROVED</span>
+                            <span th:if="${comment.status == 'PENDING'}"
+                                  class="badge-status badge-pending">PENDING</span>
+                            <span th:if="${comment.status == 'HIDDEN'}" class="badge-status badge-hidden">HIDDEN</span>
+                        </td>
+
+                        <!-- Action -->
+                        <td>
+                            <button class="btn-edit"
+                                    th:data-comment-id="${comment.id}"
+                                    th:data-comment-status="${comment.status}"
+                                    th:data-comment-content="${comment.content}"
+                                    th:data-comment-star="${comment.star}"
+                                    th:data-book-title="${comment.book != null ? comment.book.title : ''}"
+                                    th:data-user-name="${comment.user != null ? comment.user.name : ''}"
+                                    th:data-edited="${comment.status == 'PENDING' and comment.updated_at != null and comment.created_at != null and comment.updated_at.after(comment.created_at)}"
+                                    onclick="openEditModal(this)">
+                                Edit
+                            </button>
+                        </td>
+                    </tr>
+
+                    <!-- Empty state -->
+                    <tr th:if="${commentList == null or commentList.isEmpty()}">
+                        <td colspan="8" style="text-align:center; padding:40px; color:#a0aec0;">
+                            <i class="fa fa-comment-o" style="font-size:36px; display:block; margin-bottom:10px;"></i>
+                            No comments found.
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination-bar" th:if="${totalPage > 1}">
+                <a th:href="@{/admin/manage-comment(page=${page - 1}, statusFilter=${statusFilter})}"
+                   class="pg-btn" th:classappend="${page <= 1} ? ' disabled' : ''">
+                    <i class="fa fa-chevron-left"></i>
+                </a>
+                <th:block th:each="i : ${#numbers.sequence(1, totalPage)}">
+                    <a th:href="@{/admin/manage-comment(page=${i}, statusFilter=${statusFilter})}"
+                       class="pg-btn" th:classappend="${i == page} ? ' active' : ''"
+                       th:text="${i}"></a>
+                </th:block>
+                <a th:href="@{/admin/manage-comment(page=${page + 1}, statusFilter=${statusFilter})}"
+                   class="pg-btn" th:classappend="${page >= totalPage} ? ' disabled' : ''">
+                    <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Edit Status Modal ───────────────────────────────────────────────────── -->
+    <div class="modal fade" id="editStatusModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <h4 class="modal-title"><i class="fa fa-pencil"></i> Update Comment Status</h4>
+                </div>
+                <form id="editStatusForm" th:action="@{/admin/update-comment-status}" method="post">
+                    <div class="modal-body">
+                        <input type="hidden" name="commentId" id="modal-comment-id">
+                        <input type="hidden" name="page" th:value="${page}">
+                        <input type="hidden" name="statusFilter" th:value="${statusFilter}">
+
+                        <!-- Comment preview -->
+                        <div class="comment-preview">
+                            <div class="meta">
+                                <i class="fa fa-user"></i> <span id="modal-user-name"></span>
+                                &nbsp;|&nbsp;
+                                <i class="fa fa-book"></i> <span id="modal-book-title"></span>
+                                &nbsp;|&nbsp;
+                                <span id="modal-stars"></span>
+                            </div>
+                            <div class="body" id="modal-content-preview" style="color:#718096; font-style:italic;">
+                                <!-- filled by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Status select -->
+                        <div class="form-group">
+                            <label style="font-weight:700; font-size:13px; margin-bottom:8px; display:block;">
+                                Select new status <span style="color:#e53e3e;">*</span>
+                            </label>
+                            <select name="newStatus" id="modal-new-status" class="status-select">
+                                <!-- Options populated by JS based on current status -->
+                            </select>
+                        </div>
+
+                        <!-- Transition hint -->
+                        <div class="transition-note" id="modal-transition-note"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/js/vendor/jquery-library.js"></script>
+    <script src="/js/vendor/bootstrap.min.js"></script>
+    <script src="/js/owl.carousel.min.js"></script>
+    <script src="/js/jquery.vide.min.js"></script>
+    <script src="/js/countdown.js"></script>
+    <script src="/js/jquery-ui.js"></script>
+    <script src="/js/parallax.js"></script>
+    <script src="/js/countTo.js"></script>
+    <script src="/js/appear.js"></script>
+    <script src="/js/gmap3.js"></script>
+    <script src="/js/main.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var successMsg = /*[[${successMessage}]]*/ '';
+            var errorMsg = /*[[${errorMessage}]]*/ '';
+            if (successMsg) {
+                Swal.fire({
+                    toast: true, position: 'top-end', icon: 'success', title: successMsg,
+                    showConfirmButton: false, timer: 3000, timerProgressBar: true
+                });
+            }
+            if (errorMsg) {
+                Swal.fire({
+                    toast: true, position: 'top-end', icon: 'error', title: errorMsg,
+                    showConfirmButton: false, timer: 3500, timerProgressBar: true
+                });
+            }
+        });
+    </script>
+
+    <script>
+        // ─────────────────────────────────────────────────────────────────────────────
+        // SPAM DETECTION CONFIG  (persisted to localStorage)
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        const SPAM_KEYS = {offensive: 'spam_offensive', adlink: 'spam_adlink', irrelevant: 'spam_irrelevant'};
+        const SPAM_DEFAULTS = {
+            offensive: ['stupid', 'useless', 'trash', 'scam'],
+            adlink: ['buy now', 'click here', 'huge discount', 'contact zalo'],
+            irrelevant: ['casino', 'betting', 'forex', 'crypto']
+        };
+
+        function loadTags(type) {
+            try {
+                return JSON.parse(localStorage.getItem(SPAM_KEYS[type])) || SPAM_DEFAULTS[type];
+            } catch {
+                return SPAM_DEFAULTS[type];
+            }
+        }
+
+        function saveTags(type, tags) {
+            localStorage.setItem(SPAM_KEYS[type], JSON.stringify(tags));
+        }
+
+        function renderTags(type) {
+            const tags = loadTags(type);
+            const container = document.getElementById(type + '-tags');
+            container.innerHTML = tags.map(tag =>
+                `<span class="tag-chip ${type}" data-tag="${tag}">
+            ${tag} <span class="remove-tag" onclick="removeTag('${type}', '${tag}')">×</span>
+        </span>`
+            ).join('');
+            updateSpamHighlights();
+        }
+
+        function addTag(type) {
+            const input = document.getElementById(type + '-input');
+            const val = input.value.trim().toLowerCase();
+            if (!val) return;
+            const tags = loadTags(type);
+            if (!tags.includes(val)) {
+                tags.push(val);
+                saveTags(type, tags);
+            }
+            input.value = '';
+            renderTags(type);
+        }
+
+        function removeTag(type, tag) {
+            const tags = loadTags(type).filter(t => t !== tag);
+            saveTags(type, tags);
+            renderTags(type);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // SPAM DETECTION: analyse content of each row
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        function detectViolations(content) {
+            const lower = (content || '').toLowerCase();
+            const found = {offensive: [], adlink: [], irrelevant: []};
+            Object.keys(found).forEach(type => {
+                loadTags(type).forEach(tag => {
+                    if (lower.includes(tag.toLowerCase())) found[type].push(tag);
+                });
+            });
+            return found;
+        }
+
+        function highlightContent(text) {
+            let result = text;
+            ['offensive', 'adlink', 'irrelevant'].forEach(type => {
+                loadTags(type).forEach(tag => {
+                    const re = new RegExp(tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                    const cls = type === 'adlink' ? 'spam' : type;
+                    result = result.replace(re, m => `<span class="highlight-${cls}">${m}</span>`);
+                });
+            });
+            return result;
+        }
+
+        function updateSpamHighlights() {
+            document.querySelectorAll('#commentTableBody tr[data-id]').forEach(row => {
+                const content = row.getAttribute('data-content') || '';
+                const viols = detectViolations(content);
+                const hasAny = Object.values(viols).some(a => a.length > 0);
+
+                // Violation cell
+                const cell = row.querySelector('.viol-cell');
+                if (cell) {
+                    if (!hasAny) {
+                        cell.innerHTML = '<span class="viol-clean">Clean</span>';
+                    } else {
+                        let html = '';
+                        if (viols.offensive.length) html += `<span class="viol-badge viol-offensive">OFFENSIVE</span> `;
+                        if (viols.adlink.length) html += `<span class="viol-badge viol-spam">AD / SPAM</span> `;
+                        if (viols.irrelevant.length) html += `<span class="viol-badge viol-irrelevant">IRRELEVANT</span>`;
+                        cell.innerHTML = html;
+                    }
+                }
+
+                // Highlighted content text
+                const contentEl = row.querySelector('.content-text');
+                if (contentEl) {
+                    const raw = contentEl.getAttribute('data-raw') || contentEl.textContent;
+                    contentEl.innerHTML = highlightContent(raw);
+                }
+            });
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // TOGGLE CONTENT
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        function toggleContent(btn) {
+            const el = btn.nextElementSibling;
+            const visible = el.classList.toggle('visible');
+            btn.textContent = visible ? 'Hide' : 'View';
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // EDIT STATUS MODAL
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        function openEditModal(btn) {
+            const id = btn.getAttribute('data-comment-id');
+            const status = btn.getAttribute('data-comment-status') || 'APPROVED';
+            const content = btn.getAttribute('data-comment-content') || '';
+            const star = btn.getAttribute('data-comment-star');
+            const book = btn.getAttribute('data-book-title');
+            const user = btn.getAttribute('data-user-name');
+            const edited = btn.getAttribute('data-edited') === 'true';
+
+            document.getElementById('modal-comment-id').value = id;
+            document.getElementById('modal-user-name').textContent = user;
+            document.getElementById('modal-book-title').textContent = book;
+            document.getElementById('modal-content-preview').textContent =
+                content.trim() || '(Star rating only – no written content)';
+
+            // Stars
+            let stars = '';
+            for (let i = 1; i <= 5; i++) {
+                stars += `<i class="fa fa-star" style="color:${i <= parseInt(star) ? '#f6ad55' : '#e2e8f0'}; font-size:14px;"></i>`;
+            }
+            document.getElementById('modal-stars').innerHTML = stars;
+
+            // Build select
+            const select = document.getElementById('modal-new-status');
+            const note = document.getElementById('modal-transition-note');
+            const saveBtn = document.querySelector('#editStatusModal .btn-success');
+            select.innerHTML = '';
+
+            // Placeholder showing current status
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            select.appendChild(placeholder);
+
+            const opts = getAllowedTransitions(status, edited);
+            opts.forEach(o => {
+                const el = document.createElement('option');
+                el.value = o.value;
+                el.textContent = o.label;
+                select.appendChild(el);
+            });
+
+            if (opts.length === 0) {
+                // No available transitions – hide select, disable save
+                select.style.display = 'none';
+                if (saveBtn) saveBtn.disabled = true;
+            } else {
+                select.style.display = '';
+                if (saveBtn) saveBtn.disabled = false;
+                select.value = opts[0].value; // pre-select first option
+            }
+
+            note.innerHTML = getTransitionNote(status, edited);
+            note.style.display = 'block';
+
+            $('#editStatusModal').modal('show');
+        }
+
+        function getAllowedTransitions(status, edited) {
+            switch (status) {
+                case 'PENDING':
+                    return [
+                        {value: 'APPROVED', label: 'APPROVED – Publish this comment'},
+                        {value: 'HIDDEN', label: 'HIDDEN – Hide this comment'}
+                    ];
+                case 'APPROVED': {
+                    const opts = [{value: 'HIDDEN', label: 'HIDDEN – Hide this comment'}];
+                    if (edited) opts.push({value: 'PENDING', label: 'PENDING – Send back for re-review (edited)'});
+                    return opts;
+                }
+                case 'HIDDEN':
+                    return [
+                        {value: 'APPROVED', label: 'APPROVED – Unhide and publish'},
+                        {value: 'PENDING', label: 'PENDING – Move to pending review'}
+                    ];
+                default:
+                    return [];
+            }
+        }
+
+        function getTransitionNote(status, edited) {
+            switch (status) {
+                case 'PENDING':
+                    return '<b>PENDING:</b> Choose APPROVED to publish, or HIDDEN to hide this comment.';
+                case 'APPROVED':
+                    if (edited) return 'This comment was edited. You can hide it or send back to PENDING for re-review.';
+                    return '<b>APPROVED:</b> You can hide this comment if needed.';
+                case 'HIDDEN':
+                    return '<b>HIDDEN:</b> Choose APPROVED to unhide, or PENDING to send for re-review.';
+                default:
+                    return '⚠Unknown status.';
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // SPAM TABS
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        document.querySelectorAll('.spam-tab').forEach(tab => {
+            tab.addEventListener('click', function () {
+                document.querySelectorAll('.spam-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.spam-tab-body').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById(this.getAttribute('data-target')).classList.add('active');
+            });
+        });
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // INIT
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Render spam tag chips
+            ['offensive', 'adlink', 'irrelevant'].forEach(renderTags);
+        });
+    </script>
+</div><!-- /tg-wrapper -->
+</body>
+</html>

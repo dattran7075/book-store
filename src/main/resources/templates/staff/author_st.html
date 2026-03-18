@@ -127,8 +127,6 @@
                                 <th>Author Name</th>
                                 <th>Description</th>
                                 <th>Number of Books</th>
-                                <th>Created at</th>
-                                <th>Updated at</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -137,8 +135,6 @@
                                 <td th:text="${author.name}"></td>
                                 <td th:text="${author.description}" style="max-width: 200px;"></td>
                                 <td th:text="${author.bookList.size()}"></td>
-                                <td th:text="${author.created_at}"></td>
-                                <td th:text="${author.updated_at}"></td>
                             </tr>
                             <tr th:if="${#lists.isEmpty(authorList)}">
                                 <td colspan="6" style="text-align:center; padding: 30px; color: #999;">

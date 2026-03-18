@@ -2396,7 +2396,7 @@ li.menu-item-has-mega-menu {
     width: 100%;
     float: left;
     padding: 0 0 20px;
-    height: 70px;
+    height: 50px;
 }
 
 .tg-booktitle h3 {
@@ -4832,7 +4832,7 @@ blockquote .tg-bookwriter {
 }
 
 .tg-formsortshoitemss {
-    margin-left: 750px; /* đẩy select sang phải */
+    margin-left: 590px; /* đẩy select sang phải */
 }
 
 .tg-formsortshoitemss select {
@@ -4861,6 +4861,7 @@ blockquote .tg-bookwriter {
     float: left;
     margin-left: 50px;
     margin-top: 10px;
+    margin-bottom: 50px;
 }
 
 .tg-searchbox .tg-widget {
@@ -5076,7 +5077,7 @@ blockquote .tg-bookwriter {
 /*=======hambeger=======*/
 /* Style cho hamburger mega menu */
 .menu-item-has-children .mega-menu {
-    min-width: 250px;  /* Chiều rộng tối thiểu */
+    min-width: 250px; /* Chiều rộng tối thiểu */
     width: auto;
     padding: 15px 0;
 }
@@ -5501,4 +5502,517 @@ input.is-invalid, textarea.is-invalid, select.is-invalid {
 /* ===== HELPER CLASSES ===== */
 .forgot-password-container .hidden {
     display: none !important;
+}
+
+/* ============================================
+   HOME PAGE - NEW SECTIONS STYLES
+   ============================================ */
+
+/* Section Spacing & Background */
+.tg-bg-light-gray {
+    background-color: #f5f5f5;
+}
+
+.tg-sectiondesc {
+    font-size: 14px;
+    color: #888;
+    margin-top: 5px;
+    font-weight: normal;
+    text-transform: none;
+}
+
+/* ============================================
+   NEW ARRIVALS SECTION STYLES
+   ============================================ */
+
+.tg-newarrivalsslider {
+    margin-top: 30px;
+}
+
+.tg-newarrivalsslider .tg-postbook {
+    transition: all 0.3s ease;
+}
+
+.tg-newarrivalsslider .tg-postbook:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Badge New */
+.tg-badge-new {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    z-index: 10;
+    box-shadow: 0 4px 8px rgba(255, 107, 107, 0.3);
+}
+
+/* ============================================
+   TOP RATINGS & REVIEWS SECTION STYLES
+   ============================================ */
+
+.tg-topratingsslider {
+    margin-top: 30px;
+}
+
+.tg-review-card {
+    background: white;
+    border-radius: 8px;
+    padding: 25px;
+    height: 100%;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.tg-review-card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: translateY(-3px);
+}
+
+.tg-review-header {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    align-items: flex-start;
+}
+
+.tg-review-book-image {
+    width: 60px;
+    height: 85px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.tg-review-book-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.tg-review-info {
+    flex: 1;
+}
+
+.tg-review-info h4 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.4;
+}
+
+.tg-review-info .tg-author {
+    margin: 0;
+    font-size: 12px;
+    color: #999;
+}
+
+/* Stars Rating */
+.tg-review-rating {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.tg-stars {
+    display: flex;
+    gap: 3px;
+}
+
+.tg-star i,
+.tg-star-empty i {
+    font-size: 12px;
+}
+
+.tg-star i {
+    color: #ffc107;
+}
+
+.tg-star-empty i {
+    color: #ddd;
+}
+
+.tg-rating-score {
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Review Comment */
+.tg-review-comment {
+    flex: 1;
+    margin-bottom: 15px;
+}
+
+.tg-review-comment p {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.6;
+    font-style: italic;
+}
+
+/* Review Footer */
+.tg-review-footer {
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.tg-reviewer-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #888;
+}
+
+.tg-reviewer-name i {
+    font-size: 16px;
+    color: #999;
+}
+
+/* ============================================
+   RECOMMENDED FOR YOU SECTION STYLES
+   ============================================ */
+
+.tg-recommendedslider {
+    margin-top: 30px;
+}
+
+.tg-recommendedslider .tg-postbook {
+    transition: all 0.3s ease;
+}
+
+.tg-recommendedslider .tg-postbook:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* ============================================
+   RESPONSIVE STYLES
+   ============================================ */
+
+@media (max-width: 768px) {
+    .tg-review-card {
+        padding: 20px;
+    }
+
+    .tg-review-header {
+        flex-direction: column;
+    }
+
+    .tg-review-book-image {
+        width: 100%;
+        height: 120px;
+    }
+
+    .tg-review-info h4 {
+        font-size: 13px;
+    }
+
+    .tg-review-comment p {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .tg-badge-new {
+        padding: 4px 8px;
+        font-size: 10px;
+        top: 8px;
+        right: 8px;
+    }
+
+    .tg-review-card {
+        padding: 15px;
+    }
+
+    .tg-review-info h4 {
+        font-size: 12px;
+    }
+
+    .tg-review-comment p {
+        font-size: 11px;
+    }
+}
+
+/* ============================================
+   ANIMATION EFFECTS
+   ============================================ */
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tg-newarrivalsslider .item,
+.tg-topratingsslider .item,
+.tg-recommendedslider .item {
+    animation: slideInUp 0.6s ease forwards;
+}
+
+.tg-newarrivalsslider .item:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.tg-newarrivalsslider .item:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.tg-newarrivalsslider .item:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.tg-topratingsslider .item:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.tg-topratingsslider .item:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.tg-topratingsslider .item:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+/* ============================================
+   SECTION HEAD IMPROVEMENTS
+   ============================================ */
+
+.tg-sectionhead {
+    position: relative;
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.tg-sectionhead h2 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #333;
+    position: relative;
+    display: inline-block;
+}
+
+.tg-sectionhead h2::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    border-radius: 2px;
+}
+
+.tg-sectionhead .tg-sectiondesc {
+    color: #777;
+    font-size: 14px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.tg-sectionhead .tg-btn {
+    margin-top: 15px;
+}
+
+/* ============================================
+   SLIDER CUSTOM CONTROLS
+   ============================================ */
+
+.owl-carousel .owl-nav {
+    position: absolute;
+    top: -50px;
+    right: 0;
+    left: auto;
+}
+
+.owl-carousel .owl-nav button.owl-prev,
+.owl-carousel .owl-nav button.owl-next {
+    background: #f0f0f0 !important;
+    color: #333 !important;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-left: 5px;
+    transition: all 0.3s ease;
+}
+
+.owl-carousel .owl-nav button.owl-prev:hover,
+.owl-carousel .owl-nav button.owl-next:hover {
+    background: #ff6b6b !important;
+    color: white !important;
+    transform: scale(1.1);
+}
+
+.owl-carousel .owl-dots {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.owl-carousel .owl-dot {
+    display: inline-block;
+    margin: 0 5px;
+}
+
+.owl-carousel .owl-dot span {
+    background: #ddd !important;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.owl-carousel .owl-dot.active span,
+.owl-carousel .owl-dot:hover span {
+    background: #ff6b6b !important;
+    transform: scale(1.2);
+}
+
+/* ============================================
+   ENHANCED SECTION SPACING
+   ============================================ */
+
+.tg-sectionspace {
+    padding: 50px 0;
+}
+
+@media (max-width: 768px) {
+    .tg-sectionspace {
+        padding: 35px 0;
+    }
+
+    .tg-sectionhead h2 {
+        font-size: 24px;
+    }
+
+    .tg-sectionhead h2::after {
+        width: 50px;
+    }
+}
+
+@media (max-width: 480px) {
+    .tg-sectionspace {
+        padding: 25px 0;
+    }
+
+    .tg-sectionhead h2 {
+        font-size: 20px;
+    }
+
+    .tg-sectionhead .tg-sectiondesc {
+        font-size: 12px;
+    }
+}
+
+/* ============================================================
+   FIX Z-INDEX - THÊM VÀO CUỐI FILE main.css
+   Sửa lỗi hamburger mega-menu bị che bởi section bên dưới
+   ============================================================ */
+
+/* 1. Đảm bảo header luôn nằm trên cùng */
+#tg-header,
+.tg-header {
+    position: relative;
+    z-index: 1000 !important;
+}
+
+/* 2. Navigation area phải visible để mega-menu hiện ra ngoài */
+.tg-navigationarea {
+    position: relative;
+    z-index: 1000 !important;
+    overflow: visible !important;
+}
+
+/* 3. Nav, navigation container phải overflow visible */
+.tg-nav,
+.tg-navigation,
+.tg-navigation > ul,
+#tg-navigation {
+    overflow: visible !important;
+}
+
+/* 4. Mega-menu và sub-menu phải z-index cao nhất */
+.mega-menu,
+.sub-menu {
+    z-index: 99999 !important;
+}
+
+/* 5. QUAN TRỌNG: Xóa stacking context trên các section bên dưới
+      position: relative + z-index tạo stacking context chặn mega-menu */
+.tg-sectionspace {
+    position: static !important;
+    z-index: auto !important;
+}
+
+/* 6. .tg-sectionhead ở cuối main.css bị override thành position: relative
+      → tạo stacking context → chặn mega-menu. Fix: */
+.tg-sectionhead {
+    position: static !important;
+    z-index: auto !important;
+}
+
+/* 7. Các section background cũng không được tạo stacking context */
+.tg-bg-light-gray {
+    position: static !important;
+    z-index: auto !important;
+}
+
+/* Fix dứt điểm: bỏ clip vùng ảnh khi hover */
+.tg-productgrid .tg-featureimg {
+    overflow: visible !important;
+}
+
+.tg-productgrid .tg-bookimg {
+    overflow: visible !important;
+}
+
+/* Đảm bảo backcover không bị lòi ra ngoài khi không hover */
+.tg-productgrid .tg-postbook:not(:hover) .tg-backcover {
+    display: none;
+}
+
+/* Tắt hoàn toàn hiệu ứng 3D trong product grid */
+.tg-productgrid .tg-postbook:hover .tg-bookimg {
+    transform: none !important;
+    -webkit-transform: none !important;
+    transform-style: flat !important;
+    -webkit-transform-style: flat !important;
+}
+
+.tg-productgrid .tg-postbook:hover .tg-featureimg {
+    padding: 0 !important;
+}
+
+.tg-productgrid .tg-postbook:hover .tg-backcover {
+    display: none !important;
+}
+
+/* Thay bằng hiệu ứng đơn giản không ảnh hưởng layout */
+.tg-productgrid .tg-postbook {
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.tg-productgrid .tg-postbook:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    transform: translateY(-5px);
 }

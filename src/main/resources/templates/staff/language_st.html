@@ -127,8 +127,6 @@
                                 <th>Name</th>
                                 <th>Code</th>
                                 <th>Book Count</th>
-                                <th>Created at</th>
-                                <th>Updated at</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -137,8 +135,6 @@
                                 <td th:text="${language.name}"></td>
                                 <td><span class="label label-info" th:text="${language.code}"></span></td>
                                 <td th:text="${bookCountMap[language.id]}"></td>
-                                <td th:text="${language.created_at}"></td>
-                                <td th:text="${language.updated_at}"></td>
                             </tr>
                             <tr th:if="${#lists.isEmpty(languageList)}">
                                 <td colspan="6" style="text-align:center; padding: 30px; color: #999;">

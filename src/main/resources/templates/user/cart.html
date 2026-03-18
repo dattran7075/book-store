@@ -251,29 +251,29 @@
                                                 <tr>
                                                     <td colspan="8" style="padding: 0; border: none;">
                                                         <div class="series-bundle-header">
-                                                        <div>
-                                                            <i class="fa fa-book"></i>
-                                                            <strong style="font-size: 16px; margin-left: 8px;"
-                                                                    th:text="${seriesEntry.value.name}"></strong>
-                                                            <span class="series-badge" style="margin-left: 10px;">
+                                                            <div>
+                                                                <i class="fa fa-book"></i>
+                                                                <strong style="font-size: 16px; margin-left: 8px;"
+                                                                        th:text="${seriesEntry.value.name}"></strong>
+                                                                <span class="series-badge" style="margin-left: 10px;">
                                                                  Complete Series
                                                                      </span>
-                                                            <!-- Show number of sets -->
-                                                            <span th:if="${seriesSetsMap != null && seriesSetsMap.get(seriesEntry.key) != null}"
-                                                                  class="series-badge" style="margin-left: 10px; background-color: #2196F3;">
+                                                                <!-- Show number of sets -->
+                                                                <span th:if="${seriesSetsMap != null && seriesSetsMap.get(seriesEntry.key) != null}"
+                                                                      class="series-badge" style="margin-left: 10px; background-color: #2196F3;">
                                                                  <span th:text="${seriesSetsMap.get(seriesEntry.key)}"></span> Sets
                                                             </span>
-                                                        </div>
-                                                        <div class="series-discount-badge">
-                                                            <i class="fa fa-tag"></i>
-                                                            <span th:if="${seriesSetsMap != null && seriesSetsMap.get(seriesEntry.key) != null && seriesSetsMap.get(seriesEntry.key) >= 2}">
+                                                            </div>
+                                                            <div class="series-discount-badge">
+                                                                <i class="fa fa-tag"></i>
+                                                                <span th:if="${seriesSetsMap != null && seriesSetsMap.get(seriesEntry.key) != null && seriesSetsMap.get(seriesEntry.key) >= 2}">
                                                                     10% OFF
                                                                 </span>
-                                                            <span th:if="${seriesSetsMap != null && seriesSetsMap.get(seriesEntry.key) != null && seriesSetsMap.get(seriesEntry.key) == 1}">
+                                                                <span th:if="${seriesSetsMap != null && seriesSetsMap.get(seriesEntry.key) != null && seriesSetsMap.get(seriesEntry.key) == 1}">
                                                                         5% OFF
                                                                     </span>
+                                                            </div>
                                                         </div>
-                                                    </div>
                                                     </td>
                                                 </tr>
 
@@ -314,7 +314,7 @@
                                                                        th:name="${'quantity'+iterStat.index}"
                                                                        min="1"
                                                                        th:value="${detail.quantity}"
-                                                                       style="width: 80px; margin: 8px 5px; text-align: center;"
+                                                                       style="width: 90px; margin: 8px 5px; text-align: center;"
                                                                        th:id="${'quantity'+iterStat.index}"
                                                                        th:onchange="'updateQuantity(' + ${iterStat.index} + ', ' + ${detail.book.id} + ')'">
                                                                 <button type="button" class="btn btn-sm btn-outline-secondary"
@@ -393,7 +393,7 @@
                                                                th:name="${'quantity'+iterStat.index}"
                                                                min="1"
                                                                th:value="${detail.quantity}"
-                                                               style="width: 70px; margin: 8px 5px; text-align: center;"
+                                                               style="width: 90px; margin: 8px 5px; text-align: center;"
                                                                th:id="${'quantity'+iterStat.index}"
                                                                th:onchange="'updateQuantity(' + ${iterStat.index} + ', ' + ${detail.book.id} + ')'">
                                                         <button type="button" class="btn btn-sm btn-outline-secondary"
@@ -649,28 +649,60 @@
             });
         }
     }
-  function formatNumber(num) {
-    return Number(num).toLocaleString('en-US');
-}
-           function removeBookFromCart(bookId) {
+
+    function formatNumber(num) {
+        return Number(num).toLocaleString('en-US');
+    }
+
+    function removeBookFromCart(bookId) {
         Swal.fire({
             title: 'Remove Book?',
-            text: "Are you sure you want to remove this book from your cart?",
+            text: "Are you sure?",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
-            confirmButtonText: '<i class="fa fa-check"></i> Yes, remove it!',
-            cancelButtonText: '<i class="fa fa-times"></i> Cancel',
+            confirmButtonText: 'Yes',
+            cancelButtonText: 'No',
             reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
-                // Redirect to remove-book endpoint (will reload page and re-detect series bundles)
-                window.location.href = '/remove-book?id=' + bookId;
+                // Kiểm tra book có phải series không
+                var checkbox = document.querySelector('input[name="selectedItems"][value="' + bookId + '"]');
+                var row = checkbox.closest('tr');
+                var isSeriesBook = checkbox.classList.contains('series-checkbox');
+
+                if (isSeriesBook) {
+                    // ========== CASE 1: XÓA SERIES → RELOAD ==========
+                    window.location.href = '/remove-book?id=' + bookId;
+                } else {
+                    // ========== CASE 2: XÓA THƯỜNG → XÓA BACKEND TRƯỚC ==========
+                    // Gọi endpoint để xóa khỏi database
+                    fetch('/remove-book?id=' + bookId)
+                        .then(response => {
+                            // Sau khi xóa backend thành công, xóa khỏi DOM
+                            if (row) {
+                                row.remove();
+                            }
+
+                            // Cập nhật tổng tiền
+                            updateTotal();
+                            updateSeriesTotals();
+
+                            // Kiểm tra giỏ rỗng
+                            var remainingCheckboxes = document.querySelectorAll('input[name="selectedItems"]');
+                            if (remainingCheckboxes.length === 0) {
+                                location.reload();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire('Error', 'Failed to remove book', 'error');
+                        });
+                }
             }
         });
     }
-
 
     function toggleSelectAll() {
         var selectAllCheckbox = document.getElementById("selectAll");
@@ -685,183 +717,166 @@
     }
 
     function updateSeriesTotals() {
-    var seriesCheckboxes = document.querySelectorAll('.series-checkbox');
-    var seriesData = {};
-    var seriesQuantities = {}; // Track quantities per series
+        var seriesCheckboxes = document.querySelectorAll('.series-checkbox');
+        var seriesData = {};
+        var seriesQuantities = {};
 
-    // Group by series and track quantities
-    seriesCheckboxes.forEach(function(checkbox) {
-        if (checkbox.checked) {
-            var seriesId = checkbox.getAttribute('data-series-id');
-            var row = checkbox.closest('tr');
-            var subtotal = row.querySelector('.item-subtotal');
-            var price = parseFloat(subtotal.getAttribute('data-price'));
-            var quantity = parseInt(subtotal.getAttribute('data-quantity'));
-            var bookId = checkbox.value;
-
-            if (!seriesData[seriesId]) {
-                seriesData[seriesId] = 0;
-                seriesQuantities[seriesId] = {};
-            }
-
-            seriesQuantities[seriesId][bookId] = quantity;
-        }
-    });
-
-    // Calculate discount for each series
-    var totalSavings = 0;
-    for (var seriesId in seriesData) {
-        var quantities = seriesQuantities[seriesId];
-        var bookQuantities = Object.values(quantities);
-
-        // Find minimum quantity (number of complete sets)
-        var minQuantity = Math.min(...bookQuantities);
-
-        // Calculate discount percentage
-        var discountPercentage = 0.0;
-        if (minQuantity >= 2) {
-            discountPercentage = 0.10; // 10% for 2+ sets
-        } else if (minQuantity === 1) {
-            discountPercentage = 0.05; // 5% for 1 set
-        }
-
-        // Calculate original price for complete sets only
-        var originalForSets = 0;
         seriesCheckboxes.forEach(function(checkbox) {
-            if (checkbox.checked && checkbox.getAttribute('data-series-id') === seriesId) {
-                var row = checkbox.closest('tr');
-                var subtotal = row.querySelector('.item-subtotal');
-                var price = parseFloat(subtotal.getAttribute('data-price'));
-
-                // Only count up to minQuantity (complete sets)
-                originalForSets += price * minQuantity;
-            }
-        });
-
-        var discount = originalForSets * discountPercentage;
-
-        // Calculate total (including extra copies)
-        var totalOriginal = 0;
-        seriesCheckboxes.forEach(function(checkbox) {
-            if (checkbox.checked && checkbox.getAttribute('data-series-id') === seriesId) {
+            if (checkbox.checked) {
+                var seriesId = checkbox.getAttribute('data-series-id');
                 var row = checkbox.closest('tr');
                 var subtotal = row.querySelector('.item-subtotal');
                 var price = parseFloat(subtotal.getAttribute('data-price'));
                 var quantity = parseInt(subtotal.getAttribute('data-quantity'));
-                totalOriginal += price * quantity;
+                var bookId = checkbox.value;
+
+                if (!seriesData[seriesId]) {
+                    seriesData[seriesId] = 0;
+                    seriesQuantities[seriesId] = {};
+                }
+
+                seriesQuantities[seriesId][bookId] = quantity;
             }
         });
 
-        var discounted = totalOriginal - discount;
+        var totalSavings = 0;
+        for (var seriesId in seriesData) {
+            var quantities = seriesQuantities[seriesId];
+            var bookQuantities = Object.values(quantities);
 
-        var originalEl = document.querySelector('.series-original[data-series-id="' + seriesId + '"]');
-        var discountedEl = document.querySelector('.series-discounted[data-series-id="' + seriesId + '"]');
-        var savingsEl = document.querySelector('.series-savings[data-series-id="' + seriesId + '"]');
+            var minQuantity = Math.min(...bookQuantities);
 
-        if (originalEl) originalEl.textContent = formatNumber(totalOriginal);
-        if (discountedEl) discountedEl.textContent = formatNumber(discounted);
-        if (savingsEl) savingsEl.textContent = formatNumber(discount);
+            var discountPercentage = 0.0;
+            if (minQuantity >= 2) {
+                discountPercentage = 0.10;
+            } else if (minQuantity === 1) {
+                discountPercentage = 0.05;
+            }
 
-        totalSavings += discount;
+            var originalForSets = 0;
+            seriesCheckboxes.forEach(function(checkbox) {
+                if (checkbox.checked && checkbox.getAttribute('data-series-id') === seriesId) {
+                    var row = checkbox.closest('tr');
+                    var subtotal = row.querySelector('.item-subtotal');
+                    var price = parseFloat(subtotal.getAttribute('data-price'));
+
+                    originalForSets += price * minQuantity;
+                }
+            });
+
+            var discount = originalForSets * discountPercentage;
+
+            var totalOriginal = 0;
+            seriesCheckboxes.forEach(function(checkbox) {
+                if (checkbox.checked && checkbox.getAttribute('data-series-id') === seriesId) {
+                    var row = checkbox.closest('tr');
+                    var subtotal = row.querySelector('.item-subtotal');
+                    var price = parseFloat(subtotal.getAttribute('data-price'));
+                    var quantity = parseInt(subtotal.getAttribute('data-quantity'));
+                    totalOriginal += price * quantity;
+                }
+            });
+
+            var discounted = totalOriginal - discount;
+
+            var originalEl = document.querySelector('.series-original[data-series-id="' + seriesId + '"]');
+            var discountedEl = document.querySelector('.series-discounted[data-series-id="' + seriesId + '"]');
+            var savingsEl = document.querySelector('.series-savings[data-series-id="' + seriesId + '"]');
+
+            if (originalEl) originalEl.textContent = formatNumber(totalOriginal);
+            if (discountedEl) discountedEl.textContent = formatNumber(discounted);
+            if (savingsEl) savingsEl.textContent = formatNumber(discount);
+
+            totalSavings += discount;
+        }
+
+        if (totalSavings > 0) {
+            document.getElementById('seriesSavingsTotal').style.display = 'block';
+            document.getElementById('totalSeriesSavings').textContent = formatNumber(totalSavings);
+        } else {
+            document.getElementById('seriesSavingsTotal').style.display = 'none';
+        }
     }
 
-    // Show/hide total savings
-    if (totalSavings > 0) {
-        document.getElementById('seriesSavingsTotal').style.display = 'block';
-        document.getElementById('totalSeriesSavings').textContent = formatNumber(totalSavings);
-    } else {
-        document.getElementById('seriesSavingsTotal').style.display = 'none';
-    }
-}
-
-    // NEW: Check if all books in a series are selected
     function checkSeriesSelection() {
         updateSeriesTotals();
     }
 
     function updateTotal() {
-    var checkboxes = document.getElementsByClassName("item-checkbox");
-    var total = 0;
-    var selectedCount = 0;
-    var totalSeriesDiscount = 0;
+        var checkboxes = document.getElementsByClassName("item-checkbox");
+        var total = 0;
+        var selectedCount = 0;
+        var totalSeriesDiscount = 0;
 
-    for (var i = 0; i < checkboxes.length; i++) {
-        if (checkboxes[i].checked) {
-            selectedCount++;
-            var row = checkboxes[i].closest('tr');
-            var subtotalElement = row.querySelector('.item-subtotal');
-            var price = parseFloat(subtotalElement.getAttribute('data-price'));
-            var quantity = parseInt(subtotalElement.getAttribute('data-quantity'));
-            total += price * quantity;
-        }
-    }
-
-    // ===== FIX: TÍNH DISCOUNT CHỈ CHO COMPLETE SETS =====
-    var seriesCheckboxes = document.querySelectorAll('.series-checkbox');
-    var seriesQuantities = {};
-
-    // Group by series and track quantities
-    seriesCheckboxes.forEach(function(checkbox) {
-        if (checkbox.checked) {
-            var seriesId = checkbox.getAttribute('data-series-id');
-            var row = checkbox.closest('tr');
-            var subtotal = row.querySelector('.item-subtotal');
-            var price = parseFloat(subtotal.getAttribute('data-price'));
-            var quantity = parseInt(subtotal.getAttribute('data-quantity'));
-            var bookId = checkbox.value;
-
-            if (!seriesQuantities[seriesId]) {
-                seriesQuantities[seriesId] = {};
+        for (var i = 0; i < checkboxes.length; i++) {
+            if (checkboxes[i].checked) {
+                selectedCount++;
+                var row = checkboxes[i].closest('tr');
+                var subtotalElement = row.querySelector('.item-subtotal');
+                var price = parseFloat(subtotalElement.getAttribute('data-price'));
+                var quantity = parseInt(subtotalElement.getAttribute('data-quantity'));
+                total += price * quantity;
             }
-            seriesQuantities[seriesId][bookId] = {price: price, quantity: quantity};
-        }
-    });
-
-    // Calculate discount for each series (ONLY for complete sets)
-    for (var seriesId in seriesQuantities) {
-        var books = seriesQuantities[seriesId];
-        var quantities = Object.values(books).map(b => b.quantity);
-
-        // Find minimum quantity (number of complete sets)
-        var minQuantity = Math.min(...quantities);
-
-        // Calculate discount percentage
-        var discountPercentage = 0.0;
-        if (minQuantity >= 2) {
-            discountPercentage = 0.10; // 10%
-        } else if (minQuantity === 1) {
-            discountPercentage = 0.05; // 5%
         }
 
-        // Calculate discount ONLY for complete sets
-        var discountableAmount = 0;
-        for (var bookId in books) {
-            var book = books[bookId];
-            // Only count up to minQuantity
-            discountableAmount += book.price * minQuantity;
+        var seriesCheckboxes = document.querySelectorAll('.series-checkbox');
+        var seriesQuantities = {};
+
+        seriesCheckboxes.forEach(function(checkbox) {
+            if (checkbox.checked) {
+                var seriesId = checkbox.getAttribute('data-series-id');
+                var row = checkbox.closest('tr');
+                var subtotal = row.querySelector('.item-subtotal');
+                var price = parseFloat(subtotal.getAttribute('data-price'));
+                var quantity = parseInt(subtotal.getAttribute('data-quantity'));
+                var bookId = checkbox.value;
+
+                if (!seriesQuantities[seriesId]) {
+                    seriesQuantities[seriesId] = {};
+                }
+                seriesQuantities[seriesId][bookId] = {price: price, quantity: quantity};
+            }
+        });
+
+        for (var seriesId in seriesQuantities) {
+            var books = seriesQuantities[seriesId];
+            var quantities = Object.values(books).map(b => b.quantity);
+
+            var minQuantity = Math.min(...quantities);
+
+            var discountPercentage = 0.0;
+            if (minQuantity >= 2) {
+                discountPercentage = 0.10;
+            } else if (minQuantity === 1) {
+                discountPercentage = 0.05;
+            }
+
+            var discountableAmount = 0;
+            for (var bookId in books) {
+                var book = books[bookId];
+                discountableAmount += book.price * minQuantity;
+            }
+
+            var discount = discountableAmount * discountPercentage;
+            totalSeriesDiscount += discount;
         }
 
-        var discount = discountableAmount * discountPercentage;
-        totalSeriesDiscount += discount;
+        var finalTotal = total - totalSeriesDiscount;
+
+        document.getElementById("totalCart").innerText = formatNumber(finalTotal) + " VND";
+
+        if (totalSeriesDiscount > 0) {
+            document.getElementById('seriesSavingsTotal').style.display = 'block';
+            document.getElementById('totalSeriesSavings').textContent = formatNumber(totalSeriesDiscount);
+        } else {
+            document.getElementById('seriesSavingsTotal').style.display = 'none';
+        }
+
+        var selectAllCheckbox = document.getElementById("selectAll");
+        selectAllCheckbox.checked = (selectedCount === checkboxes.length && checkboxes.length > 0);
+
+        updateSeriesTotals();
     }
-
-    var finalTotal = total - totalSeriesDiscount;
-
-    document.getElementById("totalCart").innerText = formatNumber(finalTotal) + " VND";
-
-    // Show series savings
-    if (totalSeriesDiscount > 0) {
-        document.getElementById('seriesSavingsTotal').style.display = 'block';
-        document.getElementById('totalSeriesSavings').textContent = formatNumber(totalSeriesDiscount);
-    } else {
-        document.getElementById('seriesSavingsTotal').style.display = 'none';
-    }
-
-    var selectAllCheckbox = document.getElementById("selectAll");
-    selectAllCheckbox.checked = (selectedCount === checkboxes.length && checkboxes.length > 0);
-
-    updateSeriesTotals();
-}
 
     function validateSelection() {
         var checkboxes = document.getElementsByClassName("item-checkbox");
@@ -929,11 +944,9 @@
             });
         }
 
-        // Initialize totals
         updateTotal();
         updateSeriesTotals();
 
-        // Auto-select all series books on load
         var seriesCheckboxes = document.querySelectorAll('.series-checkbox');
         seriesCheckboxes.forEach(function(checkbox) {
             checkbox.checked = true;

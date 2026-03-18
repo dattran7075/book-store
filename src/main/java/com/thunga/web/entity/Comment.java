@@ -23,13 +23,17 @@ public class Comment {
     @ManyToOne
     @JoinColumn(name = "book_id")
     private Book book;
-    
+
     @OneToOne
     @JoinColumn(name = "order_detail_id")
     private OrderDetail orderDetail;
 
     private Integer star;
     private String content;
+
+    @Column(name = "status", nullable = false)
+    private String status;
+
     private Date created_at;
     private Date updated_at;
 }

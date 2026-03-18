@@ -139,8 +139,6 @@
                                 <th>Total Volumes</th>
                                 <th>Status</th>
                                 <th>Book Count</th>
-                                <th>Created at</th>
-                                <th>Updated at</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -155,8 +153,6 @@
                                           class="status-badge status-discontinued">DISCONTINUED</span>
                                 </td>
                                 <td th:text="${bookCountMap[series.id]}"></td>
-                                <td th:text="${series.created_at}"></td>
-                                <td th:text="${series.updated_at}"></td>
                             </tr>
                             <tr th:if="${#lists.isEmpty(seriesList)}">
                                 <td colspan="7" style="text-align:center; padding:30px; color:#999;">

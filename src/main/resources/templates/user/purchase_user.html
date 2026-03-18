@@ -165,12 +165,12 @@
             margin-left: 10px;
         }
         input[type="radio"] {
-        width: 16px;
-        height: 16px;
-        accent-color: #000;
-        border: none;
-        outline: none;
-}
+            width: 16px;
+            height: 16px;
+            accent-color: #000;
+            border: none;
+            outline: none;
+        }
     </style>
 </head>
 <body>
@@ -333,6 +333,28 @@
                                   style="color: #a94442; font-size: 13px; margin-top: 5px;"
                                   th:text="${addressError}"></span>
                         </div>
+                        <div class="form-group">
+                            <label><span class="required-field">*</span> <strong>Shipping Method</strong></label>
+
+                            <select id="shippingMethod" name="shippingMethod" class="form-control" style="width: 100%;"
+                                    required>
+                                <option value="STANDARD"
+                                        th:selected="${selectedShippingMethod == 'STANDARD' || selectedShippingMethod == null}">
+                                    STANDARD (3-5 days)
+                                </option>
+                                <option value="EXPRESS" th:selected="${selectedShippingMethod == 'EXPRESS'}">
+                                    EXPRESS (1-2 days)
+                                </option>
+                                <option value="SAME-DAY" th:selected="${selectedShippingMethod == 'SAME-DAY'}">
+                                    SAME-DAY (24 hours)
+                                </option>
+                            </select>
+
+                            <small style="display:block; color:#666; margin-top:8px; font-size:12px;">
+                                <i class="fa fa-truck"></i>
+                                <strong style="color: #f0ad4e;">Free shipping on orders of at least 500,000 VND</strong>
+                            </small>
+                        </div>
 
                         <!-- ========== PAYMENT METHOD SELECTION (NOT PRE-SELECTED) ========== -->
                         <div class="form-group">
@@ -353,9 +375,14 @@
                         <input type="hidden" id="discountAmount" name="discountAmount"
                                th:value="${discount != null ? discount : 0}">
 
+                        <!-- ✅ FIX: Hidden fields to store calculated values -->
+                        <input type="hidden" id="calculatedShippingFee" name="calculatedShippingFee" value="0">
+                        <input type="hidden" id="calculatedFinalTotal" name="calculatedFinalTotal" value="0">
+
                         <!-- Confirm Button -->
                         <div class="text-center" style="margin-top: 20px;">
                             <button type="submit" id="confirmBtn" class="btn btn-primary btn-lg"
+                                    onclick="return submitOrderWithCalculations(event)"
                                     style="background: green; width: 100%;">
                                 <i class="fa fa-check-circle"></i> Confirm Order
                             </button>
@@ -374,12 +401,15 @@
                                 <i class="fa fa-exclamation-triangle"></i> <span th:text="${error}"></span>
                             </div>
 
+                            <!-- ========== TABLE: ITEMS VỚI WEIGHT COLUMNS ========== -->
                             <table class="table table-bordered">
                                 <thead>
                                 <tr>
                                     <th>No.</th>
                                     <th>Book Title</th>
-                                    <th>Quantity</th>
+                                    <th>Qty</th>
+                                    <th>Weight(kg)</th>
+                                    <th>Total Weight(kg)</th>
                                     <th>Unit Price</th>
                                     <th>Subtotal</th>
                                 </tr>
@@ -391,6 +421,12 @@
                                         <td th:text="${iterStat.index + 1}"></td>
                                         <td th:text="${detail.book.title}"></td>
                                         <td th:text="${detail.quantity}"></td>
+                                        <!-- Weight per unit (lấy từ database) -->
+                                        <td th:text="${detail.book.weight_kg != null ? detail.book.weight_kg : '0'}"></td>
+                                        <!-- Total Weight = weight/unit × qty -->
+                                        <td th:with="itemWeight=${detail.book.weight_kg != null ? detail.book.weight_kg * detail.quantity : 0}"
+                                            th:text="${#numbers.formatDecimal(itemWeight, 1, 'COMMA', 2, 'POINT')}">0
+                                        </td>
                                         <td th:text="${#numbers.formatInteger(detail.book.price, 1, 'COMMA') + ' VND'}"></td>
                                         <td th:text="${#numbers.formatInteger(detail.book.price * detail.quantity, 1, 'COMMA') + ' VND'}"></td>
                                     </tr>
@@ -398,7 +434,7 @@
 
                                 <!-- Hiển thị thông báo nếu không có sản phẩm nào được chọn -->
                                 <tr th:if="${selectedBookIds == null || selectedBookIds.isEmpty()}">
-                                    <td colspan="5" class="text-center" style="color: #d9534f;">
+                                    <td colspan="7" class="text-center" style="color: #d9534f;">
                                         <i class="fa fa-exclamation-circle"></i> No products selected
                                     </td>
                                 </tr>
@@ -474,8 +510,8 @@
                                                 <option th:each="promo : ${allPromotions}"
                                                         th:value="${promo.code}"
                                                         th:text="${promo.code + ' - ' + promo.name
-                                                             + ' (' + #numbers.formatInteger(promo.discountValue, 0, 'COMMA') + ' VND)'
-                                                             + ' [Min: ' + #numbers.formatInteger(promo.minOrder, 0, 'COMMA') + ' VND]'}"
+                                                             + ' (' + #numbers.formatInteger(promo.discountValue, 1, 'COMMA') + ' VND)'
+                                                             + ' [Min: ' + #numbers.formatInteger(promo.minOrder, 1, 'COMMA') + ' VND]'}"
                                                         th:attr="data-status=${promo.status},
                                                             data-discount=${promo.discountValue},
                                                              data-minorder=${promo.minOrder}"
@@ -503,7 +539,7 @@
                                 </div>
                             </div>
 
-                            <!-- ========== UPDATED: Total calculation WITH SERIES BUNDLE DISCOUNT ========== -->
+                            <!-- ========== BẢNG TÍNH TIỀN ========== -->
                             <div class="panel panel-default" style="margin-top: 20px;">
                                 <div class="panel-body">
                                     <table class="table" style="margin-bottom: 0;">
@@ -542,14 +578,6 @@
                                             </td>
                                         </tr>
 
-                                        <!-- Shipping Fee -->
-                                        <tr style="background-color: #f9f9f9;">
-                                            <td><strong>Shipping Fee:</strong></td>
-                                            <td class="text-right">
-                                                <span th:text="${#numbers.formatInteger(shippingFee, 1, 'COMMA') + ' VND'}"></span>
-                                            </td>
-                                        </tr>
-
                                         <!-- ========== PROMOTION DISCOUNT (if applicable and NO series bundle) ========== -->
                                         <tr th:if="${(hasSeriesBundle == null || !hasSeriesBundle) && discount != null && discount > 0}"
                                             style="background-color: #dff0d8;">
@@ -567,7 +595,22 @@
                                             </td>
                                         </tr>
 
-                                        <!-- ========== FINAL TOTAL WITH SERIES BUNDLE DISCOUNT ========== -->
+                                        <!-- ✅ FIX: Shipping Fee - Updated by JavaScript -->
+                                        <tr style="background-color: #f9f9f9;">
+                                            <td><strong><i class="fa fa-dollar"></i> Shipping Fee:</strong></td>
+                                            <td class="text-right">
+                                                <span id="shippingFeeDisplay"
+                                                      style="color: #0275d8; font-weight: bold; font-size: 14px;">
+                                                    0 VND
+                                                </span>
+                                                <small style="display: block; color: #666; margin-top: 3px; font-size: 11px;">
+                                                    <span th:if="${cartTotal >= 500000}">✓ Free shipping (order >= 500K)</span>
+                                                    <span th:unless="${cartTotal >= 500000}">Calculated: Base + (Total Weight × Rate/kg)</span>
+                                                </small>
+                                            </td>
+                                        </tr>
+
+                                        <!-- ========== FINAL TOTAL - Series Bundle Case ========== -->
                                         <tr th:if="${hasSeriesBundle != null && hasSeriesBundle && seriesBundleDiscount != null && seriesBundleDiscount > 0}"
                                             style="border-top: 2px solid #3c763d; background-color: #f4f9f4;">
                                             <td>
@@ -576,13 +619,14 @@
                                                 </h4>
                                             </td>
                                             <td class="text-right">
-                                                <h3 class="final-price" style="margin: 5px 0;">
-                                                    <span th:text="${#numbers.formatInteger((cartTotal - seriesBundleDiscount + shippingFee), 1, 'COMMA') + ' VND'}"></span>
+                                                <h3 class="finalTotalDisplay final-price"
+                                                    style="margin: 5px 0;">
+                                                    0 VND
                                                 </h3>
                                             </td>
                                         </tr>
 
-                                        <!-- Final Total WITH Promotion (NO Series Bundle) -->
+                                        <!-- ========== FINAL TOTAL - Promotion Case ========== -->
                                         <tr th:if="${(hasSeriesBundle == null || !hasSeriesBundle) && discount != null && discount > 0}"
                                             style="border-top: 2px solid #3c763d; background-color: #f4f9f4;">
                                             <td>
@@ -591,24 +635,25 @@
                                                 </h4>
                                             </td>
                                             <td class="text-right">
-                                                <h3 class="final-price" style="margin: 5px 0;">
-                                                    <span th:text="${#numbers.formatInteger((cartTotal + shippingFee - discount), 1, 'COMMA') + ' VND'}"></span>
+                                                <h3 class="finalTotalDisplay final-price"
+                                                    style="margin: 5px 0;">
+                                                    0 VND
                                                 </h3>
                                             </td>
                                         </tr>
 
-                                        <!-- Total when NO discount at all -->
+                                        <!-- ========== FINAL TOTAL - No Discount Case ========== -->
                                         <tr th:if="${(hasSeriesBundle == null || !hasSeriesBundle || seriesBundleDiscount == null || seriesBundleDiscount == 0)
                                                     && (discount == null || discount == 0)}"
-                                            style="border-top: 2px solid #ddd;">
+                                            style="border-top: 2px solid #ddd; background-color: #f4f4f4;">
                                             <td>
                                                 <h4 style="margin: 5px 0;">
                                                     <strong>Total (incl. shipping):</strong>
                                                 </h4>
                                             </td>
                                             <td class="text-right">
-                                                <h3 style="margin: 5px 0;">
-                                                    <span th:text="${#numbers.formatInteger((cartTotal + shippingFee), 1, 'COMMA') + ' VND'}"></span>
+                                                <h3 class="finalTotalDisplay" style="margin: 5px 0; color: #5cb85c;">
+                                                    0 VND
                                                 </h3>
                                             </td>
                                         </tr>
@@ -753,14 +798,135 @@
 <script src="../js/main.js"></script>
 
 <script>
-    // Check for page-level messages on load and convert to inline
+    // Global variables for calculated values
+    let CALCULATED_SHIPPING_FEE = 0;
+    let CALCULATED_FINAL_TOTAL = 0;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const shippingMethodSelect = document.getElementById('shippingMethod');
+        const CART_TOTAL = [[${cartTotal}]];
+        const DISCOUNT = [[${discount != null ? discount : 0}]];
+        const SERIES_DISCOUNT = [[${seriesBundleDiscount != null ? seriesBundleDiscount : 0}]];
+
+        function getTotalWeightFromTable() {
+            let totalWeight = 0;
+            const rows = document.querySelectorAll('table.table-bordered tbody tr');
+
+            rows.forEach(row => {
+                if (row.querySelector('td[colspan]')) {
+                    return;
+                }
+
+                const weightCell = row.cells[4];
+                if (weightCell) {
+                    const weightText = weightCell.textContent.trim();
+                    const weight = parseFloat(weightText.replace(/,/g, '.'));
+
+                    if (!isNaN(weight) && weight > 0) {
+                        totalWeight += weight;
+                    }
+                }
+            });
+
+            const totalWeightDisplay = document.getElementById('totalWeightDisplay');
+            if (totalWeightDisplay) {
+                totalWeightDisplay.textContent = totalWeight.toFixed(2);
+            }
+
+            return parseFloat(totalWeight.toFixed(2));
+        }
+
+        function calculateShippingFee(method, totalWeight) {
+            if (CART_TOTAL >= 500000) {
+                return 0;
+            }
+
+            let baseFee = 0;
+            let perKgFee = 0;
+
+            switch(method.toUpperCase().trim()) {
+                case 'STANDARD':
+                    baseFee = 15000;
+                    perKgFee = 5000;
+                    break;
+                case 'EXPRESS':
+                    baseFee = 25000;
+                    perKgFee = 8000;
+                    break;
+                case 'SAME-DAY':
+                    baseFee = 40000;
+                    perKgFee = 12000;
+                    break;
+                default:
+                    baseFee = 15000;
+                    perKgFee = 5000;
+            }
+
+            return Math.round((baseFee + totalWeight * perKgFee) * 100) / 100;
+        }
+
+        function formatVND(value) {
+            return new Intl.NumberFormat('vi-VN').format(Math.round(value)) + ' VND';
+        }
+
+        function updateAllDisplays() {
+            const method = shippingMethodSelect ? shippingMethodSelect.value.trim() : 'STANDARD';
+            const totalWeight = getTotalWeightFromTable();
+            const shippingFee = calculateShippingFee(method, totalWeight);
+
+            CALCULATED_SHIPPING_FEE = shippingFee;
+
+            const methodDisplay = document.getElementById('shippingMethodDisplay');
+            if (methodDisplay) {
+                methodDisplay.textContent = method;
+            }
+
+            const feeDisplay = document.getElementById('shippingFeeDisplay');
+            if (feeDisplay) {
+                feeDisplay.textContent = formatVND(shippingFee);
+            }
+
+            let finalTotal = 0;
+
+            if (SERIES_DISCOUNT > 0) {
+                finalTotal = CART_TOTAL - SERIES_DISCOUNT + shippingFee;
+            } else if (DISCOUNT > 0) {
+                finalTotal = CART_TOTAL + shippingFee - DISCOUNT;
+            } else {
+                finalTotal = CART_TOTAL + shippingFee;
+            }
+
+            CALCULATED_FINAL_TOTAL = finalTotal;
+
+            const finalTotalDisplays = document.querySelectorAll('.finalTotalDisplay');
+            if (finalTotalDisplays.length > 0) {
+                finalTotalDisplays.forEach(elem => {
+                    elem.textContent = formatVND(finalTotal);
+                });
+            }
+        }
+
+        updateAllDisplays();
+
+        if (shippingMethodSelect) {
+            shippingMethodSelect.addEventListener('change', updateAllDisplays);
+        }
+    });
+
+    function submitOrderWithCalculations(event) {
+        document.getElementById('calculatedShippingFee').value = CALCULATED_SHIPPING_FEE;
+        document.getElementById('calculatedFinalTotal').value = CALCULATED_FINAL_TOTAL;
+        return true;
+    }
+</script>
+
+<script>
+    // Promotion select styling
     document.addEventListener('DOMContentLoaded', function () {
-        // Add status badges to promotion options
         const options = document.querySelectorAll('#promotionSelect option');
         options.forEach(option => {
             if (option.value !== '') {
                 const status = option.getAttribute('data-status');
-                let badge = '';
                 if (status === 'ACTIVE') {
                     option.style.color = '#5cb85c';
                     option.style.fontWeight = 'bold';
@@ -771,7 +937,6 @@
                     option.style.color = '#d9534f';
                     option.disabled = true;
                 }
-                option.text = option.text + badge;
             }
         });
     });

@@ -29,7 +29,6 @@ public class Admin {
     @Column(name = "phone")
     private String phone;
 
-    // === NEW: Admin can manage orders (one admin handles multiple orders) ===
     @OneToMany(mappedBy = "admin")
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
