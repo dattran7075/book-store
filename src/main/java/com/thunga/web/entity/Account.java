@@ -27,6 +27,12 @@ public class Account {
     @Column(name = "role")
     private String role;
 
+    @Column(name = "status")
+    private String status = "ACTIVE";
+
+    @Column(name = "last_login")
+    private Date last_login;
+
     @Column(name = "created_at")
     private Date created_at;
 

@@ -30,142 +30,327 @@
             margin-bottom: 20px;
             overflow: hidden;
         }
+
         .tg-filter-panel .tg-widgettitle {
             background: #f5f5f5;
             border-bottom: 1px solid #e8e8e8;
             padding: 12px 15px;
             margin-bottom: 0;
         }
+
         .tg-filter-panel .tg-widgettitle h3 {
-            margin: 0; font-size: 14px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.5px; color: #333;
+            margin: 0;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #333;
         }
-        .tg-filter-panel .tg-widgetcontent { padding: 15px; }
+
+        .tg-filter-panel .tg-widgetcontent {
+            padding: 15px;
+        }
 
         /* ===== SORT ===== */
-        .filter-sort-group { display: flex; flex-direction: column; gap: 6px; }
+        .filter-sort-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
         .filter-sort-option {
-            display: flex; align-items: center; cursor: pointer;
-            padding: 6px 8px; border-radius: 3px; transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 3px;
+            transition: background 0.15s;
         }
-        .filter-sort-option:hover { background: #f0f7e6; }
-        .filter-sort-option.active-sort { background: #f0f7e6; }
+
+        .filter-sort-option:hover {
+            background: #f0f7e6;
+        }
+
+        .filter-sort-option.active-sort {
+            background: #f0f7e6;
+        }
+
         .filter-sort-option input[type="radio"] {
-            margin-right: 8px; accent-color: #76b82a; cursor: pointer;
+            margin-right: 8px;
+            accent-color: #76b82a;
+            cursor: pointer;
         }
+
         .filter-sort-option label {
-            cursor: pointer; margin: 0; font-size: 13px; color: #444;
-            display: flex; align-items: center; gap: 6px; font-weight: 500;
+            cursor: pointer;
+            margin: 0;
+            font-size: 13px;
+            color: #444;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
         }
-        .filter-sort-option.active-sort label { font-weight: 700; color: #5fa020; }
-        .filter-sort-option label i { color: #76b82a; font-size: 12px; }
+
+        .filter-sort-option.active-sort label {
+            font-weight: 700;
+            color: #5fa020;
+        }
+
+        .filter-sort-option label i {
+            color: #76b82a;
+            font-size: 12px;
+        }
 
         /* ===== PRICE PRESET CHECKBOXES ===== */
         .section-divider {
-            font-size: 12px; font-weight: 700; text-transform: uppercase;
-            color: #555; letter-spacing: 0.4px; margin-bottom: 10px;
-            padding-bottom: 6px; border-bottom: 1px solid #f0f0f0;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #555;
+            letter-spacing: 0.4px;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #f0f0f0;
         }
-        .price-preset-group { list-style: none !important; padding: 0 !important; margin: 0 0 14px 0; }
+
+        .price-preset-group {
+            list-style: none !important;
+            padding: 0 !important;
+            margin: 0 0 14px 0;
+        }
+
         .price-preset-group li {
             padding: 3px 0;
             list-style: none !important;
         }
+
         .price-preset-label {
-            display: flex; align-items: center; cursor: pointer;
-            font-size: 13px; color: #444; margin: 0;
-            padding: 4px 6px; border-radius: 3px; transition: background 0.15s; gap: 8px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 13px;
+            color: #444;
+            margin: 0;
+            padding: 4px 6px;
+            border-radius: 3px;
+            transition: background 0.15s;
+            gap: 8px;
         }
-        .price-preset-label:hover { background: #f0f7e6; }
-        .price-preset-label.is-checked { background: #f0f7e6; color: #5fa020; font-weight: 600; }
+
+        .price-preset-label:hover {
+            background: #f0f7e6;
+        }
+
+        .price-preset-label.is-checked {
+            background: #f0f7e6;
+            color: #5fa020;
+            font-weight: 600;
+        }
+
         .price-preset-label input[type="checkbox"] {
-            accent-color: #76b82a; cursor: pointer; flex-shrink: 0; width: 14px; height: 14px;
+            accent-color: #76b82a;
+            cursor: pointer;
+            flex-shrink: 0;
+            width: 14px;
+            height: 14px;
         }
+
         .price-count {
-            margin-left: auto; color: #999; font-size: 11px;
-            background: #f5f5f5; padding: 1px 6px; border-radius: 10px;
+            margin-left: auto;
+            color: #999;
+            font-size: 11px;
+            background: #f5f5f5;
+            padding: 1px 6px;
+            border-radius: 10px;
         }
-        .price-preset-label.is-checked .price-count { background: #e0f0c8; color: #5fa020; }
+
+        .price-preset-label.is-checked .price-count {
+            background: #e0f0c8;
+            color: #5fa020;
+        }
 
         /* ===== DUAL RANGE SLIDER ===== */
         .slider-section-label {
-            text-align: center; font-size: 11px; color: #bbb;
-            margin: 12px 0 10px; position: relative;
+            text-align: center;
+            font-size: 11px;
+            color: #bbb;
+            margin: 12px 0 10px;
+            position: relative;
         }
+
         .slider-section-label::before, .slider-section-label::after {
-            content: ''; position: absolute; top: 50%;
-            width: 28%; height: 1px; background: #e8e8e8;
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 28%;
+            height: 1px;
+            background: #e8e8e8;
         }
-        .slider-section-label::before { left: 0; }
-        .slider-section-label::after  { right: 0; }
+
+        .slider-section-label::before {
+            left: 0;
+        }
+
+        .slider-section-label::after {
+            right: 0;
+        }
 
         .price-range-display {
-            display: flex; align-items: center; justify-content: space-between;
-            gap: 6px; margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            margin-bottom: 12px;
         }
+
         .price-range-val {
-            flex: 1; background: #f8f9fa; border: 1px solid #e0e0e0;
-            border-radius: 4px; padding: 5px 6px; font-size: 11px; font-weight: 700;
-            color: #333; text-align: center; min-width: 0;
+            flex: 1;
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 5px 6px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #333;
+            text-align: center;
+            min-width: 0;
         }
-        .price-range-sep { color: #ccc; font-size: 12px; flex-shrink: 0; }
+
+        .price-range-sep {
+            color: #ccc;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
 
         /* Dual-handle wrapper */
-        .dual-range-wrapper { position: relative; height: 30px; margin: 0 6px; }
+        .dual-range-wrapper {
+            position: relative;
+            height: 30px;
+            margin: 0 6px;
+        }
+
         .dual-range-track {
-            position: absolute; top: 50%; left: 0; right: 0;
-            height: 4px; background: #e0e0e0; border-radius: 2px; transform: translateY(-50%);
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            transform: translateY(-50%);
         }
+
         .dual-range-fill {
-            position: absolute; top: 50%; height: 4px;
-            background: #76b82a; border-radius: 2px;
-            transform: translateY(-50%); pointer-events: none;
+            position: absolute;
+            top: 50%;
+            height: 4px;
+            background: #76b82a;
+            border-radius: 2px;
+            transform: translateY(-50%);
+            pointer-events: none;
         }
+
         .dual-range-wrapper input[type="range"] {
-            position: absolute; top: 50%; left: 0; width: 100%;
-            transform: translateY(-50%); -webkit-appearance: none; appearance: none;
-            background: transparent; pointer-events: none;
-            height: 22px; margin: 0; padding: 0;
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            transform: translateY(-50%);
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            pointer-events: none;
+            height: 22px;
+            margin: 0;
+            padding: 0;
         }
+
         .dual-range-wrapper input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none;
-            width: 20px; height: 20px; border-radius: 50%;
-            background: #fff; border: 2.5px solid #76b82a;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.18);
-            cursor: pointer; pointer-events: all;
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2.5px solid #76b82a;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.18);
+            cursor: pointer;
+            pointer-events: all;
             transition: border-color 0.15s, transform 0.12s;
         }
+
         .dual-range-wrapper input[type="range"]::-webkit-slider-thumb:hover {
-            border-color: #5fa020; transform: scale(1.15);
+            border-color: #5fa020;
+            transform: scale(1.15);
         }
+
         .dual-range-wrapper input[type="range"]::-webkit-slider-thumb:active {
-            background: #76b82a; transform: scale(1.2);
+            background: #76b82a;
+            transform: scale(1.2);
         }
+
         .dual-range-wrapper input[type="range"]::-moz-range-thumb {
-            width: 20px; height: 20px; border-radius: 50%;
-            background: #fff; border: 2.5px solid #76b82a;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.18);
-            cursor: pointer; pointer-events: all;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2.5px solid #76b82a;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.18);
+            cursor: pointer;
+            pointer-events: all;
         }
+
         .range-ticks {
-            display: flex; justify-content: space-between; margin: 5px 2px 0;
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 2px 0;
         }
-        .range-tick { font-size: 10px; color: #ccc; }
+
+        .range-tick {
+            font-size: 10px;
+            color: #ccc;
+        }
 
         /* ===== ACTIVE FILTER BAR ===== */
         .active-filters-bar {
-            display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
-            padding: 10px 0; border-bottom: 1px solid #f0f0f0; margin-bottom: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            margin-bottom: 15px;
         }
+
         .filter-tag {
-            display: inline-flex; align-items: center; gap: 5px;
-            background: #f0f7e6; border: 1px solid #c8e6a0;
-            color: #5fa020; padding: 3px 8px; border-radius: 12px;
-            font-size: 12px; font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #f0f7e6;
+            border: 1px solid #c8e6a0;
+            color: #5fa020;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
         }
-        .filter-tag a { color: #999; text-decoration: none; font-size: 14px; line-height: 1; }
-        .filter-tag a:hover { color: #e74c3c; }
-        .filter-label-prefix { color: #999; font-size: 12px; }
+
+        .filter-tag a {
+            color: #999;
+            text-decoration: none;
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .filter-tag a:hover {
+            color: #e74c3c;
+        }
+
+        .filter-label-prefix {
+            color: #999;
+            font-size: 12px;
+        }
     </style>
 
 </head>
@@ -205,8 +390,8 @@
             <div class="container">
                 <div class="row">
                     <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                        <strong class="tg-logo"><a href="index-2.html"><img src="images/logo.png"
-                                                                            alt="company name here"></a></strong>
+                        <strong class="tg-logo"><a href="/"><img src="images/logoSWP.png"
+                                                                 alt="company name here"></a></strong>
                         <div class="tg-searchbox">
                             <div class="tg-widget tg-widgetsearch">
                                 <form class="tg-formtheme tg-formsearch" th:action="@{/search}">
@@ -222,8 +407,9 @@
                             <div sec:authorize="hasRole('USER')" class="dropdown tg-themedropdown tg-minicartdropdown">
                                 <a id="tg-minicart" class="tg-btnthemedropdown" data-toggle="dropdown"
                                    aria-haspopup="true" aria-expanded="false">
-                                    <span class="tg-themebadge"
-                                          th:text="${cartTotalBooks != null ? cartTotalBooks : 0}"></span>
+                                <span class="tg-themebadge"
+                                      th:with="qty=${cartTotalBooks != null ? cartTotalBooks : 0}"
+                                      th:text="${qty >= 10000 ? '10k+' : (qty >= 1000 ? (qty / 1000) + 'k+' : (qty >= 100 ? '99+' : qty))}"></span>
                                     <a th:href="@{view-cart}"><i class="icon-cart"></i><span style="margin-left: 10px;">Cart</span></a>
                                 </a>
                             </div>
@@ -750,7 +936,7 @@
                 <ul class="pagination">
                     <li th:classappend="${currentPage == 1} ? 'disabled'">
                         <a th:if="${currentPage > 1}"
-                           th:href="@{${keyword != null ? '/search' : '/products'}(page=${currentPage-1}, sortBy=${sortBy}, keyword=${keyword}, categoryId=${categoryId}, priceMin=${priceMin}, priceMax=${priceMax}, pricePreset=${pricePreset})}">«</a>
+                           th:href="@{${keyword != null ? '/search' : '/products'}(page=${currentPage}, sortBy=${sortBy}, keyword=${keyword}, categoryId=${categoryId}, priceMin=${priceMin}, priceMax=${priceMax}, pricePreset=${pricePreset})}">«</a>
                         <span th:if="${currentPage == 1}">«</span>
                     </li>
                     <li th:each="i : ${#numbers.sequence(1, totalPages)}"
@@ -859,14 +1045,14 @@
 
         var pct1 = ((a - SMIN) / (SMAX - SMIN)) * 100;
         var pct2 = ((b - SMIN) / (SMAX - SMIN)) * 100;
-        document.getElementById('rangeFill').style.left  = pct1 + '%';
+        document.getElementById('rangeFill').style.left = pct1 + '%';
         document.getElementById('rangeFill').style.width = (pct2 - pct1) + '%';
         document.getElementById('dispMin').textContent = (a <= SMIN) ? '0 VND' : fmtVND(a);
         document.getElementById('dispMax').textContent = (b >= SMAX) ? '700,000+ VND' : fmtVND(b);
     }
 
     function highlightMatchingPreset(a, b) {
-        document.querySelectorAll('.price-preset-cb').forEach(function(cb) {
+        document.querySelectorAll('.price-preset-cb').forEach(function (cb) {
             var cMin = parseInt(cb.getAttribute('data-min'), 10) || 0;
             var cMaxR = cb.getAttribute('data-max');
             var cMax = (cMaxR === '' || cMaxR === null) ? SMAX : parseInt(cMaxR, 10);
@@ -879,7 +1065,7 @@
 
     function submit(delay) {
         clearTimeout(_timer);
-        _timer = setTimeout(function() {
+        _timer = setTimeout(function () {
             document.getElementById('filterForm').submit();
         }, delay || 300);
     }
@@ -887,7 +1073,7 @@
     function doSort(radio) {
         document.getElementById('hSortBy').value = radio.value;
 
-        document.querySelectorAll('.filter-sort-option').forEach(function(el) {
+        document.querySelectorAll('.filter-sort-option').forEach(function (el) {
             el.classList.remove('active-sort');
             el.querySelector('label').style.color = '';
         });
@@ -898,7 +1084,7 @@
     }
 
     function doPreset(cb) {
-        document.querySelectorAll('.price-preset-cb').forEach(function(other) {
+        document.querySelectorAll('.price-preset-cb').forEach(function (other) {
             if (other !== cb) {
                 other.checked = false;
                 var lbl = other.closest('.price-preset-label');
@@ -913,8 +1099,8 @@
             var pMax = (pMaxRaw === '' || pMaxRaw === null) ? SMAX : parseInt(pMaxRaw, 10);
 
             document.getElementById('hPricePreset').value = cb.value;
-            document.getElementById('hPriceMin').value    = (pMin <= SMIN) ? '' : String(pMin);
-            document.getElementById('hPriceMax').value    = (pMax >= SMAX) ? '' : String(pMax);
+            document.getElementById('hPriceMin').value = (pMin <= SMIN) ? '' : String(pMin);
+            document.getElementById('hPriceMax').value = (pMax >= SMAX) ? '' : String(pMax);
 
             var lbl = cb.closest('.price-preset-label');
             if (lbl) lbl.classList.add('is-checked');
@@ -930,8 +1116,8 @@
             if (lbl2) lbl2.classList.remove('is-checked');
 
             document.getElementById('hPricePreset').value = '';
-            document.getElementById('hPriceMin').value    = '';
-            document.getElementById('hPriceMax').value    = '';
+            document.getElementById('hPriceMin').value = '';
+            document.getElementById('hPriceMax').value = '';
             document.getElementById('rMin').value = SMIN;
             document.getElementById('rMax').value = SMAX;
             refreshSlider();
@@ -945,9 +1131,11 @@
         var b = parseInt(document.getElementById('rMax').value, 10);
         if (a > b) {
             if (document.activeElement === document.getElementById('rMin')) {
-                document.getElementById('rMin').value = b; a = b;
+                document.getElementById('rMin').value = b;
+                a = b;
             } else {
-                document.getElementById('rMax').value = a; b = a;
+                document.getElementById('rMax').value = a;
+                b = a;
             }
         }
         refreshSlider();
@@ -960,7 +1148,7 @@
         var b = parseInt(document.getElementById('rMax').value, 10);
 
         var matched = '';
-        document.querySelectorAll('.price-preset-cb').forEach(function(cb) {
+        document.querySelectorAll('.price-preset-cb').forEach(function (cb) {
             var cMin = parseInt(cb.getAttribute('data-min'), 10) || 0;
             var cMaxR = cb.getAttribute('data-max');
             var cMax = (cMaxR === '' || cMaxR === null) ? SMAX : parseInt(cMaxR, 10);
@@ -968,17 +1156,17 @@
         });
 
         document.getElementById('hPricePreset').value = matched;
-        document.getElementById('hPriceMin').value    = (a <= SMIN) ? '' : String(a);
-        document.getElementById('hPriceMax').value    = (b >= SMAX) ? '' : String(b);
+        document.getElementById('hPriceMin').value = (a <= SMIN) ? '' : String(a);
+        document.getElementById('hPriceMax').value = (b >= SMAX) ? '' : String(b);
 
         submit(400);
     }
 
     (function init() {
         var preset = document.getElementById('hPricePreset').value || '';
-        var pMin   = document.getElementById('hPriceMin').value    || '';
-        var pMax   = document.getElementById('hPriceMax').value    || '';
-        var sort   = document.getElementById('hSortBy').value      || '';
+        var pMin = document.getElementById('hPriceMin').value || '';
+        var pMax = document.getElementById('hPriceMax').value || '';
+        var sort = document.getElementById('hSortBy').value || '';
 
         if (preset) {
             var cb = document.querySelector('.price-preset-cb[value="' + preset + '"]');

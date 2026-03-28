@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -76,7 +77,7 @@ public class SeriesService {
      * Returns Map<fieldName, errorMessage> — empty = valid.
      */
     public Map<String, String> validateNewSeries(String name, Integer totalVolumes) {
-        Map<String, String> errors = new java.util.LinkedHashMap<>();
+        Map<String, String> errors = new LinkedHashMap<>();
 
         if (name == null || name.trim().isEmpty()) {
             errors.put("name", "Series name cannot be empty");
@@ -126,7 +127,7 @@ public class SeriesService {
         long bookCount = countBooksBySeriesId(id);
         if (bookCount > 0) {
             throw new IllegalArgumentException(
-                    "Cannot delete series with " + bookCount + " book(s). Please reassign or remove books first.");
+                    "Cannot delete series with " + bookCount + " book(s).");
         }
 
         delete(series);

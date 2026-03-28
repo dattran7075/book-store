@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -25,7 +26,7 @@ public class VoucherService {
      * Voucher áp dụng cho toàn đơn:
      * - discount_value ≤ min_order × 20%
      */
-    private static final double MAX_DISCOUNT_PERCENT = 0.20; // 20%
+    private static final double MAX_DISCOUNT_PERCENT = 0.20;
 
     public List<Voucher> findAll() {
         return voucherRepository.findAll();
@@ -58,7 +59,7 @@ public class VoucherService {
     }
 
     // =====================================================
-    // VALIDATION CHO TẠO MỚI Voucher
+    // VALIDATION
     // =====================================================
 
     public void validateNewVoucher(String code, String name, Double discountValue,
@@ -127,7 +128,7 @@ public class VoucherService {
     }
 
     // =====================================================
-    // VALIDATION CHO EDIT Voucher
+    // VALIDATION EDIT
     // =====================================================
 
     public void validateEditVoucher(Integer id, String name, Double discountValue,
@@ -167,7 +168,6 @@ public class VoucherService {
 
         // ===== Validate discount_value và min_order (chỉ khi used_count = 0) =====
         if (usedCount > 0) {
-            // Nếu đã được sử dụng, KHÔNG cho phép thay đổi discount_value và min_order
             if (!discountValue.equals(voucher.getDiscountValue())) {
                 throw new IllegalArgumentException("Cannot change discount value when voucher has been used");
             }
@@ -176,13 +176,6 @@ public class VoucherService {
                 throw new IllegalArgumentException("Cannot change min order when voucher has been used");
             }
         } else {
-            // Nếu chưa được sử dụng, validate discount_value và min_order
-
-            // Validate min_order
-            if (minOrder == null || minOrder <= 0) {
-                throw new IllegalArgumentException("Min order value must be greater than 0");
-            }
-
             // Validate discount_value
             if (discountValue == null || discountValue <= 0) {
                 throw new IllegalArgumentException("Discount value must be greater than 0");
@@ -236,36 +229,11 @@ public class VoucherService {
             throw new IllegalArgumentException("Voucher not found");
         }
 
-        // Chỉ kiểm tra used_count
         if (voucher.getUsedCount() != null && voucher.getUsedCount() > 0) {
             throw new IllegalArgumentException("Cannot delete voucher that has been used (used count: " + voucher.getUsedCount() + ")");
         }
-
-        // Xóa voucher (cascade sẽ tự động set voucher_id = NULL trong order)
         voucherRepository.delete(voucher);
     }
-
-    // =====================================================
-    // HELPER METHODS
-    // =====================================================
-
-    /**
-     * Tính discount value tối đa cho phép
-     */
-    public Double calculateMaxDiscountAllowed(Double minOrder) {
-        if (minOrder == null || minOrder <= 0) {
-            return 0.0;
-        }
-        return minOrder * MAX_DISCOUNT_PERCENT;
-    }
-
-    /**
-     * Lấy % tối đa
-     */
-    public Double getMaxDiscountPercent() {
-        return MAX_DISCOUNT_PERCENT * 100; // 20%
-    }
-
     // =====================================================
     // Voucher VALIDATION & CALCULATION
     // =====================================================
@@ -301,19 +269,6 @@ public class VoucherService {
     }
 
     /**
-     * Tìm voucher hợp lệ theo code
-     */
-    public Voucher findValidVoucherByCode(String code, Double orderTotal) {
-        Voucher voucher = voucherRepository.findByCode(code).orElse(null);
-
-        if (voucher != null && isVoucherValid(voucher, orderTotal)) {
-            return voucher;
-        }
-
-        return null;
-    }
-
-    /**
      * Áp dụng voucher cho đơn hàng (tăng used_count)
      */
     public void applyVoucher(Voucher voucher) {
@@ -333,13 +288,20 @@ public class VoucherService {
         return voucher.getDiscountValue();
     }
 
-    /**
-     * Tính tổng giảm giá
-     */
-    public Double calculateDiscount(Voucher voucher, Double orderTotal) {
-        if (voucher == null || !isVoucherValid(voucher, orderTotal)) {
-            return 0.0;
+    public List<Voucher> findAllActiveVouchers() {
+        List<Voucher> allVouchers = voucherRepository.findAll();
+        List<Voucher> activeVouchers = new ArrayList<>();
+
+        LocalDate today = LocalDate.now();
+
+        for (Voucher voucher : allVouchers) {
+            if ("ACTIVE".equals(voucher.getStatus())) {
+                if (!today.isBefore(voucher.getStartDate()) &&
+                        !today.isAfter(voucher.getEndDate())) {
+                    activeVouchers.add(voucher);
+                }
+            }
         }
-        return voucher.getDiscountValue();
+        return activeVouchers;
     }
 }

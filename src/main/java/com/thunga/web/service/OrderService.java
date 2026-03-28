@@ -200,7 +200,8 @@ public class OrderService {
             String address,
             String voucherCode,
             String paymentMethod,
-            String shippingMethod) {
+            String shippingMethod,
+            Map<Integer, Integer> seriesSetsMap) {
 
         if (selectedItems == null || selectedItems.isEmpty()) {
             throw new IllegalStateException("No items selected!");
@@ -221,6 +222,25 @@ public class OrderService {
                             ". Must be STANDARD, EXPRESS, or SAME-DAY");
         }
 
+        // ========== RÀNG BUỘC: ĐƠN > 1 TRIỆU PHẢI DÙNG VNPAY ==========
+        double orderTotalForPaymentCheck = 0.0;
+        for (CartItem item : selectedItems) {
+            orderTotalForPaymentCheck += item.getBook().getPrice() * item.getQuantity();
+        }
+
+        double discountForCheck = 0.0;
+        if (!seriesSetsMap.isEmpty()) {
+            discountForCheck = calculateSeriesBundleDiscount(selectedItems, seriesSetsMap);
+        }
+
+        double netTotalForCheck = orderTotalForPaymentCheck - discountForCheck;
+
+        if (netTotalForCheck > 1_000_000 && !"VNPAY".equalsIgnoreCase(paymentMethod)) {
+            throw new IllegalStateException(
+                    "Orders over 1,000,000 VND must be paid via VNPay"
+            );
+        }
+
         Order order = new Order();
         order.setUser(selectedItems.get(0).getUser());
         order.setCustomer_name(fullname);
@@ -234,7 +254,6 @@ public class OrderService {
 
         double totalCost = 0.0;
 
-        Map<Integer, Integer> seriesSetsMap = detectCompleteSeriesWithSets(selectedItems);
         boolean isSeriesBundle = !seriesSetsMap.isEmpty();
 
         Voucher voucher = null;
@@ -493,12 +512,6 @@ public class OrderService {
 
                     if (quantity == null || quantity <= 0) {
                         throw new IllegalStateException("Invalid quantity for book: " + book.getTitle());
-                    }
-
-                    if (book.getNumber_in_stock() < quantity) {
-                        throw new IllegalStateException(
-                                "Book '" + book.getTitle() + "' only has " +
-                                        book.getNumber_in_stock() + " copies left!");
                     }
                 }
             }

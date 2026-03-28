@@ -140,9 +140,6 @@
             border-bottom: 1px solid #eee;
         }
 
-        .review-card.pending-blur .review-content {
-        }
-
         .review-card .reviewer-meta {
             margin-bottom: 6px;
         }
@@ -255,6 +252,21 @@
             display: block;
             margin-bottom: 10px;
         }
+
+        /* ── Review divider khi có cả comment cũ và form mới ─────────────── */
+        .review-new-purchase-divider {
+            margin: 20px 0 16px;
+            padding: 10px 14px;
+            background: #f0fff4;
+            border-left: 4px solid #5cb85c;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #276749;
+        }
+
+        .review-new-purchase-divider i {
+            margin-right: 6px;
+        }
     </style>
 </head>
 <body>
@@ -300,13 +312,14 @@
             <div class="container">
                 <div class="row">
                     <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                        <strong class="tg-logo"><a href="index-2.html"><img src="images/logo.png"
-                                                                            alt="company name here"></a></strong>
+                        <strong class="tg-logo"><a href="/"><img src="images/logoSWP.png"
+                                                                 alt="company name here"></a></strong>
                         <div class="tg-wishlistandcart">
                             <div sec:authorize="hasRole('USER')" class="dropdown tg-themedropdown tg-minicartdropdown">
                                 <a id="tg-minicart" class="tg-btnthemedropdown" th:href="@{/view-cart}">
-                                    <span class="tg-themebadge"
-                                          th:text="${cartTotalBooks != null ? cartTotalBooks : 0}"></span>
+                                   <span class="tg-themebadge"
+                                         th:with="qty=${cartTotalBooks != null ? cartTotalBooks : 0}"
+                                         th:text="${qty >= 10000 ? '10k+' : (qty >= 1000 ? (qty / 1000) + 'k+' : (qty >= 100 ? '99+' : qty))}"></span>
                                     <i class="icon-cart"></i>
                                     <span style="margin-left:10px;">Cart</span>
                                 </a>
@@ -628,7 +641,6 @@
                                                             </h3>
                                                         </div>
                                                         <div class="panel-body">
-                                                            <!-- Series status -->
                                                             <div style="margin-bottom:15px;">
                                                                 <span class="label label-info"
                                                                       th:if="${seriesStatus == 'ONGOING'}"
@@ -648,8 +660,6 @@
                                                                             th:text="${seriesTotalVolumes}"></span> total</span>
                                                                 </span>
                                                             </div>
-
-                                                            <!-- Can buy full series -->
                                                             <div th:if="${canBuyFullSeries != null && canBuyFullSeries}">
                                                                 <div style="margin-bottom:15px;">
                                                                     <h4 style="color:#333;margin-bottom:10px;"><i
@@ -679,7 +689,6 @@
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                                <!-- Pricing -->
                                                                 <div style="background-color:#dff0d8;padding:15px;border-radius:5px;border-left:4px solid #5cb85c;margin-bottom:15px;">
                                                                     <div class="row">
                                                                         <div class="col-xs-12 col-sm-6">
@@ -727,8 +736,6 @@
                                                                            th:value="${seriesId}">
                                                                 </form>
                                                             </div>
-
-                                                            <!-- Cannot buy full series -->
                                                             <div th:if="${canBuyFullSeries != null && !canBuyFullSeries}">
                                                                 <div class="alert alert-warning" role="alert"
                                                                      style="margin-bottom:0;">
@@ -796,8 +803,39 @@
                                                 Reviews &amp; Ratings
                                             </h2>
 
-                                            <!-- Guest / Admin: show approved comments only, no tabs -->
-                                            <div sec:authorize="!isAuthenticated() or hasRole('ADMIN')"
+                                            <div th:if="${totalReviews != null and totalReviews > 0}"
+                                                 style="display:flex;gap:0;align-items:center;padding:18px 20px;
+                                                        background:#f9f9f9;border-radius:8px;margin:16px 0 24px;border:1px solid #eee;">
+                                                <div style="text-align:center;min-width:96px;padding-right:20px;border-right:1px solid #eee;">
+                                                    <div style="font-size:42px;font-weight:700;color:#333;line-height:1.1;"
+                                                         th:text="${#numbers.formatDecimal(averageRating,1,'POINT',1,'POINT')}">
+                                                        0.0
+                                                    </div>
+                                                    <div style="margin:6px 0;">
+                                                        <i th:each="i : ${#numbers.sequence(1,5)}" class="fa"
+                                                           th:classappend="${i <= averageRating} ? 'fa-star' : (${i - 0.5 <= averageRating} ? 'fa-star-half-o' : 'fa-star-o')"
+                                                           style="color:#f0ad4e;font-size:13px;"></i>
+                                                    </div>
+                                                    <div style="font-size:12px;color:#999;">
+                                                        <span th:text="${totalReviews}"></span> Review(s)
+                                                    </div>
+                                                </div>
+                                                <div style="flex:1;padding-left:20px;">
+                                                    <div th:each="stat : ${ratingStats}"
+                                                         style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+                                                        <span style="font-size:12px;color:#555;min-width:8px;"
+                                                              th:text="${stat[0]}"></span>
+                                                        <i class="fa fa-star" style="color:#f0ad4e;font-size:11px;"></i>
+                                                        <div style="flex:1;height:10px;background:#e8e8e8;border-radius:5px;overflow:hidden;position:relative;">
+                                                            <div th:style="${'position:absolute;top:0;left:0;height:10px;border-radius:5px;background:#f0ad4e;width:' + stat[2] + '%'}"></div>
+                                                        </div>
+                                                        <span style="font-size:12px;color:#999;min-width:16px;"
+                                                              th:text="${stat[1]}"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div sec:authorize="!isAuthenticated()"
                                                  th:if="${!isUserRole}">
                                                 <div style="margin-top:20px;">
                                                     <div th:if="${approvedComments == null or approvedComments.isEmpty()}"
@@ -833,7 +871,7 @@
                                             </div>
 
                                             <!-- Logged-in USER: tabbed view -->
-                                            <div sec:authorize="isAuthenticated() and !hasRole('ADMIN')"
+                                            <div sec:authorize="isAuthenticated()"
                                                  th:if="${isUserRole}">
 
                                                 <!-- Tab buttons -->
@@ -856,8 +894,7 @@
                                                         <i class="fa fa-comment-o"></i>
                                                         <p>No reviews yet. Be the first to review!</p>
                                                     </div>
-                                                    <div th:each="comment : ${approvedComments}"
-                                                         class="review-card">
+                                                    <div th:each="comment : ${approvedComments}" class="review-card">
                                                         <div class="reviewer-meta">
                                                             <span class="reviewer-name"
                                                                   th:text="${comment.user.name}"></span>
@@ -886,204 +923,204 @@
                                                              class="review-text" th:text="${comment.content}"></div>
                                                     </div>
                                                 </div>
-
-                                                <!-- Tab: My Review -->
                                                 <div id="tab-mine" class="review-tab-pane">
 
-                                                    <!-- Has existing comment -->
-                                                    <div th:if="${myComment != null}">
+                                                    <!-- ══════════════════════════════════════════════════════════════════
+                                                         HIỂN THỊ TẤT CẢ COMMENTS CỦA USER (mới nhất lên đầu)
+                                                    ══════════════════════════════════════════════════════════════════ -->
+                                                    <div th:if="${myComments != null and !myComments.isEmpty()}">
 
-                                                        <!-- APPROVED -->
-                                                        <div th:if="${myComment.status == 'APPROVED'}"
-                                                             class="review-card">
-                                                            <div class="reviewer-meta">
-                                                                <span class="reviewer-name"
-                                                                      th:text="${myComment.user.name}"></span>
-                                                                <span class="review-date"
-                                                                      th:text="${#dates.format(myComment.created_at, 'dd-MM-yyyy HH:mm')}"></span>
-                                                                <span class="my-status-badge my-status-approved">Approved</span>
-                                                            </div>
-                                                            <div class="star-row">
-                                                                <span>
-                                                                <i th:classappend="${1<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                                <i th:classappend="${2<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                                <i th:classappend="${3<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                                <i th:classappend="${4<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                                <i th:classappend="${5<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                            </span>
-                                                            </div>
-                                                            <div th:if="${myComment.content != null and !myComment.content.trim().isEmpty()}"
-                                                                 class="review-text"
-                                                                 th:text="${myComment.content}"></div>
-                                                            <div style="margin-top:8px;">
-                                                                <button type="button" class="edit-btn"
-                                                                        th:data-comment-id="${myComment.id}"
-                                                                        th:data-book-id="${book.id}"
-                                                                        th:data-star="${myComment.star}"
-                                                                        th:data-content="${myComment.content}"
-                                                                        onclick="openEditModal(this)">
-                                                                    <i class="fa fa-pencil"></i> Edit Review
-                                                                </button>
-                                                            </div>
-                                                        </div>
+                                                        <div th:each="myComment, iterStat : ${myComments}"
+                                                             style="margin-bottom:24px;">
 
-                                                        <!-- PENDING -->
-                                                        <div th:if="${myComment.status == 'PENDING'}"
-                                                             class="review-card">
-                                                            <div class="reviewer-meta">
-                                                                <span class="reviewer-name"
-                                                                      th:text="${myComment.user.name}"></span>
-                                                                <span class="review-date"
-                                                                      th:text="${#dates.format(myComment.created_at, 'dd-MM-yyyy HH:mm')}"></span>
-                                                                <span class="my-status-badge my-status-pending">Pending</span>
+                                                            <!-- Comment number badge nếu có nhiều hơn 1 comment -->
+                                                            <div th:if="${#lists.size(myComments) > 1}"
+                                                                 style="padding:8px 12px;background:#f0f0f0;border-radius:4px;margin-bottom:12px;font-size:13px;color:#666;">
+                                                                <i class="fa fa-shopping-bag"></i>
+                                                                <strong>Purchase #<span
+                                                                        th:text="${#lists.size(myComments) - iterStat.index}"></span></strong>
                                                             </div>
-                                                            <div class="review-content">
+
+                                                            <!-- APPROVED -->
+                                                            <div th:if="${myComment.status == 'APPROVED'}"
+                                                                 class="review-card">
+                                                                <div class="reviewer-meta">
+                                                                    <span class="reviewer-name"
+                                                                          th:text="${myComment.user.name}"></span>
+                                                                    <span class="review-date"
+                                                                          th:text="${#dates.format(myComment.created_at, 'dd-MM-yyyy HH:mm')}"></span>
+                                                                    <span class="my-status-badge my-status-approved">Approved</span>
+                                                                </div>
                                                                 <div class="star-row">
-                                                                    <span>
-                                                                <i th:classappend="${1<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                                <i th:classappend="${2<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                                <i th:classappend="${3<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                                <i th:classappend="${4<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                                <i th:classappend="${5<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                            </span>
+                                                                        <span>
+                                                                            <i th:each="i : ${#numbers.sequence(1,5)}"
+                                                                               class="fa"
+                                                                               th:classappend="${i <= myComment.star} ? 'fa-star' : 'fa-star-o'"></i>
+                                                                        </span>
                                                                 </div>
                                                                 <div th:if="${myComment.content != null and !myComment.content.trim().isEmpty()}"
                                                                      class="review-text"
                                                                      th:text="${myComment.content}"></div>
-                                                            </div>
-                                                            <div class="pending-notice">
-                                                                <i class="fa fa-clock-o"></i>
-                                                                <div>
-                                                                    <strong>Thank you for your review!</strong><br>
-                                                                    Your content is being reviewed by an admin before
-                                                                    being published.
+                                                                <div style="margin-top:8px;">
+                                                                    <button type="button" class="edit-btn"
+                                                                            th:data-comment-id="${myComment.id}"
+                                                                            th:data-book-id="${book.id}"
+                                                                            th:data-star="${myComment.star}"
+                                                                            th:data-content="${myComment.content}"
+                                                                            onclick="openEditModal(this)">
+                                                                        <i class="fa fa-pencil"></i> Edit Review
+                                                                    </button>
                                                                 </div>
                                                             </div>
-                                                            <div style="margin-top:10px;">
-                                                                <button type="button" class="edit-btn"
-                                                                        th:data-comment-id="${myComment.id}"
-                                                                        th:data-book-id="${book.id}"
-                                                                        th:data-star="${myComment.star}"
-                                                                        th:data-content="${myComment.content}"
-                                                                        onclick="openEditModal(this)">
-                                                                    <i class="fa fa-pencil"></i> Edit Review
-                                                                </button>
-                                                            </div>
-                                                        </div>
 
-                                                        <!-- HIDDEN -->
-                                                        <div th:if="${myComment.status == 'HIDDEN'}"
-                                                             class="review-card">
-                                                            <div class="reviewer-meta">
-                                                                <span class="reviewer-name"
-                                                                      th:text="${myComment.user.name}"></span>
-                                                                <span class="review-date"
-                                                                      th:text="${#dates.format(myComment.created_at, 'dd-MM-yyyy HH:mm')}"></span>
-                                                                <span class="my-status-badge my-status-hidden">Hidden</span>
-                                                            </div>
-                                                            <div class="star-row">
-                                                                <span>
-                                                                <i th:classappend="${1<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                                <i th:classappend="${2<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                                <i th:classappend="${3<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                                <i th:classappend="${4<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                                <i th:classappend="${5<=myComment.star} ? 'fa-star' : 'fa-star-o'"
-                                                                   class="fa"></i>
-                                                            </span>
-                                                            </div>
-                                                            <div th:if="${myComment.content != null and !myComment.content.trim().isEmpty()}"
-                                                                 class="review-text" style="color:#999;"
-                                                                 th:text="${myComment.content}"></div>
-                                                            <div class="hidden-notice">
-                                                                <i class="fa fa-eye-slash"></i>
-                                                                <div>
-                                                                    <strong>This review has been hidden by an
-                                                                        admin.</strong><br>
-                                                                    This content is not visible to other customers.
+                                                            <!-- PENDING -->
+                                                            <div th:if="${myComment.status == 'PENDING'}"
+                                                                 class="review-card">
+                                                                <div class="reviewer-meta">
+                                                                    <span class="reviewer-name"
+                                                                          th:text="${myComment.user.name}"></span>
+                                                                    <span class="review-date"
+                                                                          th:text="${#dates.format(myComment.created_at, 'dd-MM-yyyy HH:mm')}"></span>
+                                                                    <span class="my-status-badge my-status-pending">Pending</span>
                                                                 </div>
-                                                            </div>
-                                                        </div>
-
-                                                    </div><!-- /has comment -->
-
-                                                    <!-- No comment yet -->
-                                                    <div th:if="${myComment == null}">
-
-                                                        <!-- Can review -->
-                                                        <div th:if="${canReview != null and canReview}"
-                                                             style="margin-top:16px;">
-                                                            <h4 style="font-size:16px;font-weight:600;margin-bottom:12px;">
-                                                                Write Your Review</h4>
-                                                            <form th:action="@{/save-comment}" th:object="${comment}"
-                                                                  method="post" onsubmit="return validateRating()">
-                                                                <input type="hidden" name="bookId"
-                                                                       th:value="${book.id}">
-                                                                <input type="hidden" name="username"
-                                                                       th:value="${username}">
-                                                                <!-- Stars -->
-                                                                <div style="margin-bottom:10px;">
-                                                                    <ul class="ratings"
-                                                                        style="list-style:none;padding:0;margin:0;">
-                                                                        <li class="star"></li>
-                                                                        <li class="star"></li>
-                                                                        <li class="star"></li>
-                                                                        <li class="star"></li>
-                                                                        <li class="star"></li>
-                                                                    </ul>
-                                                                    <input type="number" th:field="*{star}"
-                                                                           id="starts_submit" value=""
-                                                                           style="display:none;">
-                                                                    <span id="rating-error"
-                                                                          style="color:#e74c3c;font-size:13px;display:none;margin-top:4px;">
-                                                                        Please select at least 1 star!
+                                                                <div class="review-content">
+                                                                    <div class="star-row">
+                                                                    <span>
+                                                                        <i th:each="i : ${#numbers.sequence(1,5)}"
+                                                                           class="fa"
+                                                                           th:classappend="${i <= myComment.star} ? 'fa-star' : 'fa-star-o'"></i>
                                                                     </span>
+                                                                    </div>
+                                                                    <div th:if="${myComment.content != null and !myComment.content.trim().isEmpty()}"
+                                                                         class="review-text"
+                                                                         th:text="${myComment.content}"></div>
                                                                 </div>
-                                                                <!-- Content (optional) -->
-                                                                <div style="margin-bottom:10px;">
-                                                                    <textarea th:field="*{content}"
-                                                                              id="new-comment-content"
-                                                                              style="width:100%;height:90px;resize:none;border:1px solid #ddd;border-radius:4px;padding:8px;font-size:14px;"
-                                                                              placeholder="Write your review here... (optional)&#10;"></textarea>
-                                                                    <div style="text-align:right;color:#aaa;font-size:12px;margin-top:3px;">
-                                                                        <span id="newCommentCharCount">0</span> / 5000
+                                                                <div class="pending-notice">
+                                                                    <i class="fa fa-clock-o"></i>
+                                                                    <div>
+                                                                        <strong>Thank you for your review!</strong><br>
+                                                                        Your content is being reviewed by an admin
+                                                                        before being published.
                                                                     </div>
                                                                 </div>
-
-                                                                <button type="submit" class="tg-btn tg-active"
-                                                                        style="padding:6px 20px;">Submit Review
-                                                                </button>
-                                                            </form>
-                                                        </div>
-
-                                                        <!-- Cannot review -->
-                                                        <div th:if="${canReview == null or !canReview}"
-                                                             style="margin-top:20px;">
-                                                            <div class="alert alert-info" style="font-size:14px;">
-                                                                <i class="fa fa-info-circle"></i>
-                                                                You can only review books you have purchased and
-                                                                received (completed orders).
+                                                                <div style="margin-top:10px;">
+                                                                    <button type="button" class="edit-btn"
+                                                                            th:data-comment-id="${myComment.id}"
+                                                                            th:data-book-id="${book.id}"
+                                                                            th:data-star="${myComment.star}"
+                                                                            th:data-content="${myComment.content}"
+                                                                            onclick="openEditModal(this)">
+                                                                        <i class="fa fa-pencil"></i> Edit Review
+                                                                    </button>
+                                                                </div>
                                                             </div>
+
+                                                            <!-- HIDDEN -->
+                                                            <div th:if="${myComment.status == 'HIDDEN'}"
+                                                                 class="review-card">
+                                                                <div class="reviewer-meta">
+                                                                    <span class="reviewer-name"
+                                                                          th:text="${myComment.user.name}"></span>
+                                                                    <span class="review-date"
+                                                                          th:text="${#dates.format(myComment.created_at, 'dd-MM-yyyy HH:mm')}"></span>
+                                                                    <span class="my-status-badge my-status-hidden">Hidden</span>
+                                                                </div>
+                                                                <div class="star-row">
+                                                                    <span>
+                                                                        <i th:each="i : ${#numbers.sequence(1,5)}"
+                                                                           class="fa"
+                                                                           th:classappend="${i <= myComment.star} ? 'fa-star' : 'fa-star-o'"></i>
+                                                                    </span>
+                                                                </div>
+                                                                <div th:if="${myComment.content != null and !myComment.content.trim().isEmpty()}"
+                                                                     class="review-text" style="color:#999;"
+                                                                     th:text="${myComment.content}"></div>
+                                                                <div class="hidden-notice">
+                                                                    <i class="fa fa-eye-slash"></i>
+                                                                    <div>
+                                                                        <strong>This review has been hidden by an
+                                                                            admin.</strong><br>
+                                                                        This content is not visible to other customers.
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
                                                         </div>
 
-                                                    </div><!-- /no comment -->
-                                                </div><!-- /tab-mine -->
+                                                    </div>
 
-                                            </div><!-- /isAuthenticated() -->
-                                        </div><!-- /reviews section -->
+
+                                                    <div th:if="${canReview != null and canReview}"
+                                                         style="margin-top:24px;">
+
+                                                        <!-- Divider thông báo nếu đã có review cũ -->
+                                                        <div th:if="${myComments != null and !myComments.isEmpty()}"
+                                                             class="review-new-purchase-divider">
+                                                            <i class="fa fa-shopping-bag"></i>
+                                                            <strong>You purchased this book again!</strong>
+                                                            You can leave a new review for your latest purchase.
+                                                        </div>
+
+                                                        <h4 style="font-size:16px;font-weight:600;margin-bottom:12px;">
+                                                            Write Your Review</h4>
+                                                        <form th:action="@{/save-comment}" th:object="${comment}"
+                                                              method="post"
+                                                              onsubmit="return validateRating()">
+                                                            <input type="hidden" name="bookId" th:value="${book.id}">
+                                                            <input type="hidden" name="username" th:value="${username}">
+
+                                                            <!-- Stars -->
+                                                            <div style="margin-bottom:10px;">
+                                                                <ul class="ratings"
+                                                                    style="list-style:none;padding:0;margin:0;">
+                                                                    <li class="star"></li>
+                                                                    <li class="star"></li>
+                                                                    <li class="star"></li>
+                                                                    <li class="star"></li>
+                                                                    <li class="star"></li>
+                                                                </ul>
+                                                                <input type="number" th:field="*{star}"
+                                                                       id="starts_submit"
+                                                                       value="" style="display:none;">
+                                                                <span id="rating-error"
+                                                                      style="color:#e74c3c;font-size:13px;display:none;margin-top:4px;">
+                                                                        Please select at least 1 star!
+                                                                    </span>
+                                                            </div>
+
+                                                            <!-- Content (optional) -->
+                                                            <div style="margin-bottom:10px;">
+                                                                <textarea th:field="*{content}" id="new-comment-content"
+                                                                          style="width:100%;height:90px;resize:none;border:1px solid #ddd;border-radius:4px;padding:8px;font-size:14px;"
+                                                                          placeholder="Write your review here... (optional)&#10;"></textarea>
+                                                                <div style="text-align:right;color:#aaa;font-size:12px;margin-top:3px;">
+                                                                    <span id="newCommentCharCount">0</span> / 5000
+                                                                </div>
+                                                            </div>
+
+                                                            <button type="submit" class="tg-btn tg-active"
+                                                                    style="padding:6px 20px;">
+                                                                Submit Review
+                                                            </button>
+                                                        </form>
+                                                    </div>
+
+                                                    <!-- ══════════════════════════════════════════════════════════════════
+                                                         MESSAGE KHI KHÔNG THỂ REVIEW
+                                                    ══════════════════════════════════════════════════════════════════ -->
+                                                    <div th:if="${(canReview == null or !canReview) and (myComments == null or myComments.isEmpty())}"
+                                                         style="margin-top:20px;">
+                                                        <div class="alert alert-info" style="font-size:14px;">
+                                                            <i class="fa fa-info-circle"></i>
+                                                            You can only review books you have purchased and received
+                                                            (completed orders).
+                                                        </div>
+                                                    </div>
+
+                                                </div>
+
+                                            </div>
+                                        </div>
 
                                         <!-- ══════════════════════════════════════════════
                                              RELATED PRODUCTS
@@ -1266,16 +1303,13 @@
             </div>
             <form id="editCommentForm" th:action="@{/save-comment}" method="post" onsubmit="return validateEditForm()">
                 <div class="modal-body">
-                    <!-- Book info preview -->
                     <div style="background:#f9f9f9;padding:15px;border-left:4px solid #5cb85c;margin-bottom:20px;border-radius:4px;">
                         <p style="margin:0;"><strong>Book:</strong> <span id="modalBookTitle"></span></p>
                         <p style="color:#999;font-size:13px;margin:5px 0;">By <span id="modalBookAuthor"></span></p>
                     </div>
-                    <!-- Hidden inputs -->
                     <input type="hidden" name="commentId" id="modalCommentId">
                     <input type="hidden" name="bookId" id="modalBookId">
                     <input type="hidden" name="star" id="modalStar">
-                    <!-- Rating -->
                     <div class="form-group">
                         <label><strong>Rating: <span style="color:#d9534f;">*</span></strong></label>
                         <div style="display:flex;gap:8px;margin:10px 0;">
@@ -1288,7 +1322,6 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Content -->
                     <div class="form-group">
                         <label><strong>Your Review:</strong> <span
                                 style="color:#999;font-weight:normal;font-size:13px;">(optional)</span></label>
@@ -1309,9 +1342,6 @@
     </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════════════
-     SCRIPTS
-══════════════════════════════════════════════════════════════════════════ -->
 <script src="js/vendor/jquery-library.js"></script>
 <script src="js/vendor/bootstrap.min.js"></script>
 <script src="js/owl.carousel.min.js"></script>
@@ -1326,7 +1356,7 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script th:inline="javascript">
-    // ── Review tab switching ─────────────────────────────────────────────────────
+
     function switchTab(targetId, btn) {
         document.querySelectorAll('.review-tab-pane').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.review-tab-btn').forEach(b => b.classList.remove('active'));
@@ -1334,7 +1364,6 @@
         btn.classList.add('active');
     }
 
-    // ── Flash messages (SweetAlert toast) ───────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         var successMessage = /*[[${success}]]*/ '';
         if (successMessage && successMessage.trim() !== '') {
@@ -1354,7 +1383,7 @@
         }
     });
 
-    // ── Edit modal ───────────────────────────────────────────────────────────────
+
     function openEditModal(btn) {
         const commentId = btn.getAttribute('data-comment-id');
         const bookId = btn.getAttribute('data-book-id');
@@ -1413,7 +1442,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        // Modal star click / hover
         const stars = document.querySelectorAll('.star-modal');
         stars.forEach(star => {
             star.addEventListener('click', function () {
@@ -1432,7 +1460,6 @@
         document.getElementById('modalContent').addEventListener('input', updateModalCharCount);
     });
 
-    // ── Series purchase confirmation ─────────────────────────────────────────────
     function confirmSeriesPurchase() {
         var seriesName = document.querySelector('.tg-series-bundle .panel-title').textContent.trim().replace('Full Series: ', '');
         var volumeCount = document.querySelectorAll('.col-xs-6.col-sm-4').length;
@@ -1449,7 +1476,6 @@
         });
     }
 
-    // ── New comment form: validate rating ────────────────────────────────────────
     function validateRating() {
         var ratingInput = document.getElementById('starts_submit');
         var ratingValue = parseInt(ratingInput.value);
@@ -1483,7 +1509,6 @@
         return true;
     }
 
-    // ── New comment star rating interaction ──────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         var ratingLists = document.querySelectorAll('.ratings');
         ratingLists.forEach(function (ul) {
@@ -1525,7 +1550,6 @@
         });
     });
 
-    // ── Char counter for new comment ─────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         var newContentInput = document.getElementById('new-comment-content');
         var newCharCount = document.getElementById('newCommentCharCount');
@@ -1536,7 +1560,6 @@
         }
     });
 
-    // ── Quantity input validation ─────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         var input = document.getElementById('quantity1');
         var stock = document.getElementById('numberInStock');
@@ -1549,7 +1572,8 @@
         function showToast(icon, title, text) {
             Swal.fire({
                 toast: true, position: 'top-end', icon: icon, title: title, text: text || '',
-                showConfirmButton: false, timer: 2500, timerProgressBar: true, customClass: {popup: 'swal-toast-big'}
+                showConfirmButton: false, timer: 2500, timerProgressBar: true,
+                customClass: {popup: 'swal-toast-big'}
             });
         }
 

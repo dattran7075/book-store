@@ -70,8 +70,8 @@
         <div class="container">
             <div class="row">
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                    <strong class="tg-logo"><a href="index-2.html"><img src="images/logo.png"
-                                                                        alt="company name here"></a></strong>
+                    <strong class="tg-logo"><a href="/"><img src="/images/logo.png"
+                                                             alt="company name here"></a></strong>
                 </div>
             </div>
         </div>
@@ -94,16 +94,21 @@
                             <ul>
                                 <li><a th:href="@{/}">Home</a></li>
                                 <li><a th:href="@{/products}" sec:authorize="!hasRole('ADMIN')">Books</a></li>
-                                <li><a th:href="@{/manage-product}" sec:authorize="hasRole('ADMIN')">Books</a></li>
-                                <li><a th:href="@{/manage-category}" sec:authorize="hasRole('ADMIN')">Categories</a>
+                                <li><a th:href="@{/admin/manage-product}" sec:authorize="hasRole('ADMIN')">Books</a>
                                 </li>
-                                <li><a th:href="@{/manage-author}" sec:authorize="hasRole('ADMIN')">Authors</a></li>
-                                <li><a th:href="@{/manage-user}" sec:authorize="hasRole('ADMIN')">Users</a></li>
-                                <li><a th:href="@{/manage-staff}" sec:authorize="hasRole('ADMIN')">Staff</a></li>
-                                <li><a th:href="@{/manage-order}" sec:authorize="hasRole('ADMIN')">Orders</a></li>
-                                <li><a th:href="@{/manage-promotion}" sec:authorize="hasRole('ADMIN')">Promotions</a>
+                                <li><a th:href="@{/admin/manage-category}"
+                                       sec:authorize="hasRole('ADMIN')">Categories</a>
                                 </li>
-                                <li><a th:href="@{/statistic}" sec:authorize="hasRole('ADMIN')">Statistics</a></li>
+                                <li><a th:href="@{/admin/manage-author}" sec:authorize="hasRole('ADMIN')">Authors</a>
+                                </li>
+                                <li><a th:href="@{/admin/manage-user}" sec:authorize="hasRole('ADMIN')">Users</a></li>
+                                <li><a th:href="@{/admin/manage-staff}" sec:authorize="hasRole('ADMIN')">Staff</a></li>
+                                <li><a th:href="@{/admin/manage-order}" sec:authorize="hasRole('ADMIN')">Orders</a></li>
+                                <li><a th:href="@{/admin/manage-promotion}"
+                                       sec:authorize="hasRole('ADMIN')">Promotions</a>
+                                </li>
+                                <li><a th:href="@{/admin/statistic}" sec:authorize="hasRole('ADMIN')">Statistics</a>
+                                </li>
                             </ul>
                         </div>
                     </nav>
@@ -141,28 +146,32 @@
                             <div class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-left">
                                 <h2>Personal Information</h2>
                                 <div class="form-group">
-                                    <label for="staffName"><span style="color: red;">*</span><strong>Full
+                                    <label for="name"><span style="color: red;">*</span><strong>Full
                                         name</strong></label>
+                                    <!-- ĐÃ SỬA: id="staffName" → id="name" để khớp với profile_validation.js -->
                                     <input type="text" th:field="*{name}" class="form-control" style="width: 600px;"
-                                           id="staffName" name="name" readonly>
+                                           id="name" name="name" disabled>
                                 </div>
                                 <div class="form-group">
-                                    <label for="staffEmail"><span
+                                    <label for="email"><span
                                             style="color: red;">*</span><strong>Email</strong></label>
+                                    <!-- ĐÃ SỬA: id="staffEmail" → id="email" -->
                                     <input type="text" th:value="*{account.email}" class="form-control"
-                                           style="width: 600px;" id="staffEmail" readonly>
+                                           style="width: 600px;" id="email" name="email" disabled>
                                 </div>
                                 <div class="form-group">
-                                    <label for="staffPhone"><span style="color: red;">*</span><strong>Phone
+                                    <label for="phone"><span style="color: red;">*</span><strong>Phone
                                         number</strong></label>
+                                    <!-- ĐÃ SỬA: id="staffPhone" → id="phone" -->
                                     <input type="text" th:field="*{phone}" class="form-control" style="width: 600px;"
-                                           id="staffPhone" name="phone" readonly>
+                                           id="phone" name="phone" disabled>
                                 </div>
                                 <div class="form-group">
-                                    <label for="staffAddress"><span
+                                    <label for="address"><span
                                             style="color: red;">*</span><strong>Address</strong></label>
+                                    <!-- ĐÃ SỬA: id="staffAddress" → id="address" -->
                                     <input type="text" th:field="*{address}" class="form-control" style="width: 600px;"
-                                           id="staffAddress" name="address" readonly>
+                                           id="address" name="address" disabled>
                                 </div>
                             </div>
                             <!-- Right column: read-only account info -->
@@ -241,15 +250,15 @@
                                 <li>
                                     <i class="icon-phone-handset"></i>
                                     <span>
-												<em>0812 567 889</em>
-												<em>+84 1245 6767</em>
-											</span>
+                                        <em>0812 567 889</em>
+                                        <em>+84 1245 6767</em>
+                                    </span>
                                 </li>
                                 <li>
                                     <i class="icon-clock"></i>
                                     <span>
-												Serving 7 days a week from 9:00 - 22:00
-											</span>
+                                        Serving 7 days a week from 9:00 - 22:00
+                                    </span>
                                 </li>
                             </ul>
                             <ul class="tg-socialicons">
@@ -310,55 +319,11 @@
 <script src="../js/appear.js"></script>
 <script src="../js/gmap3.js"></script>
 <script src="../js/main.js"></script>
-<script>
-    const editBtn = document.querySelector('#edit-btn');
-    const saveBtn = document.querySelector('#save-btn');
-    const staffName = document.querySelector('#staffName');
-    const staffEmail = document.querySelector('#staffEmail');
-    const staffPhone = document.querySelector('#staffPhone');
-    const staffAddress = document.querySelector('#staffAddress');
-    // Account fields stay read-only always
-    const staffUsername = document.querySelector('#staffUsername');
-    const staffPassword = document.querySelector('#staffPassword');
 
-    editBtn.addEventListener('click', function (event) {
-        event.preventDefault();
+<!-- profile_validation.js xử lý toàn bộ edit/save/validate -->
+<script src="../js/profile_validation.js"></script>
 
-        staffName.removeAttribute('readonly');
-        staffPhone.removeAttribute('readonly');
-        staffAddress.removeAttribute('readonly');
-        staffEmail.removeAttribute('readonly');
-
-        staffEmail.setAttribute('name', 'email');
-
-        staffUsername.setAttribute('readonly', 'readonly');
-        staffPassword.setAttribute('readonly', 'readonly');
-
-        saveBtn.style.display = 'block';
-        editBtn.style.display = 'none';
-    });
-</script>
-<script th:inline="javascript">
-    /*<![CDATA[*/
-    var showPopup = /*[[${showPopup}]]*/ false;
-    var successMessage = /*[[${successMessage}]]*/ '';
-
-    // Show SweetAlert2 popup if success message exists
-    if (showPopup && successMessage) {
-        Swal.fire({
-            position: 'top',
-            icon: 'success',
-            title: successMessage,
-            showConfirmButton: false,
-            timer: 3000,
-            toast: false,
-            customClass: {
-                popup: 'swal-wide'
-            }
-        });
-    }
-    /*]]>*/
-</script>
+<!-- Popup thông báo từ server -->
 <script th:inline="javascript">
     /*<![CDATA[*/
     var showPopup = /*[[${showPopup}]]*/ false;
@@ -379,7 +344,7 @@
         });
     }
 
-    // ✅ Error popup (nếu cần)
+    // Error popup
     if (errorMessage) {
         Swal.fire({
             position: 'top',

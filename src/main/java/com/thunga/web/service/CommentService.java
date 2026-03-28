@@ -33,8 +33,10 @@ public class CommentService {
 
     /**
      * Status rules:
-     * - star-only (no content)  → APPROVED immediately
-     * - has content             → PENDING (admin must approve)
+     * - star-only (no content) → APPROVED immediately
+     * - has content→ PENDING (admin must approve)
+     * <p>
+     * Hỗ trợ mua nhiều lần: user được review thêm nếu số lần mua > số lần đã review
      */
     public Comment save(Comment comment, HttpServletRequest request) {
         Integer bookId = Integer.valueOf(request.getParameter("bookId"));
@@ -44,14 +46,18 @@ public class CommentService {
         User user = userService.findByAccount(account);
         Book book = bookService.findById(bookId);
 
-        OrderDetail completedOrderDetail = findCompletedOrderDetailForBook(user, book);
-        if (completedOrderDetail == null) {
+        long completedPurchaseCount = countCompletedPurchasesForBook(user, book);
+        if (completedPurchaseCount == 0) {
             throw new IllegalStateException(
                     "You can only review books that you have purchased and received (Completed orders only)!");
         }
 
-        if (commentRepository.existsByUserAndBook(user, book)) {
-            throw new IllegalStateException("You have already reviewed this book!");
+        long existingReviewCount = commentRepository.countByUserAndBook(user, book);
+
+        if (existingReviewCount >= completedPurchaseCount) {
+            throw new IllegalStateException(
+                    "You have already reviewed this book for all your purchases. " +
+                            "Buy the book again to leave another review!");
         }
 
         if (comment.getStar() == null || comment.getStar() < 1 || comment.getStar() > 5) {
@@ -62,6 +68,8 @@ public class CommentService {
         if (content != null && content.trim().length() > 5000) {
             throw new IllegalArgumentException("Comment content cannot exceed 5000 characters");
         }
+
+        OrderDetail completedOrderDetail = findUnreviewedCompletedOrderDetail(user, book);
 
         boolean hasContent = content != null && !content.trim().isEmpty();
         comment.setBook(book);
@@ -144,7 +152,7 @@ public class CommentService {
      * PENDING  → HIDDEN   ✓
      * PENDING  → APPROVED ✓
      * APPROVED → PENDING  ✓  (only if updated_at > created_at, i.e. customer edited it)
-     * APPROVED → HIDDEN   v
+     * APPROVED → HIDDEN   ✓
      * HIDDEN   → APPROVED ✓
      * HIDDEN   → PENDING  ✗
      */
@@ -174,10 +182,6 @@ public class CommentService {
         return commentRepository.save(comment);
     }
 
-    // =========================================================================
-    // PUBLIC helpers (book detail page)
-    // =========================================================================
-
     /**
      * Only APPROVED comments – shown to all customers
      */
@@ -191,31 +195,32 @@ public class CommentService {
     }
 
     /**
-     * All comments for a book – used by admin
+     * TẤT CẢ comments của user cho cuốn sách (dùng cho tab "My Review")
+     * Sắp xếp theo created_at DESC để comment mới nhất lên đầu
      */
-    public List<Comment> getContentsByBook(Book book) {
-        try {
-            if (book == null || book.getId() == null) return new ArrayList<>();
-            return commentRepository.findByBook(book);
-        } catch (Exception e) {
-            return new ArrayList<>();
-        }
+    public List<Comment> getAllMyCommentsForBook(User user, Book book) {
+        if (user == null || book == null) return new ArrayList<>();
+        return commentRepository.findByUserAndBookOrderByCreatedAtDesc(user, book);
     }
 
     /**
-     * A specific user's own comment for a book (any status)
+     * Comment MỚI NHẤT của user cho cuốn sách (backward compatibility)
      */
     public Optional<Comment> getMyCommentForBook(User user, Book book) {
-        if (user == null || book == null) return Optional.empty();
-        return commentRepository.findByUserAndBook(user, book);
+        List<Comment> comments = getAllMyCommentsForBook(user, book);
+        return comments.isEmpty() ? Optional.empty() : Optional.of(comments.get(0));
     }
 
     /**
-     * All of a user's comments (My Reviews tab)
+     * Kiểm tra user có thể review thêm không:
+     * canReview = true nếu số lần mua (Completed) > số lần đã review
      */
-    public List<Comment> getMyComments(User user) {
-        if (user == null) return new ArrayList<>();
-        return commentRepository.findByUserOrderByCreatedAtDesc(user);
+    public boolean canUserReview(User user, Book book) {
+        if (user == null || book == null) return false;
+        long purchaseCount = countCompletedPurchasesForBook(user, book);
+        if (purchaseCount == 0) return false;
+        long reviewCount = commentRepository.countByUserAndBook(user, book);
+        return reviewCount < purchaseCount;
     }
 
     public boolean hasUserCommented(User user, Book book) {
@@ -223,15 +228,6 @@ public class CommentService {
         return commentRepository.existsByUserAndBook(user, book);
     }
 
-    public boolean isCommentOwner(Integer commentId, User user) {
-        if (user == null || commentId == null) return false;
-        return commentRepository.findByIdAndUser(commentId, user).isPresent();
-    }
-
-
-    // =========================================================================
-    // Rating helpers
-    // =========================================================================
 
     public Double getAverageRating(Book book) {
         try {
@@ -247,14 +243,6 @@ public class CommentService {
         }
     }
 
-    public Integer getContentCount(Book book) {
-        try {
-            return getApprovedCommentsByBook(book).size();
-        } catch (Exception e) {
-            return 0;
-        }
-    }
-
     public List<Comment> getTopRatedComments(int limit) {
         try {
             List<Comment> all = commentRepository.findByStatus("APPROVED",
@@ -265,16 +253,46 @@ public class CommentService {
         }
     }
 
-    // =========================================================================
-    // Private helpers
-    // =========================================================================
+    /**
+     * Đếm số lần user đã mua và nhận cuốn sách này (đơn Completed)
+     */
+    private long countCompletedPurchasesForBook(User user, Book book) {
+        if (user == null || book == null) return 0;
+        return commentRepository.countCompletedOrdersWithBook(user, book);
+    }
 
-    private OrderDetail findCompletedOrderDetailForBook(User user, Book book) {
+    /**
+     * Tìm OrderDetail của đơn Completed chưa được gắn review (dùng khi tạo comment mới)
+     */
+    private OrderDetail findUnreviewedCompletedOrderDetail(User user, Book book) {
         if (user == null || user.getOrderList() == null) return null;
+
+        List<Comment> existingComments = commentRepository
+                .findByUserAndBookOrderByCreatedAtDesc(user, book);
+        List<Integer> reviewedOrderDetailIds = new ArrayList<>();
+        for (Comment c : existingComments) {
+            if (c.getOrderDetail() != null) {
+                reviewedOrderDetailIds.add(c.getOrderDetail().getId());
+            }
+        }
         for (Order order : user.getOrderList()) {
-            if ("Completed".equals(order.getStatus()) && order.getOrderDetailList() != null) {
+            if ("Completed".equals(order.getStatus()) && "PAID".equals(order.getPayment_status())
+                    && order.getOrderDetailList() != null) {
+
                 for (OrderDetail od : order.getOrderDetailList()) {
-                    if (od.getBook().getId().equals(book.getId())) return od;
+                    if (od.getBook().getId().equals(book.getId())
+                            && !reviewedOrderDetailIds.contains(od.getId())) {
+                        return od;
+                    }
+                }
+            }
+        }
+        for (Order order : user.getOrderList()) {
+            if ("Completed".equals(order.getStatus()) && "PAID".equals(order.getPayment_status())
+                    && order.getOrderDetailList() != null) {
+                for (OrderDetail od : order.getOrderDetailList()) {
+                    if (od.getBook().getId().equals(book.getId()))
+                        return od;
                 }
             }
         }

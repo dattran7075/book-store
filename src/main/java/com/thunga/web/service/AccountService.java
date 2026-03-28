@@ -26,8 +26,10 @@ public class AccountService implements UserDetailsService {
 
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-
     private EmailValidator emailValidator = EmailValidator.getInstance();
+
+    // Auto-deactivation threshold: 30 days of inactivity
+    private static final int INACTIVE_DAYS_THRESHOLD = 30;
 
     // ==================== GENERIC OTP STORAGE ====================
     // Map: email -> OTP code
@@ -78,11 +80,89 @@ public class AccountService implements UserDetailsService {
         if (account == null) {
             throw new UsernameNotFoundException("Account not found: " + username);
         }
+
+        // Check if account is INACTIVE
+        if ("INACTIVE".equals(account.getStatus())) {
+            throw new UsernameNotFoundException("Your account has been deactivated.");
+        }
+
+        // Update last_login timestamp
+        account.setLast_login(new Date());
+        accountRepository.save(account);
+
         return org.springframework.security.core.userdetails.User
                 .withUsername(account.getUsername())
                 .password(account.getPassword())
                 .authorities("ROLE_" + account.getRole())
                 .build();
+    }
+
+    // ==================== ACCOUNT STATUS MANAGEMENT ====================
+
+    /**
+     * Check and auto-deactivate accounts inactive for more than 30 days
+     * Should be called periodically (e.g., daily scheduled task)
+     */
+    public void autoDeactivateInactiveAccounts() {
+        List<Account> allAccounts = accountRepository.findAll();
+        Date now = new Date();
+        int deactivatedCount = 0;
+
+        for (Account account : allAccounts) {
+            // Only check ACTIVE accounts with USER role
+            if ("ACTIVE".equals(account.getStatus()) && "USER".equals(account.getRole())) {
+                Date lastLogin = account.getLast_login();
+                if (lastLogin == null) {
+                    lastLogin = account.getCreated_at();
+                }
+
+                if (lastLogin != null) {
+                    long daysSinceLastLogin = getDaysBetween(lastLogin, now);
+                    if (daysSinceLastLogin >= INACTIVE_DAYS_THRESHOLD) {
+                        account.setStatus("INACTIVE");
+                        account.setUpdated_at(now);
+                        accountRepository.save(account);
+                        deactivatedCount++;
+                    }
+                }
+            }
+        }
+
+        if (deactivatedCount > 0) {
+            System.out.println("Auto-deactivated " + deactivatedCount + " inactive accounts");
+        }
+    }
+
+    /**
+     * Calculate days between two dates
+     */
+    private long getDaysBetween(Date start, Date end) {
+        long diffInMillis = end.getTime() - start.getTime();
+        return diffInMillis / (1000 * 60 * 60 * 24);
+    }
+
+    /**
+     * Manually activate an account
+     */
+    public void activateAccount(Integer accountId) {
+        Account account = accountRepository.findById(accountId).orElse(null);
+        if (account != null) {
+            account.setStatus("ACTIVE");
+            account.setUpdated_at(new Date());
+            accountRepository.save(account);
+        }
+    }
+
+    /**
+     * Manually deactivate an account
+     */
+    public void deactivateAccount(Integer accountId) {
+        Account account = accountRepository.findById(accountId).orElse(null);
+        if (account != null) {
+            account.setStatus("INACTIVE");
+            account.setUpdated_at(new Date());
+            accountRepository.save(account);
+        }
     }
 
     // ==================== GENERIC OTP METHODS ====================
@@ -294,7 +374,7 @@ public class AccountService implements UserDetailsService {
             errors.put("userName", "Username must not be empty");
         } else if (userName.length() < 3 || userName.length() > 20) {
             errors.put("userName", "Username must be between 3 and 20 characters");
-        } else if (!userName.matches("^(?=.*[A-Za-z])[A-Za-z0-9_]+$")) {
+        } else if (!userName.matches("^(?=.*[A-Za-z])[A-Za-z0-9]+$")) {
             errors.put("userName", "Username can only contain letters, numbers");
         } else {
             Account existingAccount = accountRepository.findByUsername(userName);
@@ -367,6 +447,8 @@ public class AccountService implements UserDetailsService {
             errors.put("newPassword", "Password must be at least 6 characters long");
         } else if (newPassword.length() > 20) {
             errors.put("newPassword", "Password must not exceed 20 characters");
+        } else if (!newPassword.matches("^(?=.*[A-Za-z])(?=.*\\d).+$")) {
+            errors.put("newPassword", "Password must contain at least one letter and one number");
         }
 
         // Validate confirmPassword

@@ -86,7 +86,10 @@ public class Order {
      * Calculate final total including shipping fee
      */
     public Double getFinalTotal() {
-        return (total_cost != null ? total_cost : 0) + (shipping_fee != null ? shipping_fee : 0);
+        double total = (total_cost != null ? total_cost : 0);
+        double discount = (discount_amount != null ? discount_amount : 0);
+        double shipping = (shipping_fee != null ? shipping_fee : 0);
+        return total - discount + shipping;
     }
 
     public Double calculateTotalWeight() {

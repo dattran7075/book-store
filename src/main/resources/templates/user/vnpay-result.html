@@ -1,0 +1,265 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Book Library | Payment Result</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../css/bootstrap.min.css">
+    <link rel="stylesheet" href="../css/font-awesome.min.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <style>
+        .payment-success-container {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #d9edf7 0%, #f0f8ff 100%);
+            border-radius: 10px;
+            margin: 40px auto;
+            max-width: 600px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .payment-failed-container {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #f2dede 0%, #fcf8e3 100%);
+            border-radius: 10px;
+            margin: 40px auto;
+            max-width: 600px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .success-icon {
+            font-size: 80px;
+            color: #5cb85c;
+            margin-bottom: 20px;
+        }
+
+        .failed-icon {
+            font-size: 80px;
+            color: #d9534f;
+            margin-bottom: 20px;
+        }
+
+        .payment-message {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .payment-details {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin: 30px 0;
+            text-align: left;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .detail-value {
+            color: #333;
+            text-align: right;
+        }
+
+        .action-buttons {
+            margin-top: 30px;
+        }
+
+        .btn-custom {
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-success-custom {
+            background-color: #5cb85c;
+            border-color: #5cb85c;
+            color: white;
+        }
+
+        .btn-success-custom:hover {
+            background-color: #4cae4c;
+            text-decoration: none;
+            color: white;
+        }
+
+        .btn-primary-custom {
+            background-color: #0275d8;
+            border-color: #0275d8;
+            color: white;
+        }
+
+        .btn-primary-custom:hover {
+            background-color: #0258a8;
+            text-decoration: none;
+            color: white;
+        }
+
+        .order-id-highlight {
+            font-size: 24px;
+            font-weight: bold;
+            color: #5cb85c;
+            padding: 15px;
+            background: #f0f7f0;
+            border-left: 5px solid #5cb85c;
+            margin: 20px 0;
+            border-radius: 3px;
+        }
+
+        .error-message {
+            color: #d9534f;
+            font-size: 16px;
+            padding: 15px;
+            background: #f2dede;
+            border-left: 5px solid #d9534f;
+            border-radius: 3px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+<header id="tg-header" class="tg-header tg-haslayout">
+    <div class="tg-middlecontainer" style="padding: 10px;">
+        <div class="container">
+            <div class="row">
+                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                    <strong class="tg-logo"><a href="/"><img src="/images/logoSWP.png" alt="Book Library"></a></strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="tg-sectionspace" style="padding: 50px 0;">
+    <div class="container">
+        <div class="row">
+            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+
+                <!-- SUCCESS -->
+                <div th:if="${paymentStatus == 'SUCCESS'}" class="payment-success-container">
+                    <div class="success-icon">
+                        <i class="fa fa-check-circle"></i>
+                    </div>
+
+                    <h2 class="payment-message">Payment Successful!</h2>
+
+                    <p style="font-size: 16px; color: #666; margin-bottom: 30px;">
+                        Thank you for shopping at Book Library. Your order has been confirmed.
+                    </p>
+
+                    <div class="order-id-highlight">
+                        <i class="fa fa-receipt"></i> Order ID: #<span th:text="${orderId}"></span>
+                    </div>
+
+                    <div class="payment-details" th:if="${transactionNo != null || amount != null}">
+                        <div class="detail-row" th:if="${transactionNo != null}">
+                            <span class="detail-label"><i class="fa fa-credit-card"></i> Transaction No:</span>
+                            <span class="detail-value" th:text="${transactionNo}"></span>
+                        </div>
+                        <div class="detail-row" th:if="${amount != null}">
+                            <span class="detail-label"><i class="fa fa-money"></i> Payment Amount:</span>
+                            <span class="detail-value"
+                                  th:text="${#numbers.formatInteger(amount, 1, 'COMMA') + ' VND'}"></span>
+                        </div>
+                    </div>
+
+                    <div style="background: #e8f5e9; padding: 15px; border-radius: 5px; margin: 20px 0; color: #3c763d;">
+                        <i class="fa fa-info-circle"></i>
+                        <strong>Payment Status:</strong> PAID
+                    </div>
+
+                    <p style="font-size: 14px; color: #666; margin-top: 20px;">
+                        You will receive a confirmation email shortly. Please check your Spam folder if you do not see
+                        it.
+                    </p>
+
+                    <div class="action-buttons">
+                        <a th:href="@{/order-detail(id=${orderId})}" class="btn btn-custom btn-success-custom">
+                            <i class="fa fa-file-o"></i> View Order Details
+                        </a>
+                        <a th:href="@{/products}" class="btn btn-custom btn-primary-custom">
+                            <i class="fa fa-shopping-bag"></i> Continue Shopping
+                        </a>
+                    </div>
+                </div>
+
+                <!-- FAILED -->
+                <div th:if="${paymentStatus == 'FAILED'}" class="payment-failed-container">
+                    <div class="failed-icon">
+                        <i class="fa fa-times-circle"></i>
+                    </div>
+
+                    <h2 class="payment-message" style="color: #d9534f;">Payment Failed!</h2>
+
+                    <div class="error-message">
+                        <i class="fa fa-warning"></i>
+                        <strong th:text="${message}"></strong>
+                    </div>
+
+                    <div class="order-id-highlight"
+                         style="background: #fef5e7; border-left-color: #f0ad4e; color: #f0ad4e;">
+                        <i class="fa fa-info-circle"></i> Order ID: #<span th:text="${orderId}"></span>
+                    </div>
+
+                    <div style="background: #f2dede; padding: 15px; border-radius: 5px; margin: 20px 0; color: #a94442;">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <strong>Reason:</strong> The transaction could not be completed. Please try again or contact
+                        support.
+                    </div>
+
+                    <p style="font-size: 14px; color: #666; margin-top: 20px;">
+                        Your order has been saved. You can retry payment or choose another payment method.
+                    </p>
+
+                    <div class="action-buttons">
+                        <a th:href="@{/orders}" class="btn btn-custom btn-primary-custom">
+                            <i class="fa fa-list"></i> View My Orders
+                        </a>
+                        <a th:href="@{/purchase}" class="btn btn-custom btn-success-custom">
+                            <i class="fa fa-credit-card"></i> Retry Payment
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer id="tg-footer" class="tg-footer tg-haslayout">
+    <div class="tg-footerbar">
+        <div class="container">
+            <div class="row">
+                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                    <span class="tg-copyright">2024 All Rights Reserved By &copy; Book Library</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script src="../js/vendor/jquery-library.js"></script>
+<script src="../js/vendor/bootstrap.min.js"></script>
+</body>
+</html>

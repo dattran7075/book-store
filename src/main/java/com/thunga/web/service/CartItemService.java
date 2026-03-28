@@ -35,19 +35,36 @@ public class CartItemService {
     public CartItem addBookToCart(User user, Integer bookId, Integer quantity) {
         Book book = bookService.findById(bookId);
 
-        if (book == null) {
+        if (book == null)
             throw new IllegalArgumentException("Book not found!");
-        }
+
+        if (book.getNumber_in_stock() == 0)
+            throw new IllegalStateException("Book '" + book.getTitle() + "' is out of stock!");
+
+        if (quantity <= 0)
+            throw new IllegalArgumentException("Invalid quantity!");
+
+        if (quantity > book.getNumber_in_stock())
+            throw new IllegalStateException("Only " + book.getNumber_in_stock() + " copies available!");
 
         Optional<CartItem> existingItemOpt = cartItemRepository.findByUserAndBook(user, book);
 
+        int currentQuantity = existingItemOpt.map(CartItem::getQuantity).orElse(0);
+        int totalQuantity = currentQuantity + quantity;
+
+        if (totalQuantity > book.getNumber_in_stock()) {
+            int availableToAdd = book.getNumber_in_stock() - currentQuantity;
+            throw new IllegalStateException(
+                    "Cannot add " + quantity + " more. Only " + availableToAdd + " copies available!"
+            );
+        }
+
         if (existingItemOpt.isPresent()) {
             CartItem existingItem = existingItemOpt.get();
-            existingItem.setQuantity(existingItem.getQuantity() + quantity);
+            existingItem.setQuantity(totalQuantity);
             existingItem.setUpdatedAt(new Date());
             return cartItemRepository.save(existingItem);
         } else {
-            // Tạo CartItem mới
             CartItem newItem = new CartItem();
             newItem.setUser(user);
             newItem.setBook(book);
@@ -73,24 +90,25 @@ public class CartItemService {
     @Transactional
     public CartItem updateCartItem(User user, Integer bookId, Integer quantity) {
         Book book = bookService.findById(bookId);
+        if (book == null)
+            throw new IllegalArgumentException("Book not found!");
+
+        if (quantity <= 0)
+            throw new IllegalArgumentException("Quantity must be at least 1!");
 
         Optional<CartItem> itemOpt = cartItemRepository.findByUserAndBook(user, book);
-
         if (itemOpt.isPresent()) {
             CartItem item = itemOpt.get();
 
-            if (quantity <= 0) {
-                // Xóa item nếu quantity <= 0
-                cartItemRepository.delete(item);
-                return null;
-            } else {
-                // Cập nhật quantity
-                item.setQuantity(quantity);
-                item.setUpdatedAt(new Date());
-                return cartItemRepository.save(item);
-            }
-        }
+            if (quantity > book.getNumber_in_stock())
+                throw new IllegalStateException(
+                        "Only " + book.getNumber_in_stock() + " copies available!"
+                );
 
+            item.setQuantity(quantity);
+            item.setUpdatedAt(new Date());
+            return cartItemRepository.save(item);
+        }
         return null;
     }
 

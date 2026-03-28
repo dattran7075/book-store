@@ -138,12 +138,13 @@
         <div class="container">
             <div class="row">
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                    <strong class="tg-logo"><a href="index-2.html"><img src="images/logo.png" alt="company name here"></a></strong>
+                    <strong class="tg-logo"><a href="/"><img src="/images/logoSWP.png" alt="company name here"></a></strong>
                     <div class="tg-wishlistandcart">
                         <div sec:authorize = "hasRole('USER')" class="dropdown tg-themedropdown tg-minicartdropdown">
                             <a  id="tg-minicart" class="tg-btnthemedropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <span class="tg-themebadge" th:text="${cartItems != null ? cartItems.size() : 0}">0</span>
-                                <a th:href="@{/view-cart}"><i class="icon-cart"></i>
+                                <span class="tg-themebadge"
+                                      th:with="qty=${cartTotalBooks != null ? cartTotalBooks : 0}"
+                                      th:text="${qty >= 10000 ? '10k+' : (qty >= 1000 ? (qty / 1000) + 'k+' : (qty >= 100 ? '99+' : qty))}"></span>                                <a th:href="@{/view-cart}"><i class="icon-cart"></i>
                                     <span style="margin-left: 10px;">Cart</span></a>
                             </a>
                         </div>
@@ -667,29 +668,22 @@
             reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
-                // Kiểm tra book có phải series không
                 var checkbox = document.querySelector('input[name="selectedItems"][value="' + bookId + '"]');
                 var row = checkbox.closest('tr');
                 var isSeriesBook = checkbox.classList.contains('series-checkbox');
 
                 if (isSeriesBook) {
-                    // ========== CASE 1: XÓA SERIES → RELOAD ==========
                     window.location.href = '/remove-book?id=' + bookId;
                 } else {
-                    // ========== CASE 2: XÓA THƯỜNG → XÓA BACKEND TRƯỚC ==========
-                    // Gọi endpoint để xóa khỏi database
                     fetch('/remove-book?id=' + bookId)
                         .then(response => {
-                            // Sau khi xóa backend thành công, xóa khỏi DOM
                             if (row) {
                                 row.remove();
                             }
 
-                            // Cập nhật tổng tiền
                             updateTotal();
                             updateSeriesTotals();
 
-                            // Kiểm tra giỏ rỗng
                             var remainingCheckboxes = document.querySelectorAll('input[name="selectedItems"]');
                             if (remainingCheckboxes.length === 0) {
                                 location.reload();

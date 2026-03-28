@@ -164,6 +164,7 @@
             font-weight: bold;
             margin-left: 10px;
         }
+
         input[type="radio"] {
             width: 16px;
             height: 16px;
@@ -216,14 +217,15 @@
         <div class="container">
             <div class="row">
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                    <strong class="tg-logo"><a href="index-2.html"><img src="images/logo.png"
-                                                                        alt="company name here"></a></strong>
+                    <strong class="tg-logo"><a href="/"><img src="/images/logoSWP.png"
+                                                             alt="company name here"></a></strong>
                     <div class="tg-wishlistandcart">
                         <div sec:authorize="hasRole('USER')" class="dropdown tg-themedropdown tg-minicartdropdown">
                             <a id="tg-minicart" class="tg-btnthemedropdown" data-toggle="dropdown"
                                aria-haspopup="true" aria-expanded="false">
                                 <span class="tg-themebadge"
-                                      th:text="${cartTotalBooks != null ? cartTotalBooks : 0}"></span>
+                                      th:with="qty=${cartTotalBooks != null ? cartTotalBooks : 0}"
+                                      th:text="${qty >= 10000 ? '10k+' : (qty >= 1000 ? (qty / 1000) + 'k+' : (qty >= 100 ? '99+' : qty))}"></span>
                                 <a th:href="@{view-cart}"><i
                                         class="icon-cart"></i>
                                     <span style="margin-left: 10px;">Cart</span></a>
@@ -253,13 +255,54 @@
                                 <li><a th:href="@{/}">Home</a></li>
                                 <li><a th:href="@{/products}" sec:authorize="!hasRole('ADMIN')">Books</a></li>
                                 <li><a th:href="@{/manage-product}" sec:authorize="hasRole('ADMIN')">Books</a></li>
+                                <li class="menu-item-has-children menu-item-has-mega-menu"
+                                    sec:authorize="!hasRole('ADMIN')">
+                                    <a href="javascript:void(0);">All Categories</a>
+                                    <div class="mega-menu tg-category-mega-menu">
+                                        <ul class="tg-themetabnav" role="tablist">
+                                            <li th:each="entry, iterStat : ${categoryHierarchy}"
+                                                th:class="${iterStat.index == 0 ? 'active' : ''}"
+                                                role="presentation">
+                                                <a th:href="'#cat' + ${entry.key.id}" role="tab" data-toggle="tab"
+                                                   th:text="${entry.key.name}">Root Category</a>
+                                            </li>
+                                        </ul>
+                                        <div class="tab-content tg-themetabcontent">
+                                            <div th:each="entry, iterStat : ${categoryHierarchy}"
+                                                 th:id="|cat${entry.key.id}|" role="tabpanel"
+                                                 th:class="${iterStat.index == 0 ? 'tab-pane active' : 'tab-pane'}">
+                                                <ul class="tg-level1-container">
+                                                    <li th:each="level1 : ${entry.value}">
+                                                        <div class="tg-linkstitle"><h2 th:text="${level1.name}">
+                                                            Level 1</h2></div>
+                                                        <ul th:if="${level1.children != null}">
+                                                            <li th:each="level2 : ${level1.children}">
+                                                                <a th:href="@{/products(categoryId=${level2.id})}"
+                                                                   th:text="${level2.name}">Level 2</a>
+                                                                <ul th:if="${level2.children != null}">
+                                                                    <li th:each="level3 : ${level2.children}">
+                                                                        <a th:href="@{/products(categoryId=${level3.id})}"
+                                                                           th:text="${level3.name}">Level 3</a>
+                                                                    </li>
+                                                                </ul>
+                                                            </li>
+                                                        </ul>
+                                                        <a class="tg-btnviewall"
+                                                           th:href="@{/products(categoryId=${level1.id})}">View
+                                                            All</a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
                                 <li><a th:href="@{/manage-category}" sec:authorize="hasRole('ADMIN')">Categories</a>
                                 </li>
                                 <li><a th:href="@{/manage-author}" sec:authorize="hasRole('ADMIN')">Authors</a></li>
                                 <li><a th:href="@{/manage-user}" sec:authorize="hasRole('ADMIN')">Users</a></li>
                                 <li><a th:href="@{/manage-order}" sec:authorize="hasRole('ADMIN')">Orders</a></li>
-                                <li><a th:href="@{/manage-promotion}" sec:authorize="hasRole('ADMIN')">Promotions</a>
-                                </li>
+                                <li><a th:href="@{/manage-promotion}"
+                                       sec:authorize="hasRole('ADMIN')">Promotions</a></li>
                                 <li><a th:href="@{/statistic}" sec:authorize="hasRole('ADMIN')">Statistics</a></li>
                             </ul>
                         </div>
@@ -303,6 +346,12 @@
                         <h2>Enter Your Information</h2>
                     </div>
                     <form id="orderForm" th:action="@{/confirm}" method="post">
+                        <!-- Add hidden inputs to store values from Thymeleaf -->
+                        <input type="hidden" id="cartTotalValue" th:value="${cartTotal != null ? cartTotal : 0}">
+                        <input type="hidden" id="discountValue" th:value="${discount != null ? discount : 0}">
+                        <input type="hidden" id="seriesDiscountValue"
+                               th:value="${seriesBundleDiscount != null ? seriesBundleDiscount : 0}">
+
                         <input type="hidden" th:each="bookId : ${selectedBookIds}"
                                name="selectedItems"
                                th:value="${bookId}">
@@ -359,13 +408,37 @@
                         <!-- ========== PAYMENT METHOD SELECTION (NOT PRE-SELECTED) ========== -->
                         <div class="form-group">
                             <label><span class="required-field">*</span> <strong>Payment Method</strong></label>
+
                             <div class="payment-method-selection">
-                                <div class="payment-method-group">
+
+                                <!-- COD -->
+                                <div class="payment-method-group" id="codGroup">
                                     <label class="payment-method-label">
-                                        <input type="radio" name="paymentMethod" value="COD" required>
+                                        <input type="radio" name="paymentMethod" value="COD" id="codRadio" checked
+                                               required>
                                         <span style="margin-left: 5px;">Cash On Delivery</span>
                                     </label>
+                                    <!-- Thông báo khi bị disable -->
+                                    <div id="codDisabledMsg" style="display:none; margin-top: 8px; padding: 6px 10px;
+                                         background-color: #fcf8e3; border-left: 3px solid #f0ad4e;
+                                         font-size: 12px; color: #8a6d3b; border-radius: 0 3px 3px 0;">
+                                        <i class="fa fa-lock"></i>
+                                        <strong>Not available</strong> — Orders over 1,000,000 VND must be paid via
+                                        VNPay
+                                    </div>
                                 </div>
+
+                                <!-- VNPay -->
+                                <div class="payment-method-group"
+                                     style="background-color: #f0f8ff;">
+                                    <label class="payment-method-label">
+                                        <input type="radio" name="paymentMethod" value="VNPAY" required>
+                                        <span style="margin-left: 5px;">
+                                            <i class="fa fa-credit-card"></i> VNPay
+                                        </span>
+                                    </label>
+                                </div>
+
                             </div>
                         </div>
 
@@ -375,7 +448,7 @@
                         <input type="hidden" id="discountAmount" name="discountAmount"
                                th:value="${discount != null ? discount : 0}">
 
-                        <!-- ✅ FIX: Hidden fields to store calculated values -->
+                        <!-- FIX: Hidden fields to store calculated values -->
                         <input type="hidden" id="calculatedShippingFee" name="calculatedShippingFee" value="0">
                         <input type="hidden" id="calculatedFinalTotal" name="calculatedFinalTotal" value="0">
 
@@ -395,11 +468,6 @@
                     <div id="tg-content" class="tg-content">
                         <div id="tg-twocolumns" class="tg-twocolumns">
                             <h2>Order Details</h2>
-
-                            <!-- Hiển thị error nếu chưa chọn sản phẩm -->
-                            <div th:if="${error}" class="alert alert-danger" role="alert">
-                                <i class="fa fa-exclamation-triangle"></i> <span th:text="${error}"></span>
-                            </div>
 
                             <!-- ========== TABLE: ITEMS VỚI WEIGHT COLUMNS ========== -->
                             <table class="table table-bordered">
@@ -431,13 +499,6 @@
                                         <td th:text="${#numbers.formatInteger(detail.book.price * detail.quantity, 1, 'COMMA') + ' VND'}"></td>
                                     </tr>
                                 </th:block>
-
-                                <!-- Hiển thị thông báo nếu không có sản phẩm nào được chọn -->
-                                <tr th:if="${selectedBookIds == null || selectedBookIds.isEmpty()}">
-                                    <td colspan="7" class="text-center" style="color: #d9534f;">
-                                        <i class="fa fa-exclamation-circle"></i> No products selected
-                                    </td>
-                                </tr>
                                 </tbody>
                             </table>
 
@@ -595,7 +656,7 @@
                                             </td>
                                         </tr>
 
-                                        <!-- ✅ FIX: Shipping Fee - Updated by JavaScript -->
+                                        <!-- Shipping Fee - Updated by JavaScript -->
                                         <tr style="background-color: #f9f9f9;">
                                             <td><strong><i class="fa fa-dollar"></i> Shipping Fee:</strong></td>
                                             <td class="text-right">
@@ -798,15 +859,15 @@
 <script src="../js/main.js"></script>
 
 <script>
-    // Global variables for calculated values
     let CALCULATED_SHIPPING_FEE = 0;
     let CALCULATED_FINAL_TOTAL = 0;
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
+        const CART_TOTAL = parseFloat(document.getElementById('cartTotalValue').value) || 0;
+        const DISCOUNT = parseFloat(document.getElementById('discountValue').value) || 0;
+        const SERIES_DISCOUNT = parseFloat(document.getElementById('seriesDiscountValue').value) || 0;
+
         const shippingMethodSelect = document.getElementById('shippingMethod');
-        const CART_TOTAL = [[${cartTotal}]];
-        const DISCOUNT = [[${discount != null ? discount : 0}]];
-        const SERIES_DISCOUNT = [[${seriesBundleDiscount != null ? seriesBundleDiscount : 0}]];
 
         function getTotalWeightFromTable() {
             let totalWeight = 0;
@@ -828,11 +889,6 @@
                 }
             });
 
-            const totalWeightDisplay = document.getElementById('totalWeightDisplay');
-            if (totalWeightDisplay) {
-                totalWeightDisplay.textContent = totalWeight.toFixed(2);
-            }
-
             return parseFloat(totalWeight.toFixed(2));
         }
 
@@ -844,7 +900,7 @@
             let baseFee = 0;
             let perKgFee = 0;
 
-            switch(method.toUpperCase().trim()) {
+            switch (method.toUpperCase().trim()) {
                 case 'STANDARD':
                     baseFee = 15000;
                     perKgFee = 5000;
@@ -911,6 +967,42 @@
         if (shippingMethodSelect) {
             shippingMethodSelect.addEventListener('change', updateAllDisplays);
         }
+
+        // ===== RÀNG BUỘC: ẨN COD NẾU ĐƠN > 1 TRIỆU ==========
+        function updatePaymentMethodConstraint() {
+            const THRESHOLD = 1_000_000;
+            const discount = SERIES_DISCOUNT > 0 ? SERIES_DISCOUNT : DISCOUNT;
+            const netTotal = CART_TOTAL - discount;
+
+            const codGroup = document.getElementById('codGroup');
+            const codRadio = document.getElementById('codRadio');
+            const codMsg = document.getElementById('codDisabledMsg');
+            const vnpayRadio = document.querySelector('input[value="VNPAY"]');
+
+            if (netTotal > THRESHOLD) {
+                // Disable COD
+                codGroup.style.opacity = '0.5';
+                codGroup.style.pointerEvents = 'none';
+                codRadio.disabled = true;
+                codMsg.style.display = 'block';
+
+                // Nếu COD đang được chọn, chuyển sang VNPay
+                if (codRadio.checked) {
+                    codRadio.checked = false;
+                    if (vnpayRadio) vnpayRadio.checked = true;
+                }
+            } else {
+                codGroup.style.opacity = '1';
+                codGroup.style.pointerEvents = '';
+                codRadio.disabled = false;
+                codMsg.style.display = 'none';
+            }
+        }
+
+        updatePaymentMethodConstraint();
+        if (shippingMethodSelect) {
+            shippingMethodSelect.addEventListener('change', updatePaymentMethodConstraint);
+        }
     });
 
     function submitOrderWithCalculations(event) {
@@ -930,12 +1022,6 @@
                 if (status === 'ACTIVE') {
                     option.style.color = '#5cb85c';
                     option.style.fontWeight = 'bold';
-                } else if (status === 'EXPIRED') {
-                    option.style.color = '#999';
-                    option.disabled = true;
-                } else if (status === 'DISABLED') {
-                    option.style.color = '#d9534f';
-                    option.disabled = true;
                 }
             }
         });

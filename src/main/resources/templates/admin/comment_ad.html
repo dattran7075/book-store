@@ -16,15 +16,12 @@
     <link rel="stylesheet" href="/css/color.css">
     <link rel="stylesheet" href="/css/responsive.css">
     <style>
-        /* ── Base ─────────────────────────────────────────────────────────── */
         *, *::before, *::after {
             box-sizing: border-box;
         }
 
         body {
             font-family: 'Segoe UI', system-ui, sans-serif;
-            background: #f4f6f9;
-            color: #2d3748;
             margin: 0;
         }
 
@@ -34,7 +31,7 @@
             margin: 0 auto;
         }
 
-        /* ── Page title ───────────────────────────────────────────────────── */
+        /* ── Page title ── */
         .page-title {
             font-size: 22px;
             font-weight: 700;
@@ -50,7 +47,7 @@
             font-size: 20px;
         }
 
-        /* ── Stat cards ───────────────────────────────────────────────────── */
+        /* ── Stat cards ── */
         .stats-row {
             display: flex !important;
             gap: 16px;
@@ -99,33 +96,27 @@
             line-height: 1.1;
         }
 
-        .stat-card.total .stat-value,
-        .stat-card.stat-total .stat-value {
+        .stat-card.total .stat-value, .stat-card.stat-total .stat-value {
             color: #2d3748;
         }
 
-        .stat-card.pending .stat-value,
-        .stat-card.stat-pending .stat-value {
+        .stat-card.pending .stat-value, .stat-card.stat-pending .stat-value {
             color: #d69e2e;
         }
 
-        .stat-card.approved .stat-value,
-        .stat-card.stat-approved .stat-value {
+        .stat-card.approved .stat-value, .stat-card.stat-approved .stat-value {
             color: #38a169;
         }
 
-        .stat-card.hidden .stat-value,
-        .stat-card.stat-hidden .stat-value {
+        .stat-card.hidden .stat-value, .stat-card.stat-hidden .stat-value {
             color: #e53e3e;
         }
 
-        /* Override Bootstrap/main.css .hidden display:none */
-        .stat-card.hidden,
-        .stat-card.stat-hidden {
+        .stat-card.hidden, .stat-card.stat-hidden {
             display: flex !important;
         }
 
-        /* ── Filter tabs ──────────────────────────────────────────────────── */
+        /* ── Filter tabs ── */
         .filter-bar {
             background: #fff;
             border-radius: 12px;
@@ -159,7 +150,7 @@
             border-bottom-color: #5cb85c;
         }
 
-        /* ── Spam detection panel ─────────────────────────────────────────── */
+        /* ── Spam detection panel ── */
         .spam-panel {
             background: #fff;
             border-radius: 12px;
@@ -178,7 +169,46 @@
             border-bottom: 1px solid #f0f0f0;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+        }
+
+        .spam-panel-header-left {
+            display: flex;
+            align-items: center;
             gap: 8px;
+        }
+
+        /* Save status indicator */
+        .save-status {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            transition: all .3s;
+        }
+
+        .save-status.idle {
+            color: #a0aec0;
+            background: #f7f9fc;
+        }
+
+        .save-status.saving {
+            color: #d69e2e;
+            background: #fefcbf;
+        }
+
+        .save-status.saved {
+            color: #38a169;
+            background: #c6f6d5;
+        }
+
+        .save-status.error {
+            color: #c53030;
+            background: #fed7d7;
         }
 
         .spam-tabs {
@@ -254,6 +284,7 @@
             flex-wrap: wrap;
             gap: 8px;
             margin-bottom: 12px;
+            min-height: 32px;
         }
 
         .tag-chip {
@@ -271,7 +302,7 @@
             color: #c53030;
         }
 
-        .tag-chip.spam {
+        .tag-chip.adlink {
             background: #fefcbf;
             color: #b7791f;
         }
@@ -291,6 +322,26 @@
             opacity: 1;
         }
 
+        /* loading skeleton for tags */
+        .tag-loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #a0aec0;
+            font-size: 13px;
+            font-style: italic;
+        }
+
+        .tag-loading i {
+            animation: spin .8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         .spam-summary {
             font-size: 13px;
             color: #718096;
@@ -303,7 +354,7 @@
             color: #2d3748;
         }
 
-        /* ── Table ────────────────────────────────────────────────────────── */
+        /* ── Table ── */
         .table-card {
             background: #fff;
             border-radius: 12px;
@@ -351,7 +402,7 @@
             background: #fbfcff;
         }
 
-        /* ── Status badges ────────────────────────────────────────────────── */
+        /* ── Status badges ── */
         .badge-status {
             display: inline-block;
             padding: 3px 10px;
@@ -377,7 +428,7 @@
             color: #c53030;
         }
 
-        /* ── Violation badges ─────────────────────────────────────────────── */
+        /* ── Violation badges ── */
         .viol-list {
             display: flex;
             flex-wrap: wrap;
@@ -414,7 +465,7 @@
             font-size: 12px;
         }
 
-        /* ── Content toggle ───────────────────────────────────────────────── */
+        /* ── Content toggle ── */
         .content-wrapper {
             position: relative;
         }
@@ -483,7 +534,7 @@
             font-style: italic;
         }
 
-        /* ── Stars ────────────────────────────────────────────────────────── */
+        /* ── Stars ── */
         .star-display {
             color: #e2e8f0;
             font-size: 15px;
@@ -494,7 +545,7 @@
             color: #f6ad55;
         }
 
-        /* ── Edit button ──────────────────────────────────────────────────── */
+        /* ── Edit button ── */
         .btn-edit {
             padding: 6px 16px;
             border: 1px solid #e2711d;
@@ -514,7 +565,7 @@
             border-color: #ea6c0a;
         }
 
-        /* ── Pagination ───────────────────────────────────────────────────── */
+        /* ── Pagination ── */
         .pagination-bar {
             display: flex;
             align-items: center;
@@ -543,9 +594,9 @@
         }
 
         .pg-btn.active {
-            background: #5cb85c;
+            background: #0275d8;
             color: #fff;
-            border-color: #5cb85c;
+            border-color: #0275d8;
         }
 
         .pg-btn.disabled {
@@ -553,7 +604,7 @@
             opacity: .4;
         }
 
-        /* ── Modal ────────────────────────────────────────────────────────── */
+        /* ── Modal ── */
         .modal-header {
             background: #5cb85c;
             color: #fff;
@@ -610,7 +661,6 @@
             color: #744210;
         }
 
-        /* edited badge */
         .edited-badge {
             display: inline-block;
             padding: 2px 7px;
@@ -622,7 +672,7 @@
             margin-left: 6px;
         }
 
-        /* ── Responsive ───────────────────────────────────────────────────── */
+        /* ── Responsive ── */
         @media (max-width: 768px) {
             .page-wrapper {
                 padding: 16px;
@@ -637,10 +687,8 @@
             }
         }
 
-        /* ── Header override to not conflict ─────────────────────────────── */
         body {
             margin: 0;
-            background: #f4f6f9;
         }
 
         .tg-header {
@@ -665,9 +713,6 @@
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════════════════════════════
-     HEADER
-══════════════════════════════════════════════════════════════════════ -->
 <div id="tg-wrapper" class="tg-wrapper tg-haslayout">
     <header id="tg-header" class="tg-header tg-haslayout">
         <div class="tg-topbar">
@@ -697,7 +742,8 @@
             <div class="container">
                 <div class="row">
                     <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                        <strong class="tg-logo"><a href="/"><img src="/images/logo.png" alt="Book Library"></a></strong>
+                        <strong class="tg-logo"><a href="/"><img src="/images/logoSWP.png"
+                                                                 alt="Book Library"></a></strong>
                     </div>
                 </div>
             </div>
@@ -730,8 +776,6 @@
                                     </li>
                                     <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-promotion}">Promotions</a>
                                     </li>
-                                    <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-comment}"
-                                                                            style="font-weight:700;">Reviews</a></li>
                                     <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/statistic}">Statistics</a>
                                     </li>
                                     <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-staff}">Staff</a>
@@ -762,7 +806,7 @@
         </div>
     </header>
 
-    <!-- ── Inner Banner ──────────────────────────────────────────────────── -->
+    <!-- Inner Banner -->
     <div class="tg-innerbanner tg-haslayout tg-parallax tg-bginnerbanner"
          data-z-index="-100" data-appear-top-offset="600"
          data-parallax="scroll" data-image-src="/images/parallax/bgparallax-07.jpg">
@@ -790,35 +834,17 @@
             Book Comment Management – Spam Detection
         </div>
 
-        <!-- ── Stat cards ─────────────────────────────────────────────────────── -->
-        <div class="stats-row">
-            <a th:href="@{/admin/manage-comment}" class="stat-card stat-total"
-               th:classappend="${statusFilter == null} ? ' active' : ''">
-                <span class="stat-label">Total Comments</span>
-                <span class="stat-value" th:text="${totalComments}">0</span>
-            </a>
-            <a th:href="@{/admin/manage-comment(statusFilter='PENDING')}" class="stat-card stat-pending"
-               th:classappend="${statusFilter == 'PENDING'} ? ' active' : ''">
-                <span class="stat-label">Pending Review</span>
-                <span class="stat-value" th:text="${pendingCount}">0</span>
-            </a>
-            <a th:href="@{/admin/manage-comment(statusFilter='APPROVED')}" class="stat-card stat-approved"
-               th:classappend="${statusFilter == 'APPROVED'} ? ' active' : ''">
-                <span class="stat-label">Approved</span>
-                <span class="stat-value" th:text="${approvedCount}">0</span>
-            </a>
-            <a th:href="@{/admin/manage-comment(statusFilter='HIDDEN')}" class="stat-card stat-hidden"
-               th:classappend="${statusFilter == 'HIDDEN'} ? ' active' : ''">
-                <span class="stat-label">Hidden</span>
-                <span class="stat-value" th:text="${hiddenCount}">0</span>
-            </a>
-        </div>
-
-        <!-- ── Spam detection panel ───────────────────────────────────────────── -->
+        <!-- ── Spam detection panel ── -->
         <div class="spam-panel">
             <div class="spam-panel-header">
-                <i class="fa fa-shield"></i>
-                Spam Detection Configuration
+                <div class="spam-panel-header-left">
+                    <i class="fa fa-shield"></i>
+                    Spam Detection Configuration
+                </div>
+                <!-- Save status badge -->
+                <div class="save-status idle" id="saveStatus">
+                    <i class="fa fa-cloud"></i> <span id="saveStatusText">Synced</span>
+                </div>
             </div>
 
             <div class="spam-tabs">
@@ -837,8 +863,9 @@
                            onkeydown="if(event.key==='Enter'){addTag('offensive');event.preventDefault();}">
                     <button class="btn-add-tag" onclick="addTag('offensive')">Add</button>
                 </div>
-                <div class="tag-list" id="offensive-tags"></div>
-                <div class="spam-summary" id="offensive-summary"></div>
+                <div class="tag-list" id="offensive-tags">
+                    <span class="tag-loading"><i class="fa fa-spinner"></i> Loading...</span>
+                </div>
             </div>
 
             <!-- Tab 2: Ad/spam links -->
@@ -851,8 +878,9 @@
                            onkeydown="if(event.key==='Enter'){addTag('adlink');event.preventDefault();}">
                     <button class="btn-add-tag" onclick="addTag('adlink')">Add</button>
                 </div>
-                <div class="tag-list" id="adlink-tags"></div>
-                <div class="spam-summary" id="adlink-summary"></div>
+                <div class="tag-list" id="adlink-tags">
+                    <span class="tag-loading"><i class="fa fa-spinner"></i> Loading...</span>
+                </div>
             </div>
 
             <!-- Tab 3: Irrelevant words -->
@@ -865,32 +893,25 @@
                            onkeydown="if(event.key==='Enter'){addTag('irrelevant');event.preventDefault();}">
                     <button class="btn-add-tag" onclick="addTag('irrelevant')">Add</button>
                 </div>
-                <div class="tag-list" id="irrelevant-tags"></div>
-                <div class="spam-summary" id="irrelevant-summary"></div>
+                <div class="tag-list" id="irrelevant-tags">
+                    <span class="tag-loading"><i class="fa fa-spinner"></i> Loading...</span>
+                </div>
             </div>
         </div>
 
-        <!-- ── Filter tabs ─────────────────────────────────────────────────────── -->
+        <!-- ── Filter tabs ── -->
         <div class="filter-bar">
             <a th:href="@{/admin/manage-comment}" class="filter-tab"
-               th:classappend="${statusFilter == null} ? ' active' : ''">
-                All
-            </a>
+               th:classappend="${statusFilter == null} ? ' active' : ''">All</a>
             <a th:href="@{/admin/manage-comment(statusFilter='PENDING')}" class="filter-tab"
-               th:classappend="${statusFilter == 'PENDING'} ? ' active' : ''">
-                Pending
-            </a>
+               th:classappend="${statusFilter == 'PENDING'} ? ' active' : ''">Pending</a>
             <a th:href="@{/admin/manage-comment(statusFilter='APPROVED')}" class="filter-tab"
-               th:classappend="${statusFilter == 'APPROVED'} ? ' active' : ''">
-                Approved
-            </a>
+               th:classappend="${statusFilter == 'APPROVED'} ? ' active' : ''">Approved</a>
             <a th:href="@{/admin/manage-comment(statusFilter='HIDDEN')}" class="filter-tab"
-               th:classappend="${statusFilter == 'HIDDEN'} ? ' active' : ''">
-                Hidden
-            </a>
+               th:classappend="${statusFilter == 'HIDDEN'} ? ' active' : ''">Hidden</a>
         </div>
 
-        <!-- ── Comment table ──────────────────────────────────────────────────── -->
+        <!-- ── Comment table ── -->
         <div class="table-card">
             <div class="table-responsive">
                 <table>
@@ -950,10 +971,8 @@
                             <div th:if="${comment.content != null and !comment.content.trim().isEmpty()}"
                                  class="content-wrapper">
                                 <button class="btn-toggle-content" onclick="toggleContent(this)">View</button>
-                                <div class="content-text"
-                                     th:data-raw="${comment.content}"
-                                     th:text="${comment.content}">
-                                </div>
+                                <div class="content-text" th:data-raw="${comment.content}"
+                                     th:text="${comment.content}"></div>
                             </div>
                             <span th:if="${comment.content == null or comment.content.trim().isEmpty()}"
                                   class="no-content-label">Star rating only</span>
@@ -963,7 +982,7 @@
                         <td>
                             <div class="viol-list viol-cell"
                                  th:data-content="${comment.content != null ? comment.content : ''}">
-                                <!-- populated by JS -->
+                                <span class="viol-clean">—</span>
                             </div>
                         </td>
 
@@ -1004,7 +1023,7 @@
             </div>
 
             <!-- Pagination -->
-            <div class="pagination-bar" th:if="${totalPage > 1}">
+            <div class="pagination-bar" th:if="${totalPage >= 1}">
                 <a th:href="@{/admin/manage-comment(page=${page - 1}, statusFilter=${statusFilter})}"
                    class="pg-btn" th:classappend="${page <= 1} ? ' disabled' : ''">
                     <i class="fa fa-chevron-left"></i>
@@ -1022,7 +1041,7 @@
         </div>
     </div>
 
-    <!-- ── Edit Status Modal ───────────────────────────────────────────────────── -->
+    <!-- ── Edit Status Modal ── -->
     <div class="modal fade" id="editStatusModal" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -1036,7 +1055,6 @@
                         <input type="hidden" name="page" th:value="${page}">
                         <input type="hidden" name="statusFilter" th:value="${statusFilter}">
 
-                        <!-- Comment preview -->
                         <div class="comment-preview">
                             <div class="meta">
                                 <i class="fa fa-user"></i> <span id="modal-user-name"></span>
@@ -1045,22 +1063,17 @@
                                 &nbsp;|&nbsp;
                                 <span id="modal-stars"></span>
                             </div>
-                            <div class="body" id="modal-content-preview" style="color:#718096; font-style:italic;">
-                                <!-- filled by JS -->
-                            </div>
+                            <div class="body" id="modal-content-preview"
+                                 style="color:#718096; font-style:italic;"></div>
                         </div>
 
-                        <!-- Status select -->
                         <div class="form-group">
                             <label style="font-weight:700; font-size:13px; margin-bottom:8px; display:block;">
                                 Select new status <span style="color:#e53e3e;">*</span>
                             </label>
-                            <select name="newStatus" id="modal-new-status" class="status-select">
-                                <!-- Options populated by JS based on current status -->
-                            </select>
+                            <select name="newStatus" id="modal-new-status" class="status-select"></select>
                         </div>
 
-                        <!-- Transition hint -->
                         <div class="transition-note" id="modal-transition-note"></div>
                     </div>
                     <div class="modal-footer">
@@ -1092,54 +1105,127 @@
             var errorMsg = /*[[${errorMessage}]]*/ '';
             if (successMsg) {
                 Swal.fire({
-                    toast: true, position: 'top-end', icon: 'success', title: successMsg,
-                    showConfirmButton: false, timer: 3000, timerProgressBar: true
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: successMsg,
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
                 });
             }
             if (errorMsg) {
                 Swal.fire({
-                    toast: true, position: 'top-end', icon: 'error', title: errorMsg,
-                    showConfirmButton: false, timer: 3500, timerProgressBar: true
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: errorMsg,
+                    showConfirmButton: false,
+                    timer: 3500,
+                    timerProgressBar: true
                 });
             }
         });
     </script>
 
     <script>
-        // ─────────────────────────────────────────────────────────────────────────────
-        // SPAM DETECTION CONFIG  (persisted to localStorage)
-        // ─────────────────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────
+        // SPAM CONFIG
+        // ─────────────────────────────────────────────────────────────────────
 
-        const SPAM_KEYS = {offensive: 'spam_offensive', adlink: 'spam_adlink', irrelevant: 'spam_irrelevant'};
-        const SPAM_DEFAULTS = {
-            offensive: ['stupid', 'useless', 'trash', 'scam'],
-            adlink: ['buy now', 'click here', 'huge discount', 'contact zalo'],
-            irrelevant: ['casino', 'betting', 'forex', 'crypto']
-        };
+        // Bộ nhớ tạm trong phiên làm việc
+        let spamConfig = {offensive: [], adlink: [], irrelevant: []};
 
-        function loadTags(type) {
-            try {
-                return JSON.parse(localStorage.getItem(SPAM_KEYS[type])) || SPAM_DEFAULTS[type];
-            } catch {
-                return SPAM_DEFAULTS[type];
+        // Debounce timer để không gọi save liên tục khi xóa nhiều tag
+        let saveTimer = null;
+
+        /* ── Save status UI ── */
+        function setSaveStatus(state) {
+            const el = document.getElementById('saveStatus');
+            const text = document.getElementById('saveStatusText');
+            el.className = 'save-status ' + state;
+            const map = {idle: 'Synced', saving: 'Saving...', saved: 'Saved!', error: 'Save failed'};
+            text.textContent = map[state] || '';
+            if (state === 'saved') {
+                setTimeout(() => setSaveStatus('idle'), 2500);
             }
         }
 
-        function saveTags(type, tags) {
-            localStorage.setItem(SPAM_KEYS[type], JSON.stringify(tags));
-        }
-
-        function renderTags(type) {
-            const tags = loadTags(type);
-            const container = document.getElementById(type + '-tags');
-            container.innerHTML = tags.map(tag =>
-                `<span class="tag-chip ${type}" data-tag="${tag}">
-            ${tag} <span class="remove-tag" onclick="removeTag('${type}', '${tag}')">×</span>
-        </span>`
-            ).join('');
+        /* ── Load từ server khi trang khởi động ── */
+        async function loadSpamConfig() {
+            try {
+                const res = await fetch('/admin/spam-config');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                spamConfig = await res.json();
+            } catch (e) {
+                console.warn('Could not load spam config from server, using defaults.', e);
+                spamConfig = {
+                    offensive: ['stupid', 'useless', 'trash', 'scam'],
+                    adlink: ['buy now', 'click here', 'huge discount', 'contact zalo'],
+                    irrelevant: ['casino', 'betting', 'forex', 'crypto']
+                };
+            }
+            ['offensive', 'adlink', 'irrelevant'].forEach(renderTags);
             updateSpamHighlights();
         }
 
+        /* ── Lưu lên server (debounced 600 ms) ── */
+        function scheduleSave() {
+            setSaveStatus('saving');
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch('/admin/spam-config', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(spamConfig)
+                    });
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const data = await res.json();
+                    setSaveStatus(data.success ? 'saved' : 'error');
+                } catch (e) {
+                    setSaveStatus('error');
+                    console.error('Failed to save spam config:', e);
+                }
+            }, 600);
+        }
+
+        /* ── Helpers ── */
+        function loadTags(type) {
+            return spamConfig[type] || [];
+        }
+
+        function saveTags(type, tags) {
+            spamConfig[type] = tags;
+            scheduleSave();
+        }
+
+        /* ── Render tag chips ── */
+        function renderTags(type) {
+            const tags = loadTags(type);
+            const container = document.getElementById(type + '-tags');
+            if (tags.length === 0) {
+                container.innerHTML = '<span style="color:#a0aec0; font-size:13px; font-style:italic;">No words added yet.</span>';
+            } else {
+                container.innerHTML = tags.map(tag =>
+                    `<span class="tag-chip ${type}" data-tag="${escapeHtml(tag)}">
+                        ${escapeHtml(tag)}
+                        <span class="remove-tag" onclick="removeTag('${type}', '${escapeJs(tag)}')" title="Remove">×</span>
+                    </span>`
+                ).join('');
+            }
+            updateSpamHighlights();
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function escapeJs(str) {
+            return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+
+        /* Add/Remove */
         function addTag(type) {
             const input = document.getElementById(type + '-input');
             const val = input.value.trim().toLowerCase();
@@ -1148,9 +1234,10 @@
             if (!tags.includes(val)) {
                 tags.push(val);
                 saveTags(type, tags);
+                renderTags(type);
             }
             input.value = '';
-            renderTags(type);
+            input.focus();
         }
 
         function removeTag(type, tag) {
@@ -1159,9 +1246,9 @@
             renderTags(type);
         }
 
-        // ─────────────────────────────────────────────────────────────────────────────
-        // SPAM DETECTION: analyse content of each row
-        // ─────────────────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────
+        // SPAM DETECTION
+        // ─────────────────────────────────────────────────────────────────────
 
         function detectViolations(content) {
             const lower = (content || '').toLowerCase();
@@ -1215,9 +1302,9 @@
             });
         }
 
-        // ─────────────────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────
         // TOGGLE CONTENT
-        // ─────────────────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────
 
         function toggleContent(btn) {
             const el = btn.nextElementSibling;
@@ -1225,9 +1312,9 @@
             btn.textContent = visible ? 'Hide' : 'View';
         }
 
-        // ─────────────────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────
         // EDIT STATUS MODAL
-        // ─────────────────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────
 
         function openEditModal(btn) {
             const id = btn.getAttribute('data-comment-id');
@@ -1244,20 +1331,17 @@
             document.getElementById('modal-content-preview').textContent =
                 content.trim() || '(Star rating only – no written content)';
 
-            // Stars
             let stars = '';
             for (let i = 1; i <= 5; i++) {
                 stars += `<i class="fa fa-star" style="color:${i <= parseInt(star) ? '#f6ad55' : '#e2e8f0'}; font-size:14px;"></i>`;
             }
             document.getElementById('modal-stars').innerHTML = stars;
 
-            // Build select
             const select = document.getElementById('modal-new-status');
             const note = document.getElementById('modal-transition-note');
             const saveBtn = document.querySelector('#editStatusModal .btn-success');
             select.innerHTML = '';
 
-            // Placeholder showing current status
             const placeholder = document.createElement('option');
             placeholder.value = '';
             placeholder.disabled = true;
@@ -1273,13 +1357,12 @@
             });
 
             if (opts.length === 0) {
-                // No available transitions – hide select, disable save
                 select.style.display = 'none';
                 if (saveBtn) saveBtn.disabled = true;
             } else {
                 select.style.display = '';
                 if (saveBtn) saveBtn.disabled = false;
-                select.value = opts[0].value; // pre-select first option
+                select.value = opts[0].value;
             }
 
             note.innerHTML = getTransitionNote(status, edited);
@@ -1315,18 +1398,19 @@
                 case 'PENDING':
                     return '<b>PENDING:</b> Choose APPROVED to publish, or HIDDEN to hide this comment.';
                 case 'APPROVED':
-                    if (edited) return 'This comment was edited. You can hide it or send back to PENDING for re-review.';
-                    return '<b>APPROVED:</b> You can hide this comment if needed.';
+                    return edited
+                        ? 'This comment was edited. You can hide it or send back to PENDING for re-review.'
+                        : '<b>APPROVED:</b> You can hide this comment if needed.';
                 case 'HIDDEN':
                     return '<b>HIDDEN:</b> Choose APPROVED to unhide, or PENDING to send for re-review.';
                 default:
-                    return '⚠Unknown status.';
+                    return 'Unknown status.';
             }
         }
 
-        // ─────────────────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────
         // SPAM TABS
-        // ─────────────────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────
 
         document.querySelectorAll('.spam-tab').forEach(tab => {
             tab.addEventListener('click', function () {
@@ -1337,15 +1421,14 @@
             });
         });
 
-        // ─────────────────────────────────────────────────────────────────────────────
-        // INIT
-        // ─────────────────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────
+        // INIT — load config từ server
+        // ─────────────────────────────────────────────────────────────────────
 
         document.addEventListener('DOMContentLoaded', function () {
-            // Render spam tag chips
-            ['offensive', 'adlink', 'irrelevant'].forEach(renderTags);
+            loadSpamConfig();
         });
     </script>
-</div><!-- /tg-wrapper -->
+</div>
 </body>
 </html>

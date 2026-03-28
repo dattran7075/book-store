@@ -21,14 +21,6 @@
     <script src="js/vendor/modernizr-2.8.3-respond-1.4.2.min.js"></script>
 
     <style>
-        /* ============================================================
-           FIX Z-INDEX - Sửa lỗi hamburger mega-menu bị che bởi section
-           ============================================================
-           Nguyên nhân: main.css cuối file override .tg-sectionhead
-           thành position:relative => tạo stacking context mới
-           => mega-menu bị kẹt phía sau dù có z-index:9999
-           ============================================================ */
-
         #tg-header,
         .tg-header {
             position: relative;
@@ -48,28 +40,25 @@
             overflow: visible !important;
         }
 
-        /* Mega-menu và sub-menu phải nằm trên mọi thứ */
         .mega-menu,
         .sub-menu {
             z-index: 99999 !important;
         }
 
-        /* Xóa stacking context trên các section bên dưới header */
         .tg-sectionspace,
         .tg-bg-light-gray {
             position: static !important;
             z-index: auto !important;
         }
 
-        /* tg-sectionhead bị override ở cuối main.css thành position:relative
-           => fix: static, nhưng giữ h2 relative để pseudo ::after vẫn hoạt động */
+
         .tg-sectionhead {
             position: static !important;
             z-index: auto !important;
         }
 
         .tg-sectionhead h2 {
-            position: relative; /* cần cho ::after underline decoration */
+            position: relative;
         }
 
         /* ============================================================
@@ -707,9 +696,9 @@
             <div class="container">
                 <div class="row">
                     <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                        <strong class="tg-logo"><a href="index-2.html"><img src="images/logoSWP.png"
-                                                                            alt="company name here"></a></strong>
-                        <div class="tg-searchbox">
+                        <strong class="tg-logo"><a href="/"><img src="images/logoSWP.png"
+                                                                 alt="company name here"></a></strong>
+                        <div class="tg-searchbox" sec:authorize="!hasRole('ADMIN') and !hasRole('STAFF')">
                             <div class="tg-widget tg-widgetsearch">
                                 <form class="tg-formtheme tg-formsearch" th:action="@{/search}">
                                     <div class="form-group">
@@ -725,7 +714,8 @@
                                 <a id="tg-minicart" class="tg-btnthemedropdown" data-toggle="dropdown"
                                    aria-haspopup="true" aria-expanded="false">
                                     <span class="tg-themebadge"
-                                          th:text="${cartTotalBooks != null ? cartTotalBooks : 0}"></span>
+                                          th:with="qty=${cartTotalBooks != null ? cartTotalBooks : 0}"
+                                          th:text="${qty >= 10000 ? '10k+' : (qty >= 1000 ? (qty / 1000) + 'k+' : (qty >= 100 ? '99+' : qty))}"></span>
                                     <a th:href="@{view-cart}"><i class="icon-cart"></i>
                                         <span style="margin-left: 10px;">Cart</span></a>
                                 </a>
@@ -761,7 +751,7 @@
                                     </li>
 
                                     <li class="menu-item-has-children menu-item-has-mega-menu"
-                                        sec:authorize="hasRole('USER')">
+                                        sec:authorize="!hasAnyRole('ADMIN','STAFF')">
                                         <a href="javascript:void(0);">All Categories</a>
                                         <div class="mega-menu tg-category-mega-menu">
                                             <ul class="tg-themetabnav" role="tablist">
@@ -919,15 +909,17 @@
                                              th:with="avgRating=${bookListRatings != null ? bookListRatings.get(book.id) : 0}">
                                             <div class="tg-stars">
                                                 <th:block th:each="i : ${#numbers.sequence(1, 5)}">
-                                                    <span th:if="${avgRating != null && i <= avgRating}"
+                                                    <span th:if="${avgRating != null and i <= avgRating}"
                                                           class="tg-star"><i class="fa fa-star"></i></span>
-                                                    <span th:if="${avgRating == null || i > avgRating}"
+                                                    <span th:if="${avgRating != null and i > avgRating and (i - 0.5) <= avgRating}"
+                                                          class="tg-star"><i class="fa fa-star-half-o"></i></span>
+                                                    <span th:if="${avgRating == null or (i > avgRating and (i - 0.5) > avgRating)}"
                                                           class="tg-star-empty"><i class="fa fa-star-o"></i></span>
                                                 </th:block>
                                             </div>
                                             <span class="tg-rating-text"
                                                   th:if="${avgRating != null && avgRating > 0}"
-                                                  th:text="${#numbers.formatDecimal(avgRating, 1, 1)} + '/5'"></span>
+                                                  th:text="${#numbers.formatDecimal(avgRating, 1, 1)} + '/5,0'"></span>
                                         </div>
                                         <span class="tg-bookwriter">Author: <a href="javascript:void(0);">
                                             <span th:text="${book.author.name}"></span></a></span>
@@ -985,15 +977,17 @@
                                      th:with="avgRating=${newArrivalsRatings != null ? newArrivalsRatings.get(book.id) : 0}">
                                     <div class="tg-stars">
                                         <th:block th:each="i : ${#numbers.sequence(1, 5)}">
-                                            <span th:if="${avgRating != null && i <= avgRating}" class="tg-star"><i
-                                                    class="fa fa-star"></i></span>
-                                            <span th:if="${avgRating == null || i > avgRating}" class="tg-star-empty"><i
-                                                    class="fa fa-star-o"></i></span>
+                                                    <span th:if="${avgRating != null and i <= avgRating}"
+                                                          class="tg-star"><i class="fa fa-star"></i></span>
+                                            <span th:if="${avgRating != null and i > avgRating and (i - 0.5) <= avgRating}"
+                                                  class="tg-star"><i class="fa fa-star-half-o"></i></span>
+                                            <span th:if="${avgRating == null or (i > avgRating and (i - 0.5) > avgRating)}"
+                                                  class="tg-star-empty"><i class="fa fa-star-o"></i></span>
                                         </th:block>
                                     </div>
                                     <span class="tg-rating-text"
                                           th:if="${avgRating != null && avgRating > 0}"
-                                          th:text="${#numbers.formatDecimal(avgRating, 1, 1)} + '/5'">0.0/5</span>
+                                          th:text="${#numbers.formatDecimal(avgRating, 1, 1)} + '/5,0'">0.0/5,0</span>
                                     <span class="tg-rating-text"
                                           th:if="${avgRating == null || avgRating == 0}">No ratings</span>
                                 </div>
@@ -1083,15 +1077,19 @@
                                                 </div>
                                             </div>
                                             <div class="tg-review-rating">
-                                                <div class="tg-stars">
-                                                    <th:block th:each="i : ${#numbers.sequence(1, 5)}">
-                                                        <span th:if="${i <= rating.star}" class="tg-star"><i
-                                                                class="fa fa-star"></i></span>
-                                                        <span th:if="${i > rating.star}" class="tg-star-empty"><i
-                                                                class="fa fa-star-o"></i></span>
-                                                    </th:block>
+                                                <div class="tg-review-rating">
+                                                    <div class="tg-stars">
+                                                        <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                                                        <span th:if="${i <= rating.star}"
+                                                              class="tg-star"><i class="fa fa-star"></i></span>
+                                                            <span th:if="${i > rating.star}"
+                                                                  class="tg-star-empty"><i
+                                                                    class="fa fa-star-o"></i></span>
+                                                        </th:block>
+                                                    </div>
+                                                    <span class="tg-rating-score"
+                                                          th:text="${rating.star} + '/5'">5/5</span>
                                                 </div>
-                                                <span class="tg-rating-score" th:text="${rating.star} + '/5'">5/5</span>
                                             </div>
                                             <div class="tg-review-comment">
                                                 <p th:text="${rating.content}">Review content</p>
@@ -1149,9 +1147,11 @@
                                          th:with="avgRating=${recommendedRatings != null ? recommendedRatings.get(book.id) : 0}">
                                         <div class="tg-stars">
                                             <th:block th:each="i : ${#numbers.sequence(1, 5)}">
-                                                <span th:if="${avgRating != null && i <= avgRating}" class="tg-star"><i
-                                                        class="fa fa-star"></i></span>
-                                                <span th:if="${avgRating == null || i > avgRating}"
+                                                    <span th:if="${avgRating != null and i <= avgRating}"
+                                                          class="tg-star"><i class="fa fa-star"></i></span>
+                                                <span th:if="${avgRating != null and i > avgRating and (i - 0.5) <= avgRating}"
+                                                      class="tg-star"><i class="fa fa-star-half-o"></i></span>
+                                                <span th:if="${avgRating == null or (i > avgRating and (i - 0.5) > avgRating)}"
                                                       class="tg-star-empty"><i class="fa fa-star-o"></i></span>
                                             </th:block>
                                         </div>
@@ -1203,8 +1203,8 @@
                     <div class="tg-threecolumns">
                         <div class="col-xs-12 col-sm-6 col-md-6 col-lg-6">
                             <div class="tg-footercol">
-                                <strong class="tg-logo"><a href="javascript:void(0);"><img src="images/flogo.png"
-                                                                                           alt="image description"></a></strong>
+                                <strong class="tg-logo"><a href="/"><img src="images/flogo.png"
+                                                                         alt="image description"></a></strong>
                                 <ul class="tg-contactinfo">
                                     <li><i class="icon-apartment"></i>
                                         <address>Ha Dong, Hanoi, Vietnam</address>

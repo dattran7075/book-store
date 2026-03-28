@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.UnsupportedEncodingException;
+import java.time.LocalDate;
 import java.util.*;
 
 @Controller
@@ -46,19 +48,16 @@ public class UserController {
     @Autowired
     private SeriesService seriesService;
 
-    // ========== SHIPPING FEE CONSTANT ==========
-    private static final Double DEFAULT_SHIPPING_FEE = 20000.0;
+    @Autowired
+    private VNPayService vnPayService;
 
     /**
      * Helper method to add cart info to model
      */
-    private void addCartInfoToModel(Model model) {
-        User user = userService.getCurrentUserFromContext();
-        if (user != null) {
+    private void addCartInfoToModel(Model model, User user, List<CartItem> cartItems) {
+        if (user != null && cartItems != null) {
             Integer totalBooks = cartItemService.calculateTotalBooks(user);
             model.addAttribute("cartTotalBooks", totalBooks);
-
-            List<CartItem> cartItems = cartItemService.getCartItems(user);
             model.addAttribute("cartItems", cartItems);
         } else {
             model.addAttribute("cartTotalBooks", 0);
@@ -164,7 +163,7 @@ public class UserController {
             model.addAttribute("detectedSeriesMap", detectedSeriesMap);
             model.addAttribute("seriesSetsMap", seriesSetsMap);
 
-            addCartInfoToModel(model);
+            addCartInfoToModel(model, user, cartItems);
 
             return "user/cart";
 
@@ -175,9 +174,11 @@ public class UserController {
     }
 
     @GetMapping("/clear-cart")
-    public String clearCart(HttpServletRequest request, RedirectAttributes redirectAttributes) {
+    public String clearCart(RedirectAttributes redirectAttributes) {
         try {
-            User user = userService.getCurrentUser(request);
+            User user = userService.getCurrentUserFromContext();
+            if (user == null) return "redirect:/login";
+
             cartItemService.clearCart(user);
             redirectAttributes.addFlashAttribute("success", "Cart cleared successfully!");
         } catch (Exception e) {
@@ -187,71 +188,34 @@ public class UserController {
     }
 
     @GetMapping("/remove-book")
-    public String removeBook(HttpServletRequest request,
-                             @RequestParam Integer id) {
-        User user = userService.getCurrentUser(request);
-        cartItemService.removeCartItemByUserAndBook(user, id);
+    public String removeBook(@RequestParam Integer id,
+                             RedirectAttributes redirectAttributes) {
+        User user = userService.getCurrentUserFromContext();
+        if (user == null) return "redirect:/login";
 
+        cartItemService.removeCartItemByUserAndBook(user, id);
         return "redirect:/view-cart";
     }
 
     @PostMapping("/add-to-cart")
-    public String addToCart(HttpServletRequest request, Model model,
+    public String addToCart(Model model,
                             @RequestParam Integer id,
                             @RequestParam Integer quantity,
                             RedirectAttributes redirectAttributes) {
-        Book book = bookService.findById(id);
-
-        if (book == null) {
-            redirectAttributes.addFlashAttribute("error", "Book not found!");
-            return "redirect:/products";
-        }
-
-        if (book.getNumber_in_stock() == 0) {
-            redirectAttributes.addFlashAttribute("error",
-                    "Book '" + book.getTitle() + "' is out of stock!");
-            return "redirect:/detail-product?id=" + id;
-        }
-
-        if (quantity <= 0) {
-            redirectAttributes.addFlashAttribute("error", "Invalid quantity!");
-            return "redirect:/detail-product?id=" + id;
-        }
-
-        if (quantity > book.getNumber_in_stock()) {
-            redirectAttributes.addFlashAttribute("error",
-                    "Only " + book.getNumber_in_stock() + " copies available!");
-            return "redirect:/detail-product?id=" + id;
-        }
-
-        User user = userService.getCurrentUser(request);
-        List<CartItem> cartItems = cartItemService.getCartItems(user);
-
-        CartItem existingItem = null;
-        for (CartItem item : cartItems) {
-            if (item.getBook().getId().equals(id)) {
-                existingItem = item;
-                break;
+        try {
+            User user = userService.getCurrentUserFromContext();
+            if (user == null) {
+                redirectAttributes.addFlashAttribute("error", "Please login!");
+                return "redirect:/login";
             }
+
+            cartItemService.addBookToCart(user, id, quantity);
+            redirectAttributes.addFlashAttribute("success",
+                    "Added " + quantity + " copy(ies) to cart!");
+
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
-
-        int totalQuantity = quantity;
-        if (existingItem != null) {
-            totalQuantity += existingItem.getQuantity();
-        }
-
-        if (totalQuantity > book.getNumber_in_stock()) {
-            int availableToAdd = book.getNumber_in_stock() -
-                    (existingItem != null ? existingItem.getQuantity() : 0);
-            redirectAttributes.addFlashAttribute("error",
-                    "Cannot add " + quantity + " more. Only " + availableToAdd + " copies available!");
-            return "redirect:/detail-product?id=" + id;
-        }
-
-        cartItemService.addBookToCart(user, id, quantity);
-        redirectAttributes.addFlashAttribute("success",
-                "Added " + quantity + " copy(ies) to cart!");
-
         return "redirect:/detail-product?id=" + id;
     }
 
@@ -328,8 +292,9 @@ public class UserController {
     }
 
     @PostMapping("/purchase")
-    public String purchase(HttpServletRequest request, Model model) {
-        User user = userService.getCurrentUser(request);
+    public String purchase(HttpServletRequest request, Model model, RedirectAttributes redirectAttributes) {
+        User user = userService.getCurrentUserFromContext();
+        if (user == null) return "redirect:/login";
         List<CartItem> cartItems = cartItemService.getCartItems(user);
 
         if (cartItemService.isCartEmpty(user)) {
@@ -345,11 +310,10 @@ public class UserController {
             model.addAttribute("cartTotalBooks", 0);
             model.addAttribute("user", user);
 
-            List<Voucher> allVouchers = voucherService.findAll();
+            List<Voucher> allVouchers = voucherService.findAllActiveVouchers();
             model.addAttribute("allPromotions", allVouchers);
             model.addAttribute("appliedPromotion", null);
             model.addAttribute("discount", 0.0);
-            model.addAttribute("shippingFee", DEFAULT_SHIPPING_FEE);
 
             return "user/purchase_user";
         }
@@ -357,12 +321,19 @@ public class UserController {
         request.getSession().setAttribute("selectedItems", selectedItems);
 
         for (int i = 0; i < cartItems.size(); i++) {
-            String sequence = "quantity" + i;
-            String quantityParam = request.getParameter(sequence);
+            String quantityParam = request.getParameter("quantity" + i);
             if (quantityParam != null) {
-                Integer quantity = Integer.valueOf(quantityParam);
-                CartItem item = cartItems.get(i);
-                cartItemService.updateCartItem(user, item.getBook().getId(), quantity);
+                try {
+                    Integer quantity = Integer.valueOf(quantityParam);
+                    CartItem item = cartItems.get(i);
+                    cartItemService.updateCartItem(user, item.getBook().getId(), quantity);
+                } catch (NumberFormatException e) {
+                    redirectAttributes.addFlashAttribute("error", "Invalid quantity");
+                    return "redirect:/view-cart";
+                } catch (IllegalArgumentException | IllegalStateException e) {
+                    redirectAttributes.addFlashAttribute("error", e.getMessage());
+                    return "redirect:/view-cart";
+                }
             }
         }
 
@@ -418,7 +389,7 @@ public class UserController {
             model.addAttribute("hasSeriesBundle", false);
             model.addAttribute("seriesBundleDiscount", 0.0);
 
-            List<Voucher> allVouchers = voucherService.findAll();
+            List<Voucher> allVouchers = voucherService.findAllActiveVouchers();
             model.addAttribute("allPromotions", allVouchers);
 
             Voucher appliedVoucher = (Voucher) request.getSession().getAttribute("appliedPromotion");
@@ -434,7 +405,6 @@ public class UserController {
         model.addAttribute("cartTotalBooks", totalBooks);
         model.addAttribute("user", user);
         model.addAttribute("selectedBookIds", selectedBookIds);
-        model.addAttribute("shippingFee", DEFAULT_SHIPPING_FEE);
 
         return "user/purchase_user";
     }
@@ -502,7 +472,7 @@ public class UserController {
             model.addAttribute("hasSeriesBundle", false);
             model.addAttribute("seriesBundleDiscount", 0.0);
 
-            List<Voucher> allVouchers = voucherService.findAll();
+            List<Voucher> allVouchers = voucherService.findAllActiveVouchers();
             Voucher appliedVoucher = (Voucher) request.getSession().getAttribute("appliedPromotion");
             Double discount = (Double) request.getSession().getAttribute("discount");
             if (discount == null) discount = 0.0;
@@ -517,7 +487,6 @@ public class UserController {
         model.addAttribute("cartTotalBooks", totalBooks);
         model.addAttribute("user", user);
         model.addAttribute("selectedBookIds", selectedBookIds);
-        model.addAttribute("shippingFee", DEFAULT_SHIPPING_FEE);
 
         return "user/purchase_user";
     }
@@ -641,6 +610,337 @@ public class UserController {
         return "redirect:/purchase";
     }
 
+    /**
+     * Handle payment method selection
+     * Stores selected payment method and items in session
+     */
+    @PostMapping("/payment-method")
+    public String selectPaymentMethod(
+            HttpServletRequest request,
+            @RequestParam String paymentMethod,
+            @RequestParam(required = false) String promotionCode,
+            RedirectAttributes redirectAttributes) {
+
+        User user = userService.getCurrentUser(request);
+        if (user == null) {
+            return "redirect:/login";
+        }
+
+        try {
+            String[] selectedItems = request.getParameterValues("selectedItems");
+
+            if (selectedItems == null || selectedItems.length == 0) {
+                redirectAttributes.addFlashAttribute("error", "Please select at least one product!");
+                return "redirect:/view-cart";
+            }
+
+            if (paymentMethod == null || paymentMethod.trim().isEmpty()) {
+                request.getSession().setAttribute("selectedItems", selectedItems);
+                redirectAttributes.addFlashAttribute("error", "Please select a payment method!");
+                return "redirect:/purchase";
+            }
+
+            // Store selected payment method and items in session
+            request.getSession().setAttribute("selectedPaymentMethod", paymentMethod);
+            request.getSession().setAttribute("selectedItems", selectedItems);
+            if (promotionCode != null && !promotionCode.trim().isEmpty()) {
+                request.getSession().setAttribute("promotionCode", promotionCode);
+            }
+
+            redirectAttributes.addFlashAttribute("success", "Payment method selected!");
+            return "redirect:/purchase";
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("error", "Error selecting payment method!");
+            return "redirect:/view-cart";
+        }
+    }
+
+    /**
+     * Create VNPay payment link and redirect user to payment gateway
+     * This endpoint:
+     * 1. Validates customer information
+     * 2. Creates an Order with status=Pending, payment_status=UNPAID
+     * 3. Generates VNPay payment link with signature
+     * 4. Redirects user to VNPay gateway
+     */
+    @PostMapping("/vnpay-payment")
+    public String vnpayPayment(
+            HttpServletRequest request,
+            RedirectAttributes redirectAttributes) {
+
+        User user = userService.getCurrentUser(request);
+        if (user == null) {
+            return "redirect:/login";
+        }
+
+        try {
+            String[] selectedItems = (String[]) request.getSession().getAttribute("selectedItems");
+            String promotionCode = (String) request.getSession().getAttribute("promotionCode");
+            if (promotionCode == null || promotionCode.trim().isEmpty()) {
+                Voucher appliedVoucher = (Voucher) request.getSession().getAttribute("appliedPromotion");
+                if (appliedVoucher != null) {
+                    promotionCode = appliedVoucher.getCode();
+                }
+            }
+
+            if (selectedItems == null || selectedItems.length == 0) {
+                redirectAttributes.addFlashAttribute("error", "No items selected!");
+                return "redirect:/view-cart";
+            }
+
+            // Get customer information from request
+            String fullname = request.getParameter("fullname");
+            String phone = request.getParameter("phone");
+            String address = request.getParameter("address");
+            String shippingMethod = request.getParameter("shippingMethod");
+
+            // Validate customer information
+            try {
+                orderService.validateCustomerInfo(fullname, phone, address);
+            } catch (IllegalArgumentException e) {
+                redirectAttributes.addFlashAttribute("error", e.getMessage());
+                request.getSession().setAttribute("selectedItems", selectedItems);
+                return "redirect:/purchase";
+            }
+
+            // Get cart items
+            List<CartItem> cartItems = cartItemService.getCartItems(user);
+            List<CartItem> selectedCartItems = new ArrayList<>();
+            List<Integer> selectedBookIds = new ArrayList<>();
+
+            // Filter only selected items
+            for (String selectedId : selectedItems) {
+                Integer bookId = Integer.valueOf(selectedId);
+                selectedBookIds.add(bookId);
+                for (CartItem item : cartItems) {
+                    if (item.getBook().getId().equals(bookId)) {
+                        selectedCartItems.add(item);
+                        break;
+                    }
+                }
+            }
+
+            // Detect if user is purchasing complete series
+            Map<Integer, Integer> seriesSetsMap = orderService.detectCompleteSeriesWithSets(selectedCartItems);
+
+            // Create order (not yet confirmed payment)
+            Order order = orderService.createOrderFromSelectedItems(
+                    selectedCartItems,
+                    fullname,
+                    phone,
+                    address,
+                    promotionCode,
+                    "VNPAY",
+                    shippingMethod,
+                    seriesSetsMap
+            );
+
+            // Save order to database
+            order = orderService.save(order);
+
+            // Clear session
+            request.getSession().removeAttribute("appliedPromotion");
+            request.getSession().removeAttribute("discount");
+            request.getSession().removeAttribute("promotionCode");
+            request.getSession().removeAttribute("selectedPaymentMethod");
+            request.getSession().removeAttribute("selectedItems");
+
+            // Create VNPay payment link
+            String baseUrl = request.getScheme() + "://" + request.getServerName() +
+                    (request.getServerPort() != 80 && request.getServerPort() != 443 ?
+                            ":" + request.getServerPort() : "");
+
+            String paymentLink = vnPayService.createPaymentLink(order, baseUrl, request);
+
+            // Redirect to VNPay gateway
+            return "redirect:" + paymentLink;
+
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("error", "Error creating payment link!");
+            return "redirect:/view-cart";
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            return "redirect:/purchase";
+        } catch (Exception e) {
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("error", "Error processing payment!");
+            return "redirect:/view-cart";
+        }
+    }
+
+    /**
+     * Handle VNPay callback (Return URL)
+     * VNPay redirects user back to this endpoint after payment processing
+     * <p>
+     * Flow:
+     * 1. Receive all callback parameters from VNPay
+     * 2. Verify signature to ensure callback is from VNPay
+     * 3. Check response code (00 = success, others = fail)
+     * 4. Update order status and payment status accordingly
+     * 5. Display result page to user
+     */
+    @GetMapping("/vnpay-return")
+    public String vnpayReturn(
+            HttpServletRequest request,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+
+        try {
+            // Collect all parameters from VNPay callback
+            Map<String, String> fields = new HashMap<>();
+            Enumeration<String> params = request.getParameterNames();
+
+            while (params.hasMoreElements()) {
+                String fieldName = params.nextElement();
+                String fieldValue = request.getParameter(fieldName);
+                if ((fieldValue != null) && (fieldValue.length() > 0)) {
+                    fields.put(fieldName, fieldValue);
+                }
+            }
+
+            // Verify callback signature
+            boolean isValidSignature = vnPayService.verifyPaymentResponse(fields);
+
+            if (!isValidSignature) {
+                model.addAttribute("paymentStatus", "FAILED");
+                model.addAttribute("message", "Signature verification failed! Possible tampering detected.");
+                return "vnpay-result";
+            }
+
+            // Extract key information from callback
+            String vnp_ResponseCode = request.getParameter("vnp_ResponseCode");
+            String vnp_TxnRef = request.getParameter("vnp_TxnRef");
+            String vnp_Amount = request.getParameter("vnp_Amount");
+            String vnp_TransactionNo = request.getParameter("vnp_TransactionNo");
+
+            // Parse Order ID from transaction reference
+            Integer orderId = vnPayService.parseOrderId(vnp_TxnRef);
+
+            if (orderId == null) {
+                model.addAttribute("paymentStatus", "FAILED");
+                model.addAttribute("message", "Order not found!");
+                return "user/vnpay-result";
+            }
+
+            // Retrieve order from database
+            Order order = orderService.findById(orderId);
+
+            if (order == null) {
+                model.addAttribute("paymentStatus", "FAILED");
+                model.addAttribute("message", "Order does not exist!");
+                return "user/vnpay-result";
+            }
+
+            // Check payment result
+            if ("00".equals(vnp_ResponseCode)) {
+                // Payment successful!
+                order.setStatus("Approved");
+                order.setPayment_status("PAID");
+                order.setPayment_note("VNPay Transaction #" + vnp_TransactionNo);
+                order.setUpdated_at(LocalDate.now());
+
+                orderService.save(order);
+
+                // Remove cart items for this user
+                User user = order.getUser();
+                if (user != null) {
+                    for (OrderDetail detail : order.getOrderDetailList()) {
+                        cartItemService.removeCartItemByUserAndBook(user, detail.getBook().getId());
+                    }
+                }
+
+                model.addAttribute("paymentStatus", "SUCCESS");
+                model.addAttribute("orderId", orderId);
+                model.addAttribute("message", "Payment successful!");
+                model.addAttribute("transactionNo", vnp_TransactionNo);
+                model.addAttribute("amount", Long.parseLong(vnp_Amount) / 100); // Convert back to VND
+
+            } else {
+                // Payment failed
+                String errorMessage = vnPayService.getPaymentStatusMessage(vnp_ResponseCode);
+
+                order.setStatus("Cancelled");
+                order.setPayment_status("UNPAID");
+                order.setUpdated_at(LocalDate.now());
+
+                // Restore stock to inventory
+                if (order.getOrderDetailList() != null) {
+                    for (OrderDetail detail : order.getOrderDetailList()) {
+                        Book book = detail.getBook();
+                        book.setNumber_in_stock(book.getNumber_in_stock() + detail.getNumber());
+                        book.setNumber_sold(Math.max(0, book.getNumber_sold() - detail.getNumber()));
+                        book.setUpdated_at(new Date());
+                        bookService.save(book);
+                    }
+                }
+
+                orderService.save(order);
+
+                model.addAttribute("paymentStatus", "FAILED");
+                model.addAttribute("orderId", orderId);
+                model.addAttribute("message", errorMessage);
+            }
+
+            return "user/vnpay-result";
+
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            model.addAttribute("paymentStatus", "FAILED");
+            model.addAttribute("message", "Error processing payment data!");
+            return "user/vnpay-result";
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("paymentStatus", "FAILED");
+            model.addAttribute("message", "System error!");
+            return "user/vnpay-result";
+        }
+    }
+
+    /**
+     * View payment result (optional endpoint for direct access)
+     */
+    @GetMapping("/payment-result")
+    public String paymentResult(
+            @RequestParam(required = false) Integer orderId,
+            Model model,
+            HttpServletRequest request) {
+
+        try {
+            User user = userService.getCurrentUser(request);
+            if (user == null) {
+                return "redirect:/login";
+            }
+
+            if (orderId != null) {
+                Order order = orderService.findById(orderId);
+                if (order != null && order.getUser().getId().equals(user.getId())) {
+                    model.addAttribute("order", order);
+                    model.addAttribute("paymentStatus", "PAID".equals(order.getPayment_status()) ? "SUCCESS" : "FAILED");
+                }
+            }
+
+            List<CartItem> cartItems = cartItemService.getCartItems(user);
+            Integer totalBooks = cartItemService.calculateTotalBooks(user);
+            addCartInfoToModel(model, user, cartItems);
+
+            return "user/order_user";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "redirect:/";
+        }
+    }
+
+    /**
+     * Updated confirm endpoint to support both COD and VNPAY payment methods
+     * <p>
+     * If payment method is VNPAY:
+     * - Redirect to /vnpay-payment to create payment link
+     * If payment method is COD:
+     * - Process order normally (existing logic)
+     */
     @PostMapping("/confirm")
     public String confirm(
             HttpServletRequest request,
@@ -650,6 +950,12 @@ public class UserController {
             @RequestParam(required = false) String shippingMethod,
             RedirectAttributes redirectAttributes) {
 
+        // If VNPAY payment method selected, redirect to VNPay endpoint
+        if ("VNPAY".equals(paymentMethod)) {
+            return vnpayPayment(request, redirectAttributes);
+        }
+
+        // Handle COD (Cash On Delivery) payment
         try {
             User user = userService.getCurrentUser(request);
             List<CartItem> cartItems = cartItemService.getCartItems(user);
@@ -666,7 +972,7 @@ public class UserController {
             }
 
             if (selectedItems == null || selectedItems.length == 0) {
-                redirectAttributes.addFlashAttribute("error", "You haven't selected any products!");
+                redirectAttributes.addFlashAttribute("error", "Please select at least one product!");
                 return "redirect:/view-cart";
             }
 
@@ -709,11 +1015,11 @@ public class UserController {
                 model.addAttribute("addressValue", address);
 
                 String errorMsg = e.getMessage();
-                if (errorMsg.contains("Full name") || errorMsg.contains("name")) {
+                if (errorMsg.contains("name")) {
                     model.addAttribute("fullnameError", errorMsg);
-                } else if (errorMsg.contains("Phone") || errorMsg.contains("phone")) {
+                } else if (errorMsg.contains("phone")) {
                     model.addAttribute("phoneError", errorMsg);
-                } else if (errorMsg.contains("Address") || errorMsg.contains("address")) {
+                } else if (errorMsg.contains("address")) {
                     model.addAttribute("addressError", errorMsg);
                 }
 
@@ -722,7 +1028,6 @@ public class UserController {
             }
 
             List<CartItem> selectedCartItems = new ArrayList<>();
-            List<Integer> cartItemIds = new ArrayList<>();
             for (String selectedId : selectedItems) {
                 Integer bookId = Integer.valueOf(selectedId);
                 for (CartItem item : cartItems) {
@@ -735,27 +1040,13 @@ public class UserController {
                             return "redirect:/purchase";
                         }
 
-                        if (book.getNumber_in_stock() == 0) {
-                            request.getSession().setAttribute("selectedItems", selectedItems);
-                            redirectAttributes.addFlashAttribute("error",
-                                    "Book '" + book.getTitle() + "' is out of stock!");
-                            return "redirect:/purchase";
-                        }
-
-                        if (book.getNumber_in_stock() < item.getQuantity()) {
-                            request.getSession().setAttribute("selectedItems", selectedItems);
-                            redirectAttributes.addFlashAttribute("error",
-                                    "Book '" + book.getTitle() + "' only has " +
-                                            book.getNumber_in_stock() + " copies left!");
-                            return "redirect:/purchase";
-                        }
-
                         selectedCartItems.add(item);
-                        cartItemIds.add(item.getId());
                         break;
                     }
                 }
             }
+
+            Map<Integer, Integer> seriesSetsMap = orderService.detectCompleteSeriesWithSets(selectedCartItems);
 
             try {
                 Order order = orderService.createOrderFromSelectedItems(
@@ -765,7 +1056,8 @@ public class UserController {
                         address,
                         promotionCode,
                         paymentMethod,
-                        normalizedMethod
+                        normalizedMethod,
+                        seriesSetsMap
                 );
 
                 order = orderService.save(order);
@@ -796,8 +1088,7 @@ public class UserController {
             } catch (Exception e) {
                 e.printStackTrace();
                 request.getSession().setAttribute("selectedItems", selectedItems);
-                redirectAttributes.addFlashAttribute("error",
-                        "Error processing order: " + e.getMessage());
+                redirectAttributes.addFlashAttribute("error", "Error processing order: " + e.getMessage());
                 return "redirect:/purchase";
             }
         } catch (Exception e) {
@@ -973,7 +1264,7 @@ public class UserController {
 
             orderService.requestCancelOrder(id);
             redirectAttributes.addFlashAttribute("success",
-                    "Cancel request submitted successfully! Waiting for admin review.");
+                    "Cancel request submitted successfully!");
 
         } catch (IllegalStateException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());

@@ -94,7 +94,7 @@
         .form-group input:focus {
             outline: none;
             border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52,152,219,0.1);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
         }
 
         .alert {
@@ -111,7 +111,7 @@
             border-color: #f5b7b1;
         }
 
-       .btn-login {
+        .btn-login {
             width: 100%;
             padding: 9px;
             background: linear-gradient(135deg, #1e90ff 0%, #0066cc 100%);
@@ -123,12 +123,12 @@
             cursor: pointer;
             transition: all 0.3s;
             margin: 5px 0;
-            box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
         }
 
         .btn-login:hover {
             transform: translateY(-1px);
-            box-shadow: 0 5px 10px rgba(0,0,0,0.15);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
         }
 
         .btn-login:active {
@@ -263,7 +263,7 @@
         <div class="container">
             <div class="row">
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                    <strong class="tg-logo"><a th:href="@{/}"><img src="images/logo.png"
+                    <strong class="tg-logo"><a th:href="@{/}"><img src="images/logoSWP.png"
                                                                    alt="Book Library"></a></strong>
                     <div class="tg-wishlistandcart">
                         <div sec:authorize="hasRole('USER')" class="dropdown tg-themedropdown tg-minicartdropdown">
@@ -301,13 +301,54 @@
                                 <li><a th:href="@{/}">Home</a></li>
                                 <li><a th:href="@{/products}" sec:authorize="!hasRole('ADMIN')">Books</a></li>
                                 <li><a th:href="@{/manage-product}" sec:authorize="hasRole('ADMIN')">Books</a></li>
+                                <li class="menu-item-has-children menu-item-has-mega-menu"
+                                    sec:authorize="!hasRole('ADMIN')">
+                                    <a href="javascript:void(0);">All Categories</a>
+                                    <div class="mega-menu tg-category-mega-menu">
+                                        <ul class="tg-themetabnav" role="tablist">
+                                            <li th:each="entry, iterStat : ${categoryHierarchy}"
+                                                th:class="${iterStat.index == 0 ? 'active' : ''}"
+                                                role="presentation">
+                                                <a th:href="'#cat' + ${entry.key.id}" role="tab" data-toggle="tab"
+                                                   th:text="${entry.key.name}">Root Category</a>
+                                            </li>
+                                        </ul>
+                                        <div class="tab-content tg-themetabcontent">
+                                            <div th:each="entry, iterStat : ${categoryHierarchy}"
+                                                 th:id="|cat${entry.key.id}|" role="tabpanel"
+                                                 th:class="${iterStat.index == 0 ? 'tab-pane active' : 'tab-pane'}">
+                                                <ul class="tg-level1-container">
+                                                    <li th:each="level1 : ${entry.value}">
+                                                        <div class="tg-linkstitle"><h2 th:text="${level1.name}">
+                                                            Level 1</h2></div>
+                                                        <ul th:if="${level1.children != null}">
+                                                            <li th:each="level2 : ${level1.children}">
+                                                                <a th:href="@{/products(categoryId=${level2.id})}"
+                                                                   th:text="${level2.name}">Level 2</a>
+                                                                <ul th:if="${level2.children != null}">
+                                                                    <li th:each="level3 : ${level2.children}">
+                                                                        <a th:href="@{/products(categoryId=${level3.id})}"
+                                                                           th:text="${level3.name}">Level 3</a>
+                                                                    </li>
+                                                                </ul>
+                                                            </li>
+                                                        </ul>
+                                                        <a class="tg-btnviewall"
+                                                           th:href="@{/products(categoryId=${level1.id})}">View
+                                                            All</a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
                                 <li><a th:href="@{/manage-category}" sec:authorize="hasRole('ADMIN')">Categories</a>
                                 </li>
                                 <li><a th:href="@{/manage-author}" sec:authorize="hasRole('ADMIN')">Authors</a></li>
                                 <li><a th:href="@{/manage-user}" sec:authorize="hasRole('ADMIN')">Users</a></li>
                                 <li><a th:href="@{/manage-order}" sec:authorize="hasRole('ADMIN')">Orders</a></li>
-                                <li><a th:href="@{/manage-promotion}" sec:authorize="hasRole('ADMIN')">Promotions</a>
-                                </li>
+                                <li><a th:href="@{/manage-promotion}"
+                                       sec:authorize="hasRole('ADMIN')">Promotions</a></li>
                                 <li><a th:href="@{/statistic}" sec:authorize="hasRole('ADMIN')">Statistics</a></li>
                             </ul>
                         </div>
@@ -324,11 +365,16 @@
         <p>Sign in to your account</p>
     </div>
 
-    <div th:if="${error} != null" class='alert alert-danger' role="alert">
-        <span>Invalid username or password</span>
+    <!-- Sai username/password -->
+    <div th:if="${param.error}" class="alert alert-danger">
+        Invalid username or password!
     </div>
 
-    <form th:action="@{/j_spring_security_check}" method="POST">
+    <!-- Account bị khóa -->
+    <div th:if="${param.locked}" class="alert alert-warning">
+        Your account has been deactivated. Please contact support.
+    </div>
+    <form th:action="@{/login}" method="POST">
         <div class="form-group">
             <label for="username">Username</label>
             <input type="text" id="username" name="username" required>
@@ -472,7 +518,7 @@
 
 <div style="display: none" id="message" th:data-message="${message}"></div>
 <script th:if="${message != null}">
-    $(document).ready(function() {
+    $(document).ready(function () {
         var messageElement = document.getElementById('message');
         var message = messageElement.getAttribute('data-message');
         Swal.fire({

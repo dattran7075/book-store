@@ -1,6 +1,7 @@
 package com.thunga.web.service;
 
 import com.thunga.web.entity.Account;
+import com.thunga.web.entity.Order;
 import com.thunga.web.entity.User;
 import com.thunga.web.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -127,8 +128,18 @@ public class UserService {
 
     @Transactional
     public void delete(User user) {
-        Account account = user.getAccount();
-        userRepository.delete(user);
+        User managedUser = userRepository.findById(user.getId()).orElse(null);
+        if (managedUser == null) return;
+
+        Account account = managedUser.getAccount();
+
+        if (account != null) {
+            account.setUser(null);
+        }
+        managedUser.setAccount(null);
+
+        userRepository.deleteById(managedUser.getId());
+
         if (account != null) {
             accountService.delete(account);
         }
@@ -139,5 +150,31 @@ public class UserService {
         if (sortBy != null) paging = PageRequest.of(page, limit, Sort.by(sortBy));
         Page<User> users = userRepository.findAll(paging);
         return users;
+    }
+
+    /**
+     * Count active orders for a user (Pending, Approved, In Delivery)
+     */
+    public int countActiveOrders(User user) {
+        if (user == null || user.getOrderList() == null) {
+            return 0;
+        }
+
+        int count = 0;
+        for (Order order : user.getOrderList()) {
+            String status = order.getStatus();
+            if ("Pending".equals(status) || "Approved".equals(status) ||
+                    "In Delivery".equals(status)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Check if user can be deactivated (no active orders)
+     */
+    public boolean canDeactivateUser(User user) {
+        return countActiveOrders(user) == 0;
     }
 }

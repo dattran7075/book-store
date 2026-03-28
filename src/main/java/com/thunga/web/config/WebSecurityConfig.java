@@ -72,21 +72,29 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/staff/**")
                 .access("hasRole('STAFF')");
 
+
         // ============================================================
-        // LOGIN/LOGOUT CONFIGURATION
+        // LOGIN CONFIGURATION
         // ============================================================
-        http.authorizeRequests()
-                .and()
-                .formLogin()
-                .loginProcessingUrl("/j_spring_security_check")
+        http.formLogin(form -> form
                 .loginPage("/login")
-                .defaultSuccessUrl("/")
-                .failureUrl("/login?error=true")
                 .usernameParameter("username")
-                .passwordParameter("password")
-                .and()
-                .logout()
+                .defaultSuccessUrl("/", true)
+                .failureUrl("/login?error=true")
+                .permitAll()
+        );
+
+        // ============================================================
+        // LOGOUT CONFIGURATION
+        // ============================================================
+        http.logout(logout -> logout
                 .logoutUrl("/logout")
-                .logoutSuccessUrl("/");
+                .logoutSuccessUrl("/")
+                .invalidateHttpSession(true)
+                .deleteCookies("JSESSIONID")
+                .clearAuthentication(true)
+                .permitAll()
+        );
     }
+
 }

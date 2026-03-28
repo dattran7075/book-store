@@ -15,9 +15,7 @@ import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
-import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,10 +37,6 @@ public class AdminService {
 
     @Autowired
     private AccountService accountService;
-
-    private Map<String, String> otpStorage = new ConcurrentHashMap<>();
-    private Map<String, LocalDateTime> otpExpiryStorage = new ConcurrentHashMap<>();
-    private static final int OTP_EXPIRY_MINUTES = 5;
 
     private EmailValidator emailValidator = EmailValidator.getInstance();
 
@@ -328,35 +322,5 @@ public class AdminService {
         }
 
         return admin;
-    }
-
-    public String generateAndSendOTP(String email) {
-        Random random = new Random();
-        String otp = String.format("%06d", random.nextInt(1000000));
-        LocalDateTime expiryTime = LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES);
-        otpStorage.put(email, otp);
-        otpExpiryStorage.put(email, expiryTime);
-        emailService.sendOTPEmail(email, otp);
-        return otp;
-    }
-
-    public boolean verifyOTP(String email, String inputOtp) {
-        String storedOtp = otpStorage.get(email);
-        LocalDateTime expiryTime = otpExpiryStorage.get(email);
-
-        if (storedOtp == null || expiryTime == null) {
-            return false;
-        }
-        if (LocalDateTime.now().isAfter(expiryTime)) {
-            otpStorage.remove(email);
-            otpExpiryStorage.remove(email);
-            return false;
-        }
-        if (storedOtp.equals(inputOtp)) {
-            otpStorage.remove(email);
-            otpExpiryStorage.remove(email);
-            return true;
-        }
-        return false;
     }
 }

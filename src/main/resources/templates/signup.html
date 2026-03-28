@@ -63,8 +63,12 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
         }
 
         @keyframes slideIn {
@@ -104,7 +108,7 @@
             font-weight: bold;
         }
 
-        /* OTP Container - FIX: Nằm ngang trong popup với sizing tối ưu */
+        /* OTP Container */
         .otp-container {
             display: flex;
             justify-content: center;
@@ -149,18 +153,41 @@
             cursor: not-allowed;
         }
 
-        /* Countdown Timer */
+        /* OTP Error Display */
+        #otpError {
+            color: #d9534f;
+            font-size: 13px;
+            margin: 10px 0;
+            min-height: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        #otpError.hidden {
+            display: none;
+        }
+
+        /* Countdown Timer - HIDDEN BY DEFAULT */
         .otp-timer {
             text-align: center;
             color: #666;
             font-size: 14px;
             margin: 15px 0;
+            display: none; /* Hidden by default */
+        }
+
+        .otp-timer.show {
+            display: block;
         }
 
         .otp-timer span {
             font-weight: bold;
-            color: #17c77e;
+            color: #ff9800;
             font-size: 16px;
+        }
+
+        .otp-timer.expired {
+            color: #d9534f;
         }
 
         .otp-timer.expired span {
@@ -193,6 +220,14 @@
             color: #ccc;
             cursor: not-allowed;
             text-decoration: none;
+        }
+
+        /* Cooldown Timer for Resend Button */
+        .resend-cooldown {
+            display: inline-block;
+            margin-left: 5px;
+            color: #999;
+            font-weight: bold;
         }
 
         /* Modal Buttons */
@@ -243,8 +278,12 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         /* Responsive cho tablet */
@@ -291,6 +330,10 @@
             .otp-modal-content > p:first-of-type {
                 font-size: 12px;
             }
+        }
+
+        .section {
+            margin: 10px 0;
         }
     </style>
 </head>
@@ -340,8 +383,8 @@
         <div class="container">
             <div class="row">
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                    <strong class="tg-logo"><a href="index-2.html"><img src="images/logo.png"
-                                                                        alt="company name here"></a></strong>
+                    <strong class="tg-logo"><a href="/"><img src="images/logoSWP.png"
+                                                             alt="company name here"></a></strong>
                     <div class="tg-wishlistandcart">
                         <div sec:authorize="hasRole('USER')" class="dropdown tg-themedropdown tg-minicartdropdown">
                             <a id="tg-minicart" class="tg-btnthemedropdown" data-toggle="dropdown"
@@ -378,13 +421,54 @@
                                 <li><a th:href="@{/}">Home</a></li>
                                 <li><a th:href="@{/products}" sec:authorize="!hasRole('ADMIN')">Books</a></li>
                                 <li><a th:href="@{/manage-product}" sec:authorize="hasRole('ADMIN')">Books</a></li>
+                                <li class="menu-item-has-children menu-item-has-mega-menu"
+                                    sec:authorize="!hasRole('ADMIN')">
+                                    <a href="javascript:void(0);">All Categories</a>
+                                    <div class="mega-menu tg-category-mega-menu">
+                                        <ul class="tg-themetabnav" role="tablist">
+                                            <li th:each="entry, iterStat : ${categoryHierarchy}"
+                                                th:class="${iterStat.index == 0 ? 'active' : ''}"
+                                                role="presentation">
+                                                <a th:href="'#cat' + ${entry.key.id}" role="tab" data-toggle="tab"
+                                                   th:text="${entry.key.name}">Root Category</a>
+                                            </li>
+                                        </ul>
+                                        <div class="tab-content tg-themetabcontent">
+                                            <div th:each="entry, iterStat : ${categoryHierarchy}"
+                                                 th:id="|cat${entry.key.id}|" role="tabpanel"
+                                                 th:class="${iterStat.index == 0 ? 'tab-pane active' : 'tab-pane'}">
+                                                <ul class="tg-level1-container">
+                                                    <li th:each="level1 : ${entry.value}">
+                                                        <div class="tg-linkstitle"><h2 th:text="${level1.name}">
+                                                            Level 1</h2></div>
+                                                        <ul th:if="${level1.children != null}">
+                                                            <li th:each="level2 : ${level1.children}">
+                                                                <a th:href="@{/products(categoryId=${level2.id})}"
+                                                                   th:text="${level2.name}">Level 2</a>
+                                                                <ul th:if="${level2.children != null}">
+                                                                    <li th:each="level3 : ${level2.children}">
+                                                                        <a th:href="@{/products(categoryId=${level3.id})}"
+                                                                           th:text="${level3.name}">Level 3</a>
+                                                                    </li>
+                                                                </ul>
+                                                            </li>
+                                                        </ul>
+                                                        <a class="tg-btnviewall"
+                                                           th:href="@{/products(categoryId=${level1.id})}">View
+                                                            All</a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
                                 <li><a th:href="@{/manage-category}" sec:authorize="hasRole('ADMIN')">Categories</a>
                                 </li>
                                 <li><a th:href="@{/manage-author}" sec:authorize="hasRole('ADMIN')">Authors</a></li>
                                 <li><a th:href="@{/manage-user}" sec:authorize="hasRole('ADMIN')">Users</a></li>
                                 <li><a th:href="@{/manage-order}" sec:authorize="hasRole('ADMIN')">Orders</a></li>
-                                <li><a th:href="@{/manage-promotion}" sec:authorize="hasRole('ADMIN')">Promotions</a>
-                                </li>
+                                <li><a th:href="@{/manage-promotion}"
+                                       sec:authorize="hasRole('ADMIN')">Promotions</a></li>
                                 <li><a th:href="@{/statistic}" sec:authorize="hasRole('ADMIN')">Statistics</a></li>
                             </ul>
                         </div>
@@ -396,8 +480,6 @@
 </header>
 
 <center>
-    <div class="section"></div>
-
     <div class="section">
         <h3>SIGN UP</h3>
     </div>
@@ -408,77 +490,68 @@
             <!-- STEP 1: SIGNUP FORM -->
             <div id="signupFormStep">
                 <form id="signupForm" class="col">
-                    <div class='row'>
-                        <div th:if="${error != null}" class='col s12 alert alert-danger' role="alert">
-                            Signup error
-                        </div>
-                    </div>
 
                     <div class='row'>
                         <div class='input-field col'>
+                            <label for='fullname'>Full name</label>
                             <input type='text' name='fullName' id='fullname'
-                                   th:value="${fullName}"
                                    style="text-transform: none;" required/>
                             <div class="error" style="color: red;">
                                 <span class="form-error" id="fullNameError"></span>
                             </div>
-                            <label for='fullname'>Full name</label>
                         </div>
                     </div>
 
                     <div class='row'>
                         <div class='input-field col'>
+                            <label for='username'>Username</label>
                             <input type='text' name='userName' id='username'
-                                   th:value="${userName}"
                                    style="text-transform: none;" required/>
                             <div class="error" style="color: red;">
                                 <span class="form-error" id="userNameError"></span>
                             </div>
-                            <label for='username'>Username</label>
                         </div>
                     </div>
 
                     <div class='row'>
                         <div class='input-field col'>
+                            <label for='address'>Address</label>
                             <input type='text' name='address' id='address'
-                                   th:value="${address}"
                                    style="text-transform: none;" required/>
                             <div class="error" style="color: red;">
                                 <span class="form-error" id="addressError"></span>
                             </div>
-                            <label for='address'>Address</label>
                         </div>
                     </div>
 
                     <div class='row'>
                         <div class='input-field col'>
+                            <label for='email'>Email</label>
                             <input type='email' name='email' id='email'
-                                   th:value="${email}"
                                    style="text-transform: none;" required/>
                             <div class="error" style="color: red;">
                                 <span class="form-error" id="emailError"></span>
                             </div>
-                            <label for='email'>Email</label>
                         </div>
                     </div>
 
                     <div class='row'>
                         <div class='input-field col'>
+                            <label for='password'>Password</label>
                             <input type='password' name='password' id='password' required/>
                             <div class="error" style="color: red;">
                                 <span class="form-error" id="passwordError"></span>
                             </div>
-                            <label for='password'>Password</label>
                         </div>
                     </div>
 
                     <div class='row'>
                         <div class='input-field col'>
+                            <label for='passwordAgain'>Confirm password</label>
                             <input type='password' name='confirmPassword' id='passwordAgain' required/>
                             <div class="error" style="color: red;">
                                 <span class="form-error" id="confirmPasswordError"></span>
                             </div>
-                            <label for='passwordAgain'>Confirm password</label>
                         </div>
                     </div>
 
@@ -507,20 +580,24 @@
                         <p>We've sent a 6-digit code to <strong id="otpEmailDisplay"></strong></p>
                     </div>
 
-                    <!-- OTP Inputs - Nằm ngang -->
+                    <!-- OTP Inputs -->
                     <div class="otp-container" id="otpContainer"></div>
 
-                    <!-- Countdown Timer -->
-                    <div class="otp-timer">
+                    <!-- OTP Error Message -->
+                    <div id="otpError" class="hidden"></div>
+
+                    <!-- Countdown Timer - HIDDEN BY DEFAULT, only show when < 60s -->
+                    <div class="otp-timer" id="otpTimer">
                         Code expires in: <span id="otpCountdown">5:00</span>
                     </div>
 
                     <!-- Resend Option -->
-                    <div style="text-align: center; margin-top: 15px;">
+                    <div class="resend-section">
                         <p style="font-size: 13px;">Didn't receive the code?
                             <a href="javascript:void(0);" class="resend-otp disabled" id="resendOtpLink">
                                 Resend OTP
                             </a>
+                            <span class="resend-cooldown hidden" id="resendCooldown">(60s)</span>
                         </p>
                     </div>
 
@@ -663,385 +740,488 @@
 <script src="js/gmap3.js"></script>
 <script src="js/main.js"></script>
 
-<!-- OTP Signup Manager -->
+<!-- OTP Signup Manager - IMPROVED VERSION -->
 <script>
     /**
- * Signup OTP Verification Manager
- * Single endpoint: POST /signup-otp with action parameter
- * Actions: "send" | "verify" | "resend"
- * Modal popup for OTP verification
- */
+     * Signup OTP Verification Manager - IMPROVED
+     *
+     * IMPROVEMENTS:
+     * 1. ẨN COUNTDOWN mặc định - chỉ hiện khi còn < 60s
+     * 2. Khi hết hạn → hiện message rõ ràng: "Code expired. Please request a new one."
+     * 3. Logic xử lý OTP tương tự forgot password
+     * 4. Auto-focus, paste handling, validation rõ ràng
+     */
 
-const SignupOTPManager = (function() {
-    'use strict';
+    const SignupOTPManager = (function () {
+        'use strict';
 
-    // ============ PRIVATE PROPERTIES ============
-    let formData = {};
-    let countdownTimer = null;
-    let timeLeft = 300;
-    const OTP_EXPIRY_SECONDS = 300;
+        // ============ PRIVATE PROPERTIES ============
+        let formData = {};
+        let countdownTimer = null;
+        let timeLeft = 300;
+        const OTP_EXPIRY_SECONDS = 300;
+        const WARNING_THRESHOLD = 60;
 
-    // ============ DOM SELECTORS ============
-    const elements = {
-        signupForm: '#signupForm',
-        fullNameInput: '#fullname',
-        userNameInput: '#username',
-        addressInput: '#address',
-        emailInput: '#email',
-        passwordInput: '#password',
-        confirmPasswordInput: '#passwordAgain',
+        // Resend cooldown
+        let resendCooldownTimer = null;
+        let resendCooldownLeft = 0;
+        const RESEND_COOLDOWN_SECONDS = 60;
 
-        signupFormStep: '#signupFormStep',
-        otpVerificationStep: '#otpVerificationStep',
+        // ============ DOM SELECTORS ============
+        const elements = {
+            signupForm: '#signupForm',
+            fullNameInput: '#fullname',
+            userNameInput: '#username',
+            addressInput: '#address',
+            emailInput: '#email',
+            passwordInput: '#password',
+            confirmPasswordInput: '#passwordAgain',
 
-        otpContainer: '#otpContainer',
-        otpEmailDisplay: '#otpEmailDisplay',
-        otpCountdown: '#otpCountdown',
+            signupFormStep: '#signupFormStep',
+            otpVerificationStep: '#otpVerificationStep',
 
-        sendOtpBtn: '#sendOtpBtn',
-        verifyOtpBtn: '#verifyOtpBtn',
-        backToFormBtn: '#backToFormBtn',
-        resendOtpLink: '#resendOtpLink',
+            otpContainer: '#otpContainer',
+            otpEmailDisplay: '#otpEmailDisplay',
+            otpTimer: '#otpTimer',
+            otpCountdown: '#otpCountdown',
+            otpError: '#otpError',
 
-        fullNameError: '#fullNameError',
-        userNameError: '#userNameError',
-        addressError: '#addressError',
-        emailError: '#emailError',
-        passwordError: '#passwordError',
-        confirmPasswordError: '#confirmPasswordError'
-    };
+            sendOtpBtn: '#sendOtpBtn',
+            verifyOtpBtn: '#verifyOtpBtn',
+            backToFormBtn: '#backToFormBtn',
+            resendOtpLink: '#resendOtpLink',
+            resendCooldown: '#resendCooldown',
 
-    // ============ HELPER FUNCTIONS ============
-
-    function getFormData() {
-        return {
-            userName: $(elements.userNameInput).val().trim(),
-            password: $(elements.passwordInput).val(),
-            confirmPassword: $(elements.confirmPasswordInput).val(),
-            fullName: $(elements.fullNameInput).val().trim(),
-            email: $(elements.emailInput).val().trim(),
-            address: $(elements.addressInput).val().trim()
+            fullNameError: '#fullNameError',
+            userNameError: '#userNameError',
+            addressError: '#addressError',
+            emailError: '#emailError',
+            passwordError: '#passwordError',
+            confirmPasswordError: '#confirmPasswordError'
         };
-    }
 
-    function clearErrors() {
-        Object.keys(elements).forEach(function(key) {
-            if (key.includes('Error')) {
-                $(elements[key]).text('');
-            }
-        });
-    }
+        // ============ HELPER FUNCTIONS ============
 
-    function displayErrors(errors) {
-        clearErrors();
-        Object.keys(errors).forEach(function(field) {
-            const errorSelector = '#' + field + 'Error';
-            $(errorSelector).text(errors[field]);
-        });
-    }
-
-    function getOTPValue() {
-        let otp = '';
-        $(elements.otpContainer + ' .otp-input').each(function() {
-            otp += $(this).val();
-        });
-        return otp;
-    }
-
-    function clearOtpInputs() {
-        $(elements.otpContainer + ' .otp-input').each(function() {
-            $(this).val('');
-        });
-        $(elements.otpContainer + ' .otp-input').first().focus();
-    }
-
-    function formatCountdown(seconds) {
-        const minutes = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return minutes + ':' + (secs < 10 ? '0' : '') + secs;
-    }
-
-    // ============ OTP INPUT HANDLERS ============
-
-    function createOtpInputs() {
-        const container = $(elements.otpContainer);
-        container.empty();
-
-        for (let i = 0; i < 6; i++) {
-            const input = $('<input>', {
-                type: 'text',
-                class: 'otp-input',
-                maxlength: 1,
-                'data-index': i,
-                inputmode: 'numeric',
-                placeholder: '•'
-            });
-            container.append(input);
+        function getFormData() {
+            return {
+                userName: $(elements.userNameInput).val().trim(),
+                password: $(elements.passwordInput).val(),
+                confirmPassword: $(elements.confirmPasswordInput).val(),
+                fullName: $(elements.fullNameInput).val().trim(),
+                email: $(elements.emailInput).val().trim(),
+                address: $(elements.addressInput).val().trim()
+            };
         }
 
-        setupOtpInputHandlers();
-    }
-
-    function setupOtpInputHandlers() {
-        const inputs = $(elements.otpContainer + ' .otp-input');
-
-        inputs.on('input', function() {
-            const val = this.value.replace(/[^0-9]/g, '');
-            this.value = val;
-
-            if (val.length === 1) {
-                const index = parseInt($(this).data('index'));
-                if (index < 5) {
-                    inputs.eq(index + 1).focus();
+        function clearErrors() {
+            Object.keys(elements).forEach(function (key) {
+                if (key.includes('Error')) {
+                    $(elements[key]).text('');
                 }
-            }
-        });
-
-        inputs.on('keydown', function(e) {
-            if (e.keyCode === 8 && !this.value) {
-                const index = parseInt($(this).data('index'));
-                if (index > 0) {
-                    inputs.eq(index - 1).focus();
-                }
-            }
-        });
-
-        inputs.first().on('paste', function(e) {
-            e.preventDefault();
-            const pastedData = (e.originalEvent || e).clipboardData.getData('text');
-            const digits = pastedData.replace(/[^0-9]/g, '').slice(0, 6);
-
-            inputs.each(function(index) {
-                $(this).val(digits[index] || '');
             });
-
-            if (digits.length === 6) {
-                inputs.eq(5).focus();
-            }
-        });
-    }
-
-    // ============ COUNTDOWN TIMER ============
-
-    function startCountdown() {
-        timeLeft = OTP_EXPIRY_SECONDS;
-        $(elements.resendOtpLink).addClass('disabled');
-
-        if (countdownTimer) {
-            clearInterval(countdownTimer);
         }
 
-        countdownTimer = setInterval(function() {
-            timeLeft--;
-            $(elements.otpCountdown).text(formatCountdown(timeLeft));
-
-            if (timeLeft === 0) {
-                stopCountdown();
-                $(elements.otpCountdown).text('Expired');
-                $(elements.resendOtpLink).removeClass('disabled');
-            }
-        }, 1000);
-    }
-
-    function stopCountdown() {
-        if (countdownTimer) {
-            clearInterval(countdownTimer);
-            countdownTimer = null;
+        function displayErrors(errors) {
+            clearErrors();
+            Object.keys(errors).forEach(function (field) {
+                const errorSelector = '#' + field + 'Error';
+                $(errorSelector).text(errors[field]);
+            });
         }
-    }
 
-    // ============ API CALL (SINGLE ENDPOINT) ============
+        function getOTPValue() {
+            let otp = '';
+            $(elements.otpContainer + ' .otp-input').each(function () {
+                otp += $(this).val();
+            });
+            return otp;
+        }
 
-    function callSignupOTP(action, data) {
-        const payload = Object.assign({ action: action }, data);
+        function clearOtpInputs() {
+            $(elements.otpContainer + ' .otp-input').each(function () {
+                $(this).val('');
+            });
+            $(elements.otpContainer + ' .otp-input').first().focus();
+        }
 
-        return $.ajax({
-            url: '/signup-otp',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(payload),
-            timeout: 10000
-        });
-    }
+        function formatCountdown(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return minutes + ':' + (secs < 10 ? '0' : '') + secs;
+        }
 
-    // ============ FORM FLOW HANDLERS ============
+        function showOtpError(message) {
+            $(elements.otpError).text(message).removeClass('hidden');
+        }
 
-    function handleFormSubmit(e) {
-        e.preventDefault();
+        function clearOtpError() {
+            $(elements.otpError).text('').addClass('hidden');
+        }
 
-        clearErrors();
-        formData = getFormData();
+        // ============ OTP INPUT HANDLERS ============
 
-        const $sendBtn = $(elements.sendOtpBtn);
-        $sendBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
+        function createOtpInputs() {
+            const container = $(elements.otpContainer);
+            container.empty();
 
-        callSignupOTP('send', formData)
-            .done(function(response) {
-                if (response.success) {
-                    showOtpForm();
-                    showSuccessAlert('OTP Sent!', 'Please check your email for the verification code.', 2000);
-                } else {
-                    if (response.errors) {
-                        displayErrors(response.errors);
-                    } else {
-                        showErrorAlert('Error', response.message);
+            for (let i = 0; i < 6; i++) {
+                const input = $('<input>', {
+                    type: 'text',
+                    class: 'otp-input',
+                    maxlength: 1,
+                    'data-index': i,
+                    inputmode: 'numeric',
+                    placeholder: '•'
+                });
+                container.append(input);
+            }
+
+            setupOtpInputHandlers();
+        }
+
+        function setupOtpInputHandlers() {
+            const inputs = $(elements.otpContainer + ' .otp-input');
+
+            // Handle input
+            inputs.on('input', function () {
+                const val = this.value.replace(/[^0-9]/g, '');
+                this.value = val;
+
+                // Clear error when user starts typing
+                if (val.length > 0) {
+                    clearOtpError();
+                }
+
+                // Auto-focus to next input
+                if (val.length === 1) {
+                    const index = parseInt($(this).data('index'));
+                    if (index < 5) {
+                        inputs.eq(index + 1).focus();
                     }
                 }
-            })
-            .fail(function(jqXHR, textStatus, errorThrown) {
-                const errorMsg = textStatus === 'timeout'
-                    ? 'Request timeout. Please try again.'
-                    : 'Failed to send OTP. Please try again.';
-                showErrorAlert('Error', errorMsg);
-            })
-            .always(function() {
-                $sendBtn.prop('disabled', false).html('Send OTP');
             });
-    }
 
-    function handleOtpVerification() {
-        const otp = getOTPValue();
-
-        if (otp.length !== 6) {
-            showErrorAlert('Error', 'Please enter all 6 digits.');
-            return;
-        }
-
-        const $verifyBtn = $(elements.verifyOtpBtn);
-        $verifyBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Verifying...');
-
-        callSignupOTP('verify', {
-            email: formData.email,
-            otp: otp
-        })
-            .done(function(response) {
-                if (response.success) {
-                    stopCountdown();
-                    showSuccessAlert('Success!', 'Registration successful! Redirecting to login...', 2000);
-
-                    setTimeout(function() {
-                        window.location.href = response.redirect || '/login';
-                    }, 2000);
-                } else {
-                    showErrorAlert('Error', response.message);
-                    clearOtpInputs();
+            // Handle backspace
+            inputs.on('keydown', function (e) {
+                if (e.keyCode === 8 && !this.value) {
+                    const index = parseInt($(this).data('index'));
+                    if (index > 0) {
+                        inputs.eq(index - 1).focus();
+                    }
                 }
-            })
-            .fail(function(jqXHR, textStatus, errorThrown) {
-                const errorMsg = textStatus === 'timeout'
-                    ? 'Request timeout. Please try again.'
-                    : 'An error occurred. Please try again.';
-                showErrorAlert('Error', errorMsg);
-            })
-            .always(function() {
-                $verifyBtn.prop('disabled', false).text('Verify & Create Account');
             });
-    }
 
-    function showOtpForm() {
-        $(elements.signupFormStep).hide();
-        $(elements.otpVerificationStep).addClass('show');
-        $(elements.otpEmailDisplay).text(formData.email);
-
-        createOtpInputs();
-        startCountdown();
-
-        setTimeout(function() {
-            $(elements.otpContainer + ' .otp-input').first().focus();
-        }, 100);
-    }
-
-    function backToForm() {
-        stopCountdown();
-        $(elements.otpVerificationStep).removeClass('show');
-        $(elements.signupFormStep).show();
-        clearOtpInputs();
-    }
-
-    function handleResendOTP() {
-        $(elements.resendOtpLink).addClass('disabled');
-
-        callSignupOTP('resend', {
-            email: formData.email
-        })
-            .done(function(response) {
-                if (response.success) {
-                    showSuccessAlert('OTP Resent!', 'A new code has been sent to your email.', 2000);
-                    stopCountdown();
-                    startCountdown();
-                    clearOtpInputs();
-                } else {
-                    showErrorAlert('Error', response.message);
-                }
-            })
-            .fail(function() {
-                showErrorAlert('Error', 'Failed to resend OTP. Please try again.');
-            });
-    }
-
-    // ============ ALERT NOTIFICATIONS ============
-
-    function showSuccessAlert(title, message, timer) {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                icon: 'success',
-                title: title,
-                text: message,
-                timer: timer || 2000,
-                showConfirmButton: false
-            });
-        } else {
-            alert(title + '\n' + message);
-        }
-    }
-
-    function showErrorAlert(title, message) {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                icon: 'error',
-                title: title,
-                text: message
-            });
-        } else {
-            alert(title + '\n' + message);
-        }
-    }
-
-    // ============ PUBLIC API ============
-
-    return {
-        init: function() {
-            $(elements.signupForm).on('submit', handleFormSubmit);
-            $(elements.verifyOtpBtn).on('click', handleOtpVerification);
-            $(elements.backToFormBtn).on('click', backToForm);
-            $(elements.resendOtpLink).on('click', function(e) {
+            // Handle paste
+            inputs.first().on('paste', function (e) {
                 e.preventDefault();
-                if (!$(this).hasClass('disabled')) {
-                    handleResendOTP();
+                const pastedData = (e.originalEvent || e).clipboardData.getData('text');
+                const digits = pastedData.replace(/[^0-9]/g, '').slice(0, 6);
+
+                inputs.each(function (index) {
+                    $(this).val(digits[index] || '');
+                });
+
+                if (digits.length === 6) {
+                    inputs.eq(5).focus();
+                    clearOtpError();
                 }
             });
-
-            console.log('SignupOTPManager initialized');
-        },
-
-        destroy: function() {
-            stopCountdown();
-            $(elements.signupForm).off('submit');
-            $(elements.verifyOtpBtn).off('click');
-            $(elements.backToFormBtn).off('click');
-            $(elements.resendOtpLink).off('click');
-        },
-
-        getFormData: function() {
-            return Object.assign({}, formData);
         }
-    };
-})();
 
-// Auto init on document ready
-$(document).ready(function() {
-    SignupOTPManager.init();
-});
+        // ============ COUNTDOWN TIMER - IMPROVED ============
+
+        function startCountdown() {
+            timeLeft = OTP_EXPIRY_SECONDS;
+
+            // HIDE timer initially
+            $(elements.otpTimer).removeClass('show').removeClass('expired');
+            $(elements.otpCountdown).css('color', '#ff9800');
+
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+            }
+
+            countdownTimer = setInterval(function () {
+                timeLeft--;
+
+                // Update countdown display
+                $(elements.otpCountdown).text(formatCountdown(timeLeft));
+
+                // SHOW timer only when < 60 seconds (WARNING_THRESHOLD)
+                if (timeLeft <= WARNING_THRESHOLD && timeLeft > 0) {
+                    $(elements.otpTimer).addClass('show');
+                }
+
+                // EXPIRED: Show clear message
+                if (timeLeft === 0) {
+                    stopCountdown();
+                    $(elements.otpTimer).addClass('show expired');
+                    $(elements.otpCountdown).parent().html('<strong style="color: #d9534f;">Code expired. Please request a new one.</strong>');
+                    $(elements.resendOtpLink).removeClass('disabled');
+                }
+            }, 1000);
+
+            // Start resend cooldown after OTP is sent
+            startResendCooldown();
+        }
+
+        function stopCountdown() {
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+        }
+
+        // ============ RESEND COOLDOWN TIMER ============
+
+        function startResendCooldown() {
+            resendCooldownLeft = RESEND_COOLDOWN_SECONDS;
+            $(elements.resendOtpLink).addClass('disabled');
+            $(elements.resendCooldown).removeClass('hidden').text('(' + resendCooldownLeft + 's)');
+
+            if (resendCooldownTimer) {
+                clearInterval(resendCooldownTimer);
+            }
+
+            resendCooldownTimer = setInterval(function () {
+                resendCooldownLeft--;
+                $(elements.resendCooldown).text('(' + resendCooldownLeft + 's)');
+
+                if (resendCooldownLeft === 0) {
+                    stopResendCooldown();
+                }
+            }, 1000);
+        }
+
+        function stopResendCooldown() {
+            if (resendCooldownTimer) {
+                clearInterval(resendCooldownTimer);
+                resendCooldownTimer = null;
+            }
+            $(elements.resendOtpLink).removeClass('disabled');
+            $(elements.resendCooldown).addClass('hidden');
+        }
+
+        // ============ API CALL (SINGLE ENDPOINT) ============
+
+        function callSignupOTP(action, data) {
+            const payload = Object.assign({action: action}, data);
+
+            return $.ajax({
+                url: '/signup-otp',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+                timeout: 10000
+            });
+        }
+
+        // ============ FORM FLOW HANDLERS ============
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            clearErrors();
+            formData = getFormData();
+
+            const $sendBtn = $(elements.sendOtpBtn);
+            $sendBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
+
+            callSignupOTP('send', formData)
+                .done(function (response) {
+                    if (response.success) {
+                        showOtpForm();
+                        showSuccessAlert('OTP Sent!', 'Please check your email for the verification code.', 2000);
+                    } else {
+                        if (response.errors) {
+                            displayErrors(response.errors);
+                        } else {
+                            showErrorAlert('Error', response.message);
+                        }
+                    }
+                })
+                .fail(function (jqXHR, textStatus, errorThrown) {
+                    const errorMsg = textStatus === 'timeout'
+                        ? 'Request timeout. Please try again.'
+                        : 'Failed to send OTP. Please try again.';
+                    showErrorAlert('Error', errorMsg);
+                })
+                .always(function () {
+                    $sendBtn.prop('disabled', false).html('Sign up');
+                });
+        }
+
+        function handleOtpVerification() {
+            const otp = getOTPValue();
+
+            // Validate: Check if OTP length is less than 6
+            if (otp.length === 0) {
+                showOtpError('Please enter the 6-digit OTP code.');
+                return;
+            }
+
+            if (otp.length < 6) {
+                showOtpError('OTP must be exactly 6 digits. You have entered ' + otp.length + ' digits.');
+                return;
+            }
+
+            if (!/^\d{6}$/.test(otp)) {
+                showOtpError('OTP must contain only numbers (0-9).');
+                return;
+            }
+
+            const $verifyBtn = $(elements.verifyOtpBtn);
+            $verifyBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Verifying...');
+
+            callSignupOTP('verify', {
+                email: formData.email,
+                otp: otp
+            })
+                .done(function (response) {
+                    if (response.success) {
+                        stopCountdown();
+                        showSuccessAlert('Success!', 'Registration successful! Redirecting to login...', 2000);
+
+                        setTimeout(function () {
+                            window.location.href = response.redirect || '/login';
+                        }, 2000);
+                    } else {
+                        showOtpError(response.message || 'Invalid or incorrect OTP. Please try again.');
+                        clearOtpInputs();
+                    }
+                })
+                .fail(function (jqXHR, textStatus, errorThrown) {
+                    const errorMsg = textStatus === 'timeout'
+                        ? 'Request timeout. Please try again.'
+                        : 'An error occurred during verification. Please try again.';
+                    showOtpError(errorMsg);
+                })
+                .always(function () {
+                    $verifyBtn.prop('disabled', false).text('Verify & Create Account');
+                });
+        }
+
+        function showOtpForm() {
+            $(elements.signupFormStep).hide();
+            $(elements.otpVerificationStep).addClass('show');
+            $(elements.otpEmailDisplay).text(formData.email);
+
+            createOtpInputs();
+            startCountdown();
+
+            setTimeout(function () {
+                $(elements.otpContainer + ' .otp-input').first().focus();
+            }, 100);
+        }
+
+        function backToForm() {
+            stopCountdown();
+            stopResendCooldown();
+            $(elements.otpVerificationStep).removeClass('show');
+            $(elements.signupFormStep).show();
+            clearOtpInputs();
+            clearOtpError();
+
+            // Reset timer display
+            $(elements.otpTimer).removeClass('show expired');
+            $(elements.otpCountdown).parent().html('Code expires in: <span id="otpCountdown">5:00</span>');
+        }
+
+        function handleResendOTP() {
+            if ($(elements.resendOtpLink).hasClass('disabled')) {
+                return;
+            }
+
+            $(elements.resendOtpLink).addClass('disabled');
+
+            callSignupOTP('resend', {
+                email: formData.email
+            })
+                .done(function (response) {
+                    if (response.success) {
+                        showSuccessAlert('OTP Resent!', 'A new code has been sent to your email.', 2000);
+
+                        // Reset everything
+                        stopCountdown();
+                        clearOtpInputs();
+                        clearOtpError();
+
+                        // Reset timer display
+                        $(elements.otpTimer).removeClass('show expired');
+                        $(elements.otpCountdown).parent().html('Code expires in: <span id="otpCountdown">5:00</span>');
+
+                        // Start new countdown
+                        startCountdown();
+                    } else {
+                        showOtpError(response.message || 'Failed to resend OTP.');
+                        $(elements.resendOtpLink).removeClass('disabled');
+                    }
+                })
+                .fail(function () {
+                    showOtpError('Failed to resend OTP. Please try again.');
+                    $(elements.resendOtpLink).removeClass('disabled');
+                });
+        }
+
+        // ============ ALERT NOTIFICATIONS ============
+
+        function showSuccessAlert(title, message, timer) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: title,
+                    text: message,
+                    timer: timer || 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                alert(title + '\n' + message);
+            }
+        }
+
+        function showErrorAlert(title, message) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: title,
+                    text: message
+                });
+            } else {
+                alert(title + '\n' + message);
+            }
+        }
+
+        // ============ PUBLIC API ============
+
+        return {
+            init: function () {
+                $(elements.signupForm).on('submit', handleFormSubmit);
+                $(elements.verifyOtpBtn).on('click', handleOtpVerification);
+                $(elements.backToFormBtn).on('click', backToForm);
+                $(elements.resendOtpLink).on('click', function (e) {
+                    e.preventDefault();
+                    handleResendOTP();
+                });
+            },
+
+            destroy: function () {
+                stopCountdown();
+                stopResendCooldown();
+                $(elements.signupForm).off('submit');
+                $(elements.verifyOtpBtn).off('click');
+                $(elements.backToFormBtn).off('click');
+                $(elements.resendOtpLink).off('click');
+            },
+
+            getFormData: function () {
+                return Object.assign({}, formData);
+            }
+        };
+    })();
+
+    $(document).ready(function () {
+        SignupOTPManager.init();
+    });
 </script>
 
 </body>

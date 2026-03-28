@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="../css/main.css">
     <link rel="stylesheet" href="../css/color.css">
     <link rel="stylesheet" href="../css/responsive.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <script src="../js/vendor/modernizr-2.8.3-respond-1.4.2.min.js"></script>
 </head>
 <body>
@@ -28,54 +29,190 @@
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
                     <div class="tg-userlogin">
                         <div>
-                            <li style="list-style:none ;" class="menu-item-has-children"
+                            <li style="list-style:none;" class="menu-item-has-children"
                                 sec:authorize="isAuthenticated()">
-                                <a href=""> <i id="user_icon" class="fa fa-user"></i> Welcome <span
-                                        class="sr-only"></span></a>
+                                <a href="">
+                                    <i id="user_icon" class="fa fa-user"></i> Welcome
+                                    <span th:if="${currentUserName != null}" th:text="${currentUserName}"></span>
+                                    <span class="sr-only"></span>
+                                </a>
                                 <div class="mega-menu user">
-                                    <ul class="tg-themetabnav " role="tablist">
-                                        <li><a th:href="@{/profile}">Profile<span class="sr-only">(current)</span></a>
-                                        </li>
-                                        <li><a th:href="@{/orders}" sec:authorize="hasRole('USER')">Orders<span
+                                    <ul class="tg-themetabnav" role="tablist">
+                                        <li><a th:href="@{/profile}">Profile<span
                                                 class="sr-only">(current)</span></a></li>
-                                        <li><a class="tg-userlogout" th:href="@{/logout}">Logout<span class="sr-only">(current)</span></a>
+                                        <li sec:authorize="hasRole('USER')">
+                                            <a th:href="@{/orders}">Orders<span class="sr-only">(current)</span></a>
                                         </li>
+                                        <li><a class="tg-userlogout" th:href="@{/logout}">Logout<span
+                                                class="sr-only">(current)</span></a></li>
                                     </ul>
                                 </div>
                             </li>
+                            <br>
+                            <a class="nav-link text" th:href="@{/signup}" style="margin-right: 30px"
+                               sec:authorize="!isAuthenticated()">Sign up<span class="sr-only">(current)</span></a>
+                            <a class="nav-link text" th:href="@{/login}"
+                               sec:authorize="!isAuthenticated()">Login<span class="sr-only">(current)</span></a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
     <div class="tg-middlecontainer" style="padding: 10px;">
         <div class="container">
             <div class="row">
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                    <strong class="tg-logo"><a href="index-2.html"><img src="images/logo.png"
-                                                                        alt="company name here"></a></strong>
+                    <strong class="tg-logo"><a href="/"><img src="/images/logoSWP.png"
+                                                             alt="company name here"></a></strong>
+
+                    <div class="tg-wishlistandcart">
+                        <div sec:authorize="hasRole('USER')" class="dropdown tg-themedropdown tg-minicartdropdown">
+                            <a id="tg-minicart" class="tg-btnthemedropdown" data-toggle="dropdown"
+                               aria-haspopup="true" aria-expanded="false">
+                                    <span class="tg-themebadge"
+                                          th:text="${cartTotalBooks != null ? cartTotalBooks : 0}"></span>
+                                <a th:href="@{view-cart}"><i class="icon-cart"></i>
+                                    <span style="margin-left: 10px;">Cart</span></a>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
     <div class="tg-navigationarea">
         <div class="container">
             <div class="row">
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
                     <nav id="tg-nav" class="tg-nav">
+                        <div class="navbar-header">
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+                                    data-target="#tg-navigation" aria-expanded="false">
+                                <span class="sr-only">Toggle navigation</span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                            </button>
+                        </div>
                         <div id="tg-navigation" class="collapse navbar-collapse tg-navigation">
                             <ul>
                                 <li><a th:href="@{/}">Home</a></li>
-                                <li><a th:href="@{/manage-product}" sec:authorize="hasRole('ADMIN')">Books</a></li>
-                                <li><a th:href="@{/manage-category}" sec:authorize="hasRole('ADMIN')">Categories</a>
+
+                                <!-- ========== USER ========== -->
+                                <li>
+                                    <a th:href="@{/products}"
+                                       sec:authorize="!hasRole('ADMIN') and !hasRole('STAFF')">Books</a>
                                 </li>
-                                <li><a th:href="@{/manage-author}" sec:authorize="hasRole('ADMIN')">Authors</a></li>
-                                <li><a th:href="@{/manage-user}" sec:authorize="hasRole('ADMIN')">Users</a></li>
-                                <li><a th:href="@{/manage-order}" sec:authorize="hasRole('ADMIN')">Orders</a></li>
-                                <li><a th:href="@{/manage-promotion}" sec:authorize="hasRole('ADMIN')">Promotions</a>
+
+                                <li class="menu-item-has-children menu-item-has-mega-menu"
+                                    sec:authorize="hasRole('USER')">
+                                    <a href="javascript:void(0);">All Categories</a>
+                                    <div class="mega-menu tg-category-mega-menu">
+                                        <ul class="tg-themetabnav" role="tablist">
+                                            <li th:each="entry, iterStat : ${categoryHierarchy}"
+                                                th:class="${iterStat.index == 0 ? 'active' : ''}"
+                                                role="presentation">
+                                                <a th:href="'#cat' + ${entry.key.id}"
+                                                   role="tab" data-toggle="tab"
+                                                   th:text="${entry.key.name}">Root Category</a>
+                                            </li>
+                                        </ul>
+                                        <div class="tab-content tg-themetabcontent">
+                                            <div th:each="entry, iterStat : ${categoryHierarchy}"
+                                                 th:id="|cat${entry.key.id}|"
+                                                 role="tabpanel"
+                                                 th:class="${iterStat.index == 0 ? 'tab-pane active' : 'tab-pane'}">
+                                                <ul class="tg-level1-container">
+                                                    <li th:each="level1 : ${entry.value}">
+                                                        <div class="tg-linkstitle">
+                                                            <h2 th:text="${level1.name}">Level 1</h2>
+                                                        </div>
+                                                        <ul th:if="${level1.children != null}">
+                                                            <li th:each="level2 : ${level1.children}">
+                                                                <a th:href="@{/products(categoryId=${level2.id})}"
+                                                                   th:text="${level2.name}">Level 2</a>
+                                                                <ul th:if="${level2.children != null}">
+                                                                    <li th:each="level3 : ${level2.children}">
+                                                                        <a th:href="@{/products(categoryId=${level3.id})}"
+                                                                           th:text="${level3.name}">Level 3</a>
+                                                                    </li>
+                                                                </ul>
+                                                            </li>
+                                                        </ul>
+                                                        <a class="tg-btnviewall"
+                                                           th:href="@{/products(categoryId=${level1.id})}">View
+                                                            All</a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </li>
-                                <li><a th:href="@{/statistic}" sec:authorize="hasRole('ADMIN')">Statistics</a></li>
+
+                                <!-- ========== ADMIN ========== -->
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-product}">Books</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a
+                                        th:href="@{/admin/manage-category}">Categories</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a
+                                        th:href="@{/admin/manage-author}">Authors</a></li>
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-user}">Users</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-order}">Orders</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a
+                                        th:href="@{/admin/manage-promotion}">Promotions</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/statistic}">Statistics</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-staff}">Staff</a>
+                                </li>
+                                <li class="menu-item-has-children" sec:authorize="hasRole('ADMIN')">
+                                    <a href="javascript:void(0);"><i class="fa fa-bars"></i></a>
+                                    <div class="mega-menu">
+                                        <ul>
+                                            <li><a th:href="@{/admin/manage-series}"><i class="fa fa-book"></i>
+                                                Series</a></li>
+                                            <li><a th:href="@{/admin/manage-language}"><i class="fa fa-flag"></i>
+                                                Language</a></li>
+                                            <li><a th:href="@{/admin/manage-publisher}"><i
+                                                    class="fa fa-briefcase"></i> Publisher</a></li>
+                                            <li><a th:href="@{/admin/manage-translator}"><i class="fa fa-users"></i>
+                                                Translator</a></li>
+                                            <li><a th:href="@{/admin/manage-comment}"><i class="fa fa-comments"></i>
+                                                Reviews</a></li>
+                                        </ul>
+                                    </div>
+                                </li>
+
+                                <!-- ========== STAFF ========== -->
+                                <li sec:authorize="hasRole('STAFF')"><a th:href="@{/staff/books}">Books</a></li>
+                                <li sec:authorize="hasRole('STAFF')"><a th:href="@{/staff/orders}">My Orders</a>
+                                </li>
+                                <li sec:authorize="hasRole('STAFF')"><a
+                                        th:href="@{/staff/categories}">Categories</a></li>
+                                <li sec:authorize="hasRole('STAFF')"><a th:href="@{/staff/authors}">Authors</a></li>
+                                <li sec:authorize="hasRole('STAFF')"><a
+                                        th:href="@{/staff/promotions}">Promotions</a></li>
+                                <li class="menu-item-has-children" sec:authorize="hasRole('STAFF')">
+                                    <a href="javascript:void(0);"><i class="fa fa-bars"></i></a>
+                                    <div class="mega-menu">
+                                        <ul>
+                                            <li><a th:href="@{/staff/series}"><i class="fa fa-book"></i> Series</a>
+                                            </li>
+                                            <li><a th:href="@{/staff/languages}"><i class="fa fa-flag"></i> Language</a>
+                                            </li>
+                                            <li><a th:href="@{/staff/publishers}"><i class="fa fa-briefcase"></i>
+                                                Publisher</a></li>
+                                            <li><a th:href="@{/staff/translators}"><i class="fa fa-users"></i>
+                                                Translator</a></li>
+                                        </ul>
+                                    </div>
+                                </li>
                             </ul>
                         </div>
                     </nav>
@@ -115,22 +252,6 @@
                                             data-toggle="modal" th:data-target="${'#myModal_add'}">
                                         Add New Category
                                     </button>
-
-                                    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible"
-                                         role="alert" style="margin-bottom: 15px;">
-                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                            <span aria-hidden="true">&times;</span>
-                                        </button>
-                                        <strong>Error!</strong> <span th:text="${errorMessage}"></span>
-                                    </div>
-
-                                    <div th:if="${successMessage}" class="alert alert-success alert-dismissible"
-                                         role="alert" style="margin-bottom: 15px;">
-                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                            <span aria-hidden="true">&times;</span>
-                                        </button>
-                                        <strong>Success!</strong> <span th:text="${successMessage}"></span>
-                                    </div>
 
                                     <div class="row">
                                         <table class="table table-bordered category-tree">
@@ -189,51 +310,51 @@
                                                                     <span>&times;</span>
                                                                 </button>
                                                                 <h4 class="modal-title" style="text-transform: none;">
-                                                                    Edit Category
-                                                                </h4>
+                                                                    Edit Category</h4>
                                                             </div>
                                                             <div class="modal-body">
                                                                 <form th:action="@{/admin/edit-category}" method="post">
                                                                     <input type="hidden" name="id"
                                                                            th:value="${category.id}">
+                                                                    <input type="hidden" name="page" th:value="${page}">
 
-                                                                    <div class="form-group">
-                                                                        <label>Current Level</label>
-                                                                        <input type="text" class="form-control"
-                                                                               th:value="${category.level == 0 ? 'Root (Level 0)' : (category.level == 1 ? 'Parent (Level 1)' : 'Child (Level 2)')}"
-                                                                               disabled>
-                                                                    </div>
-
-                                                                    <div class="form-group">
-                                                                        <label><span style="color: red;">*</span>
-                                                                            Category Name</label>
-                                                                        <input type="text" th:value="${category.name}"
-                                                                               class="form-control" name="name"
-                                                                               required>
-                                                                    </div>
-
-                                                                    <!-- Show parent selector only for level 1 and 2 -->
-                                                                    <div class="form-group"
-                                                                         th:if="${category.level > 0}">
-                                                                        <label>Parent Category</label>
-                                                                        <select class="form-control" name="parentId"
-                                                                                disabled>
-                                                                            <option th:if="${category.parentId != null}"
-                                                                                    th:value="${category.parentId}"
-                                                                                    selected>Current Parent
-                                                                            </option>
-                                                                        </select>
-                                                                        <small class="text-muted">Note: Cannot change
-                                                                            parent when editing. Delete and recreate if
-                                                                            needed.</small>
+                                                                    <div th:with="isThis=${editCategoryId != null and editCategoryId == category.id.toString()}">
+                                                                        <div class="form-group">
+                                                                            <label>Current Level</label>
+                                                                            <input type="text" class="form-control"
+                                                                                   th:value="${category.level == 0 ? 'Root (Level 0)' : (category.level == 1 ? 'Parent (Level 1)' : 'Child (Level 2)')}"
+                                                                                   disabled>
+                                                                        </div>
+                                                                        <div class="form-group"
+                                                                             th:classappend="${isThis and editErrorMessage != null} ? 'has-error'">
+                                                                            <label><span style="color: red;">*</span>
+                                                                                Category Name</label>
+                                                                            <input type="text" class="form-control"
+                                                                                   name="name" required
+                                                                                   th:value="${isThis and editFormName != null ? editFormName : category.name}">
+                                                                            <span th:if="${isThis and editErrorMessage != null}"
+                                                                                  class="help-block text-danger"
+                                                                                  th:text="${editErrorMessage}"></span>
+                                                                        </div>
+                                                                        <div class="form-group"
+                                                                             th:if="${category.level > 0}">
+                                                                            <label>Parent Category</label>
+                                                                            <select class="form-control" name="parentId"
+                                                                                    disabled>
+                                                                                <option th:if="${category.parentId != null}"
+                                                                                        th:value="${category.parentId}"
+                                                                                        selected>Current Parent
+                                                                                </option>
+                                                                            </select>
+                                                                            <small class="text-muted">Note: Cannot
+                                                                                change parent when editing.</small>
+                                                                        </div>
                                                                     </div>
 
                                                                     <button type="button" class="btn btn-default"
-                                                                            data-dismiss="modal">
-                                                                        Cancel
+                                                                            data-dismiss="modal">Cancel
                                                                     </button>
-                                                                    <button type="submit" class="btn btn-primary">
-                                                                        Save
+                                                                    <button type="submit" class="btn btn-primary">Save
                                                                     </button>
                                                                 </form>
                                                             </div>
@@ -335,14 +456,23 @@
             </div>
             <div class="modal-body">
                 <form th:action="@{/admin/create-category}" method="post">
-                    <div class="form-group">
+                    <input type="hidden" name="page" th:value="${page}">
+
+                    <div class="form-group"
+                         th:classappend="${addErrorMessage != null and addFormLevel == null} ? 'has-error'">
                         <label><span style="color: red;">*</span> Category Level</label>
                         <select class="form-control" name="level" id="categoryLevel" required
                                 onchange="updateParentSelector()">
                             <option value="">-- Select Level --</option>
-                            <option value="0">Level 0 - Root Category (Main Category)</option>
-                            <option value="1">Level 1 - Parent Category (Sub Category)</option>
-                            <option value="2">Level 2 - Child Category (Sub-sub Category)</option>
+                            <option value="0" th:selected="${addFormLevel == '0'}">Level 0 - Root Category (Main
+                                Category)
+                            </option>
+                            <option value="1" th:selected="${addFormLevel == '1'}">Level 1 - Parent Category (Sub
+                                Category)
+                            </option>
+                            <option value="2" th:selected="${addFormLevel == '2'}">Level 2 - Child Category (Sub-sub
+                                Category)
+                            </option>
                         </select>
                         <small class="text-muted">
                             Level 0: Main categories (e.g., Domestic Comics, International Comics)<br>
@@ -356,25 +486,30 @@
                         <label><span style="color: red;">*</span> Parent Category</label>
                         <select class="form-control" name="parentId" id="parentSelector">
                             <option value="">-- Select Parent Category --</option>
-                            <!-- Level 0 categories for Level 1 selection -->
                             <optgroup label="Level 0 Categories" id="level0Group">
                                 <option th:each="cat : ${level0Categories}"
                                         th:value="${cat.id}"
+                                        th:selected="${addFormParentId != null and addFormParentId == cat.id.toString()}"
                                         th:text="${cat.name}"></option>
                             </optgroup>
-                            <!-- Level 1 categories for Level 2 selection -->
                             <optgroup label="Level 1 Categories" id="level1Group" style="display: none;">
                                 <option th:each="cat : ${level1Categories}"
                                         th:value="${cat.id}"
+                                        th:selected="${addFormParentId != null and addFormParentId == cat.id.toString()}"
                                         th:text="${cat.name}"></option>
                             </optgroup>
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group" th:classappend="${addErrorMessage != null} ? 'has-error'">
                         <label><span style="color: red;">*</span> Category Name</label>
-                        <input name="name" type="text" class="form-control" id="categoryname" required>
-                        <small class="text-muted">Name must contain only letters and spaces</small>
+                        <input name="name" type="text" class="form-control" id="categoryname" required
+                               th:value="${addFormName}">
+                        <span th:if="${addErrorMessage != null}"
+                              class="help-block text-danger"
+                              th:text="${addErrorMessage}"></span>
+                        <small th:if="${addErrorMessage == null}" class="text-muted">Name must contain only letters and
+                            spaces</small>
                     </div>
 
                     <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
@@ -385,9 +520,7 @@
     </div>
 </div>
 
-<!-- Footer (keep your existing footer) -->
 <footer id="tg-footer" class="tg-footer tg-haslayout">
-    <!-- ... existing footer code ... -->
 </footer>
 
 <script src="../js/vendor/jquery-library.js"></script>
@@ -401,6 +534,44 @@
 <script src="../js/appear.js"></script>
 <script src="../js/gmap3.js"></script>
 <script src="../js/main.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    var showAddModal = /*[[${showAddModal}]]*/ false;
+    var showEditModal = /*[[${showEditModal}]]*/ false;
+    var editCategoryId = /*[[${editCategoryId}]]*/ null;
+    var successMessage = /*[[${successMessage}]]*/ null;
+    var addFormLevel = /*[[${addFormLevel}]]*/ null;
+
+    $(document).ready(function () {
+        if (successMessage) {
+            Swal.fire({
+                position: 'top',
+                icon: 'success',
+                title: successMessage,
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true
+            });
+        }
+
+        if (showAddModal) {
+            $('#myModal_add').on('shown.bs.modal', function () {
+                if (addFormLevel) {
+                    document.getElementById('categoryLevel').value = addFormLevel;
+                    updateParentSelector();
+                }
+            });
+            $('#myModal_add').modal('show');
+        }
+
+        if (showEditModal && editCategoryId) {
+            $('#myModal_edit' + editCategoryId).modal('show');
+        }
+    });
+    /*]]>*/
+</script>
 
 <script>
     function updateParentSelector() {
@@ -414,6 +585,7 @@
             // Level 0: No parent needed
             parentGroup.style.display = 'none';
             parentSelector.required = false;
+            E
             parentSelector.value = '';
         } else if (level === '1') {
             // Level 1: Select from Level 0 categories

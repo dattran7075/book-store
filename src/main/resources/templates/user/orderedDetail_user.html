@@ -64,14 +64,15 @@
         <div class="container">
             <div class="row">
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                    <strong class="tg-logo"><a href="index-2.html"><img src="images/logo.png"
-                                                                        alt="company name here"></a></strong>
+                    <strong class="tg-logo"><a href="/"><img src="/images/logoSWP.png"
+                                                             alt="company name here"></a></strong>
                     <div class="tg-wishlistandcart">
                         <div sec:authorize="hasRole('USER')" class="dropdown tg-themedropdown tg-minicartdropdown">
                             <a id="tg-minicart" class="tg-btnthemedropdown" data-toggle="dropdown" aria-haspopup="true"
                                aria-expanded="false">
-                                <span class="tg-themebadge"
-                                      th:text="${cartTotalBooks != null ? cartTotalBooks : 0}">0</span>
+                               <span class="tg-themebadge"
+                                     th:with="qty=${cartTotalBooks != null ? cartTotalBooks : 0}"
+                                     th:text="${qty >= 10000 ? '10k+' : (qty >= 1000 ? (qty / 1000) + 'k+' : (qty >= 100 ? '99+' : qty))}"></span>
                                 <a th:href="@{view-cart}"><i class="icon-cart"></i>
                                     <span style="margin-left: 10px;">Cart</span></a>
                             </a>
@@ -100,13 +101,54 @@
                                 <li><a th:href="@{/}">Home</a></li>
                                 <li><a th:href="@{/products}" sec:authorize="!hasRole('ADMIN')">Books</a></li>
                                 <li><a th:href="@{/manage-product}" sec:authorize="hasRole('ADMIN')">Books</a></li>
+                                <li class="menu-item-has-children menu-item-has-mega-menu"
+                                    sec:authorize="!hasRole('ADMIN')">
+                                    <a href="javascript:void(0);">All Categories</a>
+                                    <div class="mega-menu tg-category-mega-menu">
+                                        <ul class="tg-themetabnav" role="tablist">
+                                            <li th:each="entry, iterStat : ${categoryHierarchy}"
+                                                th:class="${iterStat.index == 0 ? 'active' : ''}"
+                                                role="presentation">
+                                                <a th:href="'#cat' + ${entry.key.id}" role="tab" data-toggle="tab"
+                                                   th:text="${entry.key.name}">Root Category</a>
+                                            </li>
+                                        </ul>
+                                        <div class="tab-content tg-themetabcontent">
+                                            <div th:each="entry, iterStat : ${categoryHierarchy}"
+                                                 th:id="|cat${entry.key.id}|" role="tabpanel"
+                                                 th:class="${iterStat.index == 0 ? 'tab-pane active' : 'tab-pane'}">
+                                                <ul class="tg-level1-container">
+                                                    <li th:each="level1 : ${entry.value}">
+                                                        <div class="tg-linkstitle"><h2 th:text="${level1.name}">
+                                                            Level 1</h2></div>
+                                                        <ul th:if="${level1.children != null}">
+                                                            <li th:each="level2 : ${level1.children}">
+                                                                <a th:href="@{/products(categoryId=${level2.id})}"
+                                                                   th:text="${level2.name}">Level 2</a>
+                                                                <ul th:if="${level2.children != null}">
+                                                                    <li th:each="level3 : ${level2.children}">
+                                                                        <a th:href="@{/products(categoryId=${level3.id})}"
+                                                                           th:text="${level3.name}">Level 3</a>
+                                                                    </li>
+                                                                </ul>
+                                                            </li>
+                                                        </ul>
+                                                        <a class="tg-btnviewall"
+                                                           th:href="@{/products(categoryId=${level1.id})}">View
+                                                            All</a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
                                 <li><a th:href="@{/manage-category}" sec:authorize="hasRole('ADMIN')">Categories</a>
                                 </li>
                                 <li><a th:href="@{/manage-author}" sec:authorize="hasRole('ADMIN')">Authors</a></li>
                                 <li><a th:href="@{/manage-user}" sec:authorize="hasRole('ADMIN')">Users</a></li>
                                 <li><a th:href="@{/manage-order}" sec:authorize="hasRole('ADMIN')">Orders</a></li>
-                                <li><a th:href="@{/manage-promotion}" sec:authorize="hasRole('ADMIN')">Promotions</a>
-                                </li>
+                                <li><a th:href="@{/manage-promotion}"
+                                       sec:authorize="hasRole('ADMIN')">Promotions</a></li>
                                 <li><a th:href="@{/statistic}" sec:authorize="hasRole('ADMIN')">Statistics</a></li>
                             </ul>
                         </div>
@@ -243,6 +285,10 @@
                                            th:if="${order.payment_method == 'COD'}">
                                         (Cash On Delivery)
                                     </small>
+                                    <!-- VNPAY -->
+                                    <span class="label label-primary"
+                                          th:if="${order.payment_method == 'VNPAY'}"
+                                          th:text="${order.payment_method}"></span>
                                 </td>
                             </tr>
 
@@ -316,7 +362,7 @@
                                 </tr>
                                 </thead>
                                 <tbody>
-                                <!-- ✅ PRODUCT ROWS -->
+                                <!-- PRODUCT ROWS -->
                                 <tr th:each="detail, iterStat : ${order.orderDetailList}">
                                     <td style="text-align: center; vertical-align: middle;"
                                         th:text="${iterStat.index + 1}">1

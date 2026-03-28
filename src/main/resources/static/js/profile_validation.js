@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const oldPasswordInput = document.querySelector('#oldPassword');
     const newPasswordInput = document.querySelector('#newPassword');
     const confirmPasswordInput = document.querySelector('#confirmNewPassword');
-    const confirmPassBtn = document.querySelector('#confirm_pass_btn');
     const editPasswordForm = document.querySelector('#editForm');
 
     // ================== ERROR DISPLAY FUNCTION ==================
@@ -29,7 +28,6 @@ document.addEventListener('DOMContentLoaded', function () {
         error.style.width = '100%';
         error.textContent = message;
 
-        // Find the wrapper div and insert error after it
         const wrapper = input.closest('div[style*="position: relative"]') || input.parentNode;
         wrapper.parentNode.insertBefore(error, wrapper.nextSibling);
 
@@ -38,7 +36,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function clearError(input) {
-        // Find error message after the wrapper
         const wrapper = input.closest('div[style*="position: relative"]') || input.parentNode;
         const error = wrapper.nextElementSibling;
         if (error && error.classList && error.classList.contains('error-message')) {
@@ -70,15 +67,15 @@ document.addEventListener('DOMContentLoaded', function () {
     function validateAddress(value) {
         if (!value || !value.trim()) return 'Address cannot be empty';
         const trimmed = value.trim();
-        if (trimmed.length < 5 || trimmed.length > 100)
+        if (trimmed.length < 6 || trimmed.length > 200)
             return 'Address must be 5-100 characters';
-        if (!/^(?!.*[.,#/^()'\-]{2,})(?!-)[A-Za-z0-9\s.,#/^()'\-]{2,50}$/.test(trimmed))
+        if (!/^(?!.*[.,#/^()'\-]{6,})(?!-)[A-Za-z0-9\s.,#/^()'\-]{6,200}$/.test(trimmed))
             return 'Address contains invalid characters';
         return null;
     }
 
     function validatePhone(value) {
-        if (!value || !value.trim()) return 'Phone cannot be empty';
+        if (!value || !value.trim()) return null; // bỏ qua nếu null/rỗng
         const phoneRegex = /^0[1-9]\d{8}$/;
         if (!phoneRegex.test(value.trim()))
             return 'Phone must start with 0 and have 10 digits (ex: 0123456789)';
@@ -142,10 +139,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (editBtn && saveBtn) {
         editBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            fullName.removeAttribute('disabled');
+            if (fullName) fullName.removeAttribute('disabled');
             if (email) email.removeAttribute('disabled');
-            address.removeAttribute('disabled');
-            phone.removeAttribute('disabled');
+            if (address) address.removeAttribute('disabled');
+            if (phone) phone.removeAttribute('disabled');
+            // username luôn disabled, không enable
             saveBtn.style.display = 'inline-block';
             editBtn.style.display = 'none';
         });
@@ -168,8 +166,11 @@ document.addEventListener('DOMContentLoaded', function () {
                         const err = validateAddress(input.value);
                         if (err) showError(input, err);
                     } else if (input === phone) {
-                        const err = validatePhone(input.value);
-                        if (err) showError(input, err);
+                        // chỉ validate khi có giá trị
+                        if (input.value && input.value.trim()) {
+                            const err = validatePhone(input.value);
+                            if (err) showError(input, err);
+                        }
                     }
                 }
             });
@@ -237,10 +238,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 hasError = true;
             }
 
-            const phoneError = validatePhone(phone.value);
-            if (phoneError) {
-                showError(phone, phoneError);
-                hasError = true;
+            // chỉ validate phone khi có giá trị
+            if (phone.value && phone.value.trim()) {
+                const phoneError = validatePhone(phone.value);
+                if (phoneError) {
+                    showError(phone, phoneError);
+                    hasError = true;
+                }
             }
 
             if (hasError) {

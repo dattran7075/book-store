@@ -1,5 +1,6 @@
 package com.thunga.web.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thunga.web.entity.*;
 import com.thunga.web.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.*;
@@ -52,6 +54,8 @@ public class AdminController {
     @Autowired
     private CommentService commentService;
 
+    private static final String SPAM_CONFIG_PATH = "src/main/resources/static/json/spam-config.json";
+
     @InitBinder
     public void initBinder(WebDataBinder binder) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -86,29 +90,80 @@ public class AdminController {
             userPage = userService.findByLimit(0, 10, sortBy);
         }
 
+        // Count active orders for each user
+        Map<Integer, Integer> activeOrdersMap = new HashMap<>();
+        for (User user : userPage.getContent()) {
+            activeOrdersMap.put(user.getId(), userService.countActiveOrders(user));
+        }
+
         model.addAttribute("userList", userPage.getContent());
         model.addAttribute("totalPage", userPage.getTotalPages());
         model.addAttribute("page", currentPage);
         model.addAttribute("sortBy", sortBy);
+        model.addAttribute("activeOrdersMap", activeOrdersMap);
         return "admin/user_ad";
     }
 
-    @GetMapping("/admin/delete-user")
-    public String deleteUser(@RequestParam(required = true) Integer id) {
-        userService.delete(userService.findById(id));
-        return "redirect:/manage-user";
+    @GetMapping("/admin/view-user")
+    public String viewUser(Model model, @RequestParam(required = false) Integer id) {
+        User user = userService.findById(id);
+        int activeOrders = userService.countActiveOrders(user);
+        model.addAttribute("user", user);
+        model.addAttribute("activeOrders", activeOrders);
+        return "admin/user_detail_ad";
     }
 
     @GetMapping("/admin/edit-user")
     public String editUser(Model model, @RequestParam(required = false) Integer id) {
-        model.addAttribute("user", userService.findById(id));
+        User user = userService.findById(id);
+        int activeOrders = userService.countActiveOrders(user);
+        model.addAttribute("user", user);
+        model.addAttribute("activeOrders", activeOrders);
+        model.addAttribute("editMode", true);   // flag phân biệt
         return "admin/user_detail_ad";
     }
 
     @PostMapping("/admin/save-user-ad")
-    public String saveUser(Model model, @ModelAttribute User user, HttpServletRequest request) {
-        model.addAttribute("user", userService.update(user, request));
-        return "admin/user_detail_ad";
+    public String saveUser(Model model, @ModelAttribute User user,
+                           @RequestParam(required = false) String accountStatus,
+                           HttpServletRequest request,
+                           RedirectAttributes redirectAttributes) {
+        try {
+            User existingUser = userService.findById(user.getId());
+            Account account = existingUser.getAccount();
+
+            // Check if trying to deactivate
+            if (accountStatus != null && "INACTIVE".equals(accountStatus)) {
+                int activeOrders = userService.countActiveOrders(existingUser);
+                if (activeOrders > 0) {
+                    redirectAttributes.addFlashAttribute("errorMessage",
+                            "Cannot deactivate user with " + activeOrders + " active order(s). " +
+                                    "Active orders must be completed, cancelled, or returned first.");
+                    return "redirect:/admin/edit-user?id=" + user.getId();
+                }
+                account.setStatus("INACTIVE");
+            } else if (accountStatus != null && "ACTIVE".equals(accountStatus)) {
+                account.setStatus("ACTIVE");
+            }
+
+            // Update user info
+            existingUser.setName(user.getName());
+            existingUser.setPhone(user.getPhone());
+            existingUser.setAddress(user.getAddress());
+            account.setEmail(request.getParameter("email"));
+            account.setUpdated_at(new Date());
+
+            userService.save(existingUser);
+            accountService.save(account);
+
+            redirectAttributes.addFlashAttribute("successMessage", "User updated successfully");
+            return "redirect:/admin/manage-user";
+
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Error updating user: " + e.getMessage());
+            return "redirect:/admin/edit-user?id=" + user.getId();
+        }
     }
 
     // =====================================================
@@ -189,6 +244,14 @@ public class AdminController {
         Book book = bookService.findById(id);
         model.addAttribute("book", book);
         model.addAttribute("action", "edit");
+
+        List<Integer> selectedTranslatorIds = book.getBookTranslatorList() != null
+                ? book.getBookTranslatorList().stream()
+                .map(bt -> bt.getTranslator().getId())
+                .collect(java.util.stream.Collectors.toList())
+                : new ArrayList<>();
+        model.addAttribute("selectedTranslatorIds", selectedTranslatorIds);
+
         return "admin/productdetail_ad";
     }
 
@@ -329,47 +392,31 @@ public class AdminController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            String step = requestData.get("step");
+            // Validate all fields
+            Map<String, String> errors = adminService.validateStaff(null,
+                    requestData.get("username"), requestData.get("password"),
+                    requestData.get("confirmPassword"), requestData.get("name"),
+                    requestData.get("email"), requestData.get("phone"),
+                    requestData.get("address"));
 
-            if ("validate".equals(step)) {
-                Map<String, String> errors = adminService.validateStaff(null,
-                        requestData.get("username"), requestData.get("password"),
-                        requestData.get("confirmPassword"), requestData.get("name"),
-                        requestData.get("email"), requestData.get("phone"),
-                        requestData.get("address"));
-
-                if (!errors.isEmpty()) {
-                    response.put("success", false);
-                    response.put("message", errors.values().iterator().next());
-                    return response;
-                }
-
-                adminService.generateAndSendOTP(requestData.get("email"));
-                response.put("success", true);
-                response.put("message", "OTP sent to email successfully");
-
-            } else if ("verify".equals(step)) {
-                String email = requestData.get("email");
-                String otp = requestData.get("otp");
-
-                if (!adminService.verifyOTP(email, otp)) {
-                    response.put("success", false);
-                    response.put("message", "Invalid or expired OTP");
-                    return response;
-                }
-
-                adminService.createNewStaff(
-                        requestData.get("username"),
-                        requestData.get("password"),
-                        requestData.get("name"),
-                        email,
-                        requestData.get("phone"),
-                        requestData.get("address")
-                );
-
-                response.put("success", true);
-                response.put("message", "Staff created successfully");
+            if (!errors.isEmpty()) {
+                response.put("success", false);
+                response.put("message", errors.values().iterator().next());
+                return response;
             }
+
+            // Create staff directly without OTP verification
+            adminService.createNewStaff(
+                    requestData.get("username"),
+                    requestData.get("password"),
+                    requestData.get("name"),
+                    requestData.get("email"),
+                    requestData.get("phone"),
+                    requestData.get("address")
+            );
+
+            response.put("success", true);
+            response.put("message", "Staff created successfully and credentials sent to email");
 
         } catch (Exception e) {
             response.put("success", false);
@@ -441,7 +488,8 @@ public class AdminController {
                 return "redirect:/admin/manage-order";
             }
 
-            if (!("Pending".equals(order.getStatus()) || "Assigned".equals(order.getStatus()))) {
+            if (!("Pending".equals(order.getStatus()) || "Assigned".equals(order.getStatus())
+                    || ("Approved".equals(order.getStatus()) && "PAID".equals(order.getPayment_status())))) {
                 redirectAttributes.addFlashAttribute("errorMessage",
                         "Order #" + orderId + " cannot be reassigned (current status: " + order.getStatus() + ")");
                 return "redirect:/admin/manage-order";
@@ -750,8 +798,9 @@ public class AdminController {
     }
 
     @GetMapping("/admin/delete-author")
-    public String adminDeleteAuthor(@RequestParam(required = true) Integer id) {
+    public String adminDeleteAuthor(@RequestParam(required = true) Integer id, RedirectAttributes redirectAttributes) {
         authorService.delete(authorService.findById(id));
+        redirectAttributes.addFlashAttribute("successMessage", "Author deleted successfully");
         return "redirect:/admin/manage-author";
     }
 
@@ -795,7 +844,8 @@ public class AdminController {
     }
 
     @PostMapping("/admin/create-category")
-    public String adminCreateCategory(HttpServletRequest request, RedirectAttributes redirectAttributes) {
+    public String adminCreateCategory(HttpServletRequest request, Model model,
+                                      RedirectAttributes redirectAttributes) {
         try {
             String name = request.getParameter("name");
             Integer level = null;
@@ -807,21 +857,33 @@ public class AdminController {
 
             categoryService.createCategory(name, level, parentId);
             redirectAttributes.addFlashAttribute("successMessage", "Category created successfully at Level " + level);
+            return "redirect:/admin/manage-category";
+
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            model.addAttribute("addErrorMessage", e.getMessage());
+            model.addAttribute("addFormName", request.getParameter("name"));
+            model.addAttribute("addFormLevel", request.getParameter("level"));
+            model.addAttribute("addFormParentId", request.getParameter("parentId"));
+            model.addAttribute("showAddModal", true);
+            return adminManageCategory(model, request.getParameter("page"));
         }
-        return "redirect:/admin/manage-category";
     }
 
     @PostMapping("/admin/edit-category")
-    public String adminEditCategory(HttpServletRequest request, RedirectAttributes redirectAttributes) {
+    public String adminEditCategory(HttpServletRequest request, Model model,
+                                    RedirectAttributes redirectAttributes) {
         try {
             categoryService.updateCategory(Integer.valueOf(request.getParameter("id")), request.getParameter("name"));
             redirectAttributes.addFlashAttribute("successMessage", "Category updated successfully");
+            return "redirect:/admin/manage-category";
+
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            model.addAttribute("editErrorMessage", e.getMessage());
+            model.addAttribute("editCategoryId", request.getParameter("id"));
+            model.addAttribute("editFormName", request.getParameter("name"));
+            model.addAttribute("showEditModal", true);
+            return adminManageCategory(model, request.getParameter("page"));
         }
-        return "redirect:/admin/manage-category";
     }
 
     @GetMapping("/admin/delete-category")
@@ -1389,13 +1451,29 @@ public class AdminController {
                 model.addAttribute("addGeneralError", msg);
             }
             model.addAttribute("showAddModal", true);
-            model.addAttribute("formData", request.getParameterMap());
+
+            model.addAttribute("addCode", request.getParameter("code"));
+            model.addAttribute("addName", request.getParameter("name"));
+            model.addAttribute("addMinOrder", request.getParameter("minOrder"));
+            model.addAttribute("addDiscountValue", request.getParameter("discountValue"));
+            model.addAttribute("addStartDate", request.getParameter("startDate"));
+            model.addAttribute("addEndDate", request.getParameter("endDate"));
+            model.addAttribute("addMaxUsage", request.getParameter("maxUsage"));
+
             return adminManagePromotion(model, request.getParameter("page"), request.getParameter("sortBy"));
 
         } catch (Exception e) {
             model.addAttribute("addGeneralError", "Invalid input data: " + e.getMessage());
             model.addAttribute("showAddModal", true);
-            model.addAttribute("formData", request.getParameterMap());
+
+            model.addAttribute("addCode", request.getParameter("code"));
+            model.addAttribute("addName", request.getParameter("name"));
+            model.addAttribute("addMinOrder", request.getParameter("minOrder"));
+            model.addAttribute("addDiscountValue", request.getParameter("discountValue"));
+            model.addAttribute("addStartDate", request.getParameter("startDate"));
+            model.addAttribute("addEndDate", request.getParameter("endDate"));
+            model.addAttribute("addMaxUsage", request.getParameter("maxUsage"));
+
             return adminManagePromotion(model, request.getParameter("page"), request.getParameter("sortBy"));
         }
     }
@@ -1431,14 +1509,35 @@ public class AdminController {
             redirectAttributes.addFlashAttribute("successMessage", "Promotion updated successfully");
             return "redirect:/admin/manage-promotion";
 
+        } catch (IllegalArgumentException e) {
+            model.addAttribute("editGeneralError", e.getMessage());
+            model.addAttribute("editPromotionId", request.getParameter("id"));
+
+            model.addAttribute("editName", request.getParameter("name"));
+            model.addAttribute("editMinOrder", request.getParameter("minOrder"));
+            model.addAttribute("editDiscountValue", request.getParameter("discountValue"));
+            model.addAttribute("editStartDate", request.getParameter("startDate"));
+            model.addAttribute("editEndDate", request.getParameter("endDate"));
+            model.addAttribute("editMaxUsage", request.getParameter("maxUsage"));
+
+            return adminManagePromotion(model, request.getParameter("page"), request.getParameter("sortBy"));
+
         } catch (Exception e) {
-            model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("errorPromotionId", request.getParameter("id"));
+            model.addAttribute("editGeneralError", "Invalid input data: " + e.getMessage());
+            model.addAttribute("editPromotionId", request.getParameter("id"));
+
+            model.addAttribute("editName", request.getParameter("name"));
+            model.addAttribute("editMinOrder", request.getParameter("minOrder"));
+            model.addAttribute("editDiscountValue", request.getParameter("discountValue"));
+            model.addAttribute("editStartDate", request.getParameter("startDate"));
+            model.addAttribute("editEndDate", request.getParameter("endDate"));
+            model.addAttribute("editMaxUsage", request.getParameter("maxUsage"));
+
             return adminManagePromotion(model, request.getParameter("page"), request.getParameter("sortBy"));
         }
     }
 
-    @GetMapping("/admin/delete-promotion")
+    @PostMapping("/admin/delete-promotion")
     public String adminDeletePromotion(@RequestParam(required = true) Integer id,
                                        RedirectAttributes redirectAttributes) {
         try {
@@ -1473,10 +1572,9 @@ public class AdminController {
             }
         }
 
-        org.springframework.data.domain.Page<com.thunga.web.entity.Comment> commentPage;
-
+        Page<Comment> commentPage;
         if (statusFilter != null && !statusFilter.trim().isEmpty()
-                && java.util.List.of("PENDING", "APPROVED", "HIDDEN").contains(statusFilter.trim().toUpperCase())) {
+                && java.util.List.of("PENDING", "APPROVED", "HIDDEN").contains(statusFilter)) {
             statusFilter = statusFilter.trim().toUpperCase();
             commentPage = commentService.findByStatusPaged(statusFilter, currentPage - 1, 10);
         } else {
@@ -1492,7 +1590,7 @@ public class AdminController {
         }
 
         model.addAttribute("commentList", commentPage.getContent());
-        model.addAttribute("totalPage", Math.max(commentPage.getTotalPages(), 1));
+        model.addAttribute("totalPage", commentPage.getTotalPages());
         model.addAttribute("page", currentPage);
         model.addAttribute("statusFilter", statusFilter);
         return "admin/comment_ad";
@@ -1523,6 +1621,38 @@ public class AdminController {
         }
         return redirect;
     }
+
+    @GetMapping("/admin/spam-config")
+    @ResponseBody
+    public Map<String, Object> getSpamConfig() {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.readValue(Paths.get(SPAM_CONFIG_PATH).toFile(), Map.class);
+        } catch (Exception e) {
+            Map<String, Object> defaults = new HashMap<>();
+            defaults.put("offensive", List.of("stupid", "useless", "trash", "scam"));
+            defaults.put("adlink", List.of("buy now", "click here", "huge discount", "contact zalo"));
+            defaults.put("irrelevant", List.of("casino", "betting", "forex", "crypto"));
+            return defaults;
+        }
+    }
+
+    @PostMapping("/admin/spam-config")
+    @ResponseBody
+    public Map<String, Object> saveSpamConfig(@RequestBody Map<String, Object> config) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.writerWithDefaultPrettyPrinter()
+                    .writeValue(Paths.get(SPAM_CONFIG_PATH).toFile(), config);
+            response.put("success", true);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+        }
+        return response;
+    }
+
 
     // =====================================================
     // STATISTICS (/admin/*)

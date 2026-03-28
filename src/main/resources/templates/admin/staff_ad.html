@@ -44,65 +44,20 @@
         }
 
         .form-error {
-            color: #d9534f;
-            font-size: 12px;
-            margin-top: 5px;
-        }
-
-        .otp-container {
-            display: flex !important;
-            justify-content: center !important;
-            gap: 10px !important;
-            margin: 20px 0 !important;
-        }
-
-        .otp-input {
-            width: 50px !important;
-            height: 50px !important;
-            text-align: center !important;
-            font-size: 24px !important;
-            font-weight: bold !important;
-            border: 2px solid #ddd !important;
-            border-radius: 8px !important;
-            transition: all 0.3s !important;
-        }
-
-        .otp-input:focus {
-            border-color: #667eea !important;
-            outline: none !important;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
-        }
-
-        .otp-timer {
-            text-align: center;
-            color: #666;
-            font-size: 14px;
-            margin-top: 10px;
-        }
-
-        .otp-timer.expired {
-            color: #d9534f;
-        }
-
-        .resend-otp {
-            color: #667eea;
-            cursor: pointer;
-            text-decoration: underline;
-        }
-
-        .resend-otp:hover {
-            color: #764ba2;
-        }
-
-        .resend-otp.disabled {
-            color: #ccc;
-            cursor: not-allowed;
-            text-decoration: none;
+            color: #d32f2f;
+            font-size: 13px;
+            margin-top: 6px;
+            margin-bottom: 10px;
+            font-weight: 500;
+            display: none;
+            width: 100%;
         }
     </style>
 </head>
+
 <body>
 
+<!-- ============================= HEADER START ============================= -->
 <header id="tg-header" class="tg-header tg-haslayout">
     <div class="tg-topbar">
         <div class="container">
@@ -112,41 +67,58 @@
                         <div>
                             <li style="list-style:none;" class="menu-item-has-children"
                                 sec:authorize="isAuthenticated()">
-                                <a href=""><i id="user_icon" class="fa fa-user"></i> Welcome <span
-                                        class="sr-only"></span></a>
+                                <a href="">
+                                    <i id="user_icon" class="fa fa-user"></i> Welcome
+                                    <span th:if="${currentUserName != null}" th:text="${currentUserName}"></span>
+                                    <span class="sr-only"></span>
+                                </a>
                                 <div class="mega-menu user">
                                     <ul class="tg-themetabnav" role="tablist">
-                                        <li><a th:href="@{/profile}">Profile<span class="sr-only">(current)</span></a>
-                                        </li>
-                                        <li><a th:href="@{/orders}" sec:authorize="hasRole('USER')">Orders<span
+                                        <li><a th:href="@{/profile}">Profile<span
                                                 class="sr-only">(current)</span></a></li>
-                                        <li><a class="tg-userlogout" th:href="@{/logout}">Logout<span class="sr-only">(current)</span></a>
+                                        <li sec:authorize="hasRole('USER')">
+                                            <a th:href="@{/orders}">Orders<span class="sr-only">(current)</span></a>
                                         </li>
+                                        <li><a class="tg-userlogout" th:href="@{/logout}">Logout<span
+                                                class="sr-only">(current)</span></a></li>
                                     </ul>
                                 </div>
                             </li>
                             <br>
                             <a class="nav-link text" th:href="@{/signup}" style="margin-right: 30px"
-                               sec:authorize="!isAuthenticated()">
-                                Sign up<span class="sr-only">(current)</span></a>
-                            <a class="nav-link text" th:href="@{/login}" sec:authorize="!isAuthenticated()">
-                                Login<span class="sr-only">(current)</span></a>
+                               sec:authorize="!isAuthenticated()">Sign up<span class="sr-only">(current)</span></a>
+                            <a class="nav-link text" th:href="@{/login}"
+                               sec:authorize="!isAuthenticated()">Login<span class="sr-only">(current)</span></a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
     <div class="tg-middlecontainer" style="padding: 10px;">
         <div class="container">
             <div class="row">
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                    <strong class="tg-logo"><a href="index-2.html"><img src="images/logo.png"
-                                                                        alt="company name here"></a></strong>
+                    <strong class="tg-logo"><a href="/"><img src="/images/logoSWP.png"
+                                                             alt="company name here"></a></strong>
+
+                    <div class="tg-wishlistandcart">
+                        <div sec:authorize="hasRole('USER')" class="dropdown tg-themedropdown tg-minicartdropdown">
+                            <a id=class="tg-btnthemedropdown" data-toggle="dropdown"
+                               aria-haspopup="true" aria-expanded="false">
+                                    <span class="tg-themebadge"
+                                          th:text="${cartTotalBooks != null ? cartTotalBooks : 0}"></span>
+                                <a th:href="@{view-cart}"><i class="icon-cart"></i>
+                                    <span style="margin-left: 10px;">Cart</span></a>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
     <div class="tg-navigationarea">
         <div class="container">
             <div class="row">
@@ -164,17 +136,119 @@
                         <div id="tg-navigation" class="collapse navbar-collapse tg-navigation">
                             <ul>
                                 <li><a th:href="@{/}">Home</a></li>
-                                <li><a th:href="@{/products}" sec:authorize="!hasRole('ADMIN')">Books</a></li>
-                                <li><a th:href="@{/manage-product}" sec:authorize="hasRole('ADMIN')">Books</a></li>
-                                <li><a th:href="@{/manage-category}" sec:authorize="hasRole('ADMIN')">Categories</a>
+
+                                <!-- ========== USER ========== -->
+                                <li>
+                                    <a th:href="@{/products}"
+                                       sec:authorize="!hasRole('ADMIN') and !hasRole('STAFF')">Books</a>
                                 </li>
-                                <li><a th:href="@{/manage-author}" sec:authorize="hasRole('ADMIN')">Authors</a></li>
-                                <li><a th:href="@{/manage-user}" sec:authorize="hasRole('ADMIN')">Users</a></li>
-                                <li><a th:href="@{/manage-staff}" sec:authorize="hasRole('ADMIN')">Staff</a></li>
-                                <li><a th:href="@{/manage-order}" sec:authorize="hasRole('ADMIN')">Orders</a></li>
-                                <li><a th:href="@{/manage-promotion}" sec:authorize="hasRole('ADMIN')">Promotions</a>
+
+                                <li class="menu-item-has-children menu-item-has-mega-menu"
+                                    sec:authorize="hasRole('USER')">
+                                    <a href="javascript:void(0);">All Categories</a>
+                                    <div class="mega-menu tg-category-mega-menu">
+                                        <ul class="tg-themetabnav" role="tablist">
+                                            <li th:each="entry, iterStat : ${categoryHierarchy}"
+                                                th:class="${iterStat.index == 0 ? 'active' : ''}"
+                                                role="presentation">
+                                                <a th:href="'#cat' + ${entry.key.id}"
+                                                   role="tab" data-toggle="tab"
+                                                   th:text="${entry.key.name}">Root Category</a>
+                                            </li>
+                                        </ul>
+                                        <div class="tab-content tg-themetabcontent">
+                                            <div th:each="entry, iterStat : ${categoryHierarchy}"
+                                                 th:id="|cat${entry.key.id}|"
+                                                 role="tabpanel"
+                                                 th:class="${iterStat.index == 0 ? 'tab-pane active' : 'tab-pane'}">
+                                                <ul class="tg-level1-container">
+                                                    <li th:each="level1 : ${entry.value}">
+                                                        <div class="tg-linkstitle">
+                                                            <h2 th:text="${level1.name}">Level 1</h2>
+                                                        </div>
+                                                        <ul th:if="${level1.children != null}">
+                                                            <li th:each="level2 : ${level1.children}">
+                                                                <a th:href="@{/products(categoryId=${level2.id})}"
+                                                                   th:text="${level2.name}">Level 2</a>
+                                                                <ul th:if="${level2.children != null}">
+                                                                    <li th:each="level3 : ${level2.children}">
+                                                                        <a th:href="@{/products(categoryId=${level3.id})}"
+                                                                           th:text="${level3.name}">Level 3</a>
+                                                                    </li>
+                                                                </ul>
+                                                            </li>
+                                                        </ul>
+                                                        <a class="tg-btnviewall"
+                                                           th:href="@{/products(categoryId=${level1.id})}">View
+                                                            All</a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </li>
-                                <li><a th:href="@{/statistic}" sec:authorize="hasRole('ADMIN')">Statistics</a></li>
+
+                                <!-- ========== ADMIN ========== -->
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-product}">Books</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a
+                                        th:href="@{/admin/manage-category}">Categories</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a
+                                        th:href="@{/admin/manage-author}">Authors</a></li>
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-user}">Users</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-order}">Orders</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a
+                                        th:href="@{/admin/manage-promotion}">Promotions</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/statistic}">Statistics</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-staff}">Staff</a>
+                                </li>
+                                <li class="menu-item-has-children" sec:authorize="hasRole('ADMIN')">
+                                    <a href="javascript:void(0);"><i class="fa fa-bars"></i></a>
+                                    <div class="mega-menu">
+                                        <ul>
+                                            <li><a th:href="@{/admin/manage-series}"><i class="fa fa-book"></i>
+                                                Series</a></li>
+                                            <li><a th:href="@{/admin/manage-language}"><i class="fa fa-flag"></i>
+                                                Language</a></li>
+                                            <li><a th:href="@{/admin/manage-publisher}"><i
+                                                    class="fa fa-briefcase"></i> Publisher</a></li>
+                                            <li><a th:href="@{/admin/manage-translator}"><i class="fa fa-users"></i>
+                                                Translator</a></li>
+                                            <li><a th:href="@{/admin/manage-comment}"><i class="fa fa-comments"></i>
+                                                Reviews</a></li>
+                                        </ul>
+                                    </div>
+                                </li>
+
+                                <!-- ========== STAFF ========== -->
+                                <li sec:authorize="hasRole('STAFF')"><a th:href="@{/staff/books}">Books</a></li>
+                                <li sec:authorize="hasRole('STAFF')"><a th:href="@{/staff/orders}">My Orders</a>
+                                </li>
+                                <li sec:authorize="hasRole('STAFF')"><a
+                                        th:href="@{/staff/categories}">Categories</a></li>
+                                <li sec:authorize="hasRole('STAFF')"><a th:href="@{/staff/authors}">Authors</a></li>
+                                <li sec:authorize="hasRole('STAFF')"><a
+                                        th:href="@{/staff/promotions}">Promotions</a></li>
+                                <li class="menu-item-has-children" sec:authorize="hasRole('STAFF')">
+                                    <a href="javascript:void(0);"><i class="fa fa-bars"></i></a>
+                                    <div class="mega-menu">
+                                        <ul>
+                                            <li><a th:href="@{/staff/series}"><i class="fa fa-book"></i> Series</a>
+                                            </li>
+                                            <li><a th:href="@{/staff/languages}"><i class="fa fa-flag"></i> Language</a>
+                                            </li>
+                                            <li><a th:href="@{/staff/publishers}"><i class="fa fa-briefcase"></i>
+                                                Publisher</a></li>
+                                            <li><a th:href="@{/staff/translators}"><i class="fa fa-users"></i>
+                                                Translator</a></li>
+                                        </ul>
+                                    </div>
+                                </li>
                             </ul>
                         </div>
                     </nav>
@@ -183,7 +257,7 @@
         </div>
     </div>
 </header>
-
+<!-- ============================= HEADER END ============================= -->
 <div class="tg-innerbanner tg-haslayout tg-parallax tg-bginnerbanner" data-z-index="-100" data-appear-top-offset="600"
      data-parallax="scroll" data-image-src="../images/parallax/bgparallax-07.jpg">
     <div class="container">
@@ -204,13 +278,6 @@
 <main id="tg-main" class="tg-main tg-haslayout">
     <div class="tg-sectionspace tg-haslayout" style="padding-top: 50px;">
         <div class="container">
-            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible" role="alert"
-                 style="margin-bottom: 20px;">
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-                <span th:text="${errorMessage}"></span>
-            </div>
 
             <div style="margin-bottom: 10px; text-align: left;">
                 <button type="button" class="btn btn-success" id="addStaffBtn">
@@ -321,7 +388,7 @@
     </div>
 </main>
 
-<!-- Create Staff Modal -->
+<!--  UPDATED: Modal form - Removed OTP, Single form only -->
 <div class="modal fade" id="createStaffModal" tabindex="-1" role="dialog" aria-labelledby="createStaffModalLabel">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -330,83 +397,59 @@
                     Member</h4>
             </div>
 
-            <!-- Step 1: Staff Information Form -->
-            <div id="staffInfoForm">
-                <form id="createStaffForm">
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label for="staff_name">Full Name <span style="color: red;">*</span></label>
-                            <input type="text" class="form-control" id="staff_name" name="name"
-                                   placeholder="Enter full name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="staff_username">Username <span style="color: red;">*</span></label>
-                            <input type="text" class="form-control" id="staff_username" name="username"
-                                   placeholder="Enter username" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="staff_email">Email <span style="color: red;">*</span></label>
-                            <input type="email" class="form-control" id="staff_email" name="email"
-                                   placeholder="Enter email address" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="staff_phone">Phone Number <span style="color: red;">*</span></label>
-                            <input type="text" class="form-control" id="staff_phone" name="phone"
-                                   placeholder="Enter phone" pattern="0\d{9}" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="staff_address">Address <span style="color: red;">*</span></label>
-                            <input type="text" class="form-control" id="staff_address" name="address"
-                                   placeholder="Enter address" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="staff_password">Password <span style="color: red;">*</span></label>
-                            <input type="password" class="form-control" id="staff_password" name="password"
-                                   placeholder="Enter password" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="staff_confirmPassword">Confirm Password <span
-                                    style="color: red;">*</span></label>
-                            <input type="password" class="form-control" id="staff_confirmPassword"
-                                   name="confirmPassword"
-                                   placeholder="Re-enter password" required>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary" id="sendOtpBtn">Save</button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Step 2: OTP Verification Form -->
-            <div id="otpVerificationForm" style="display: none;">
+            <!-- Staff Registration Form -->
+            <form id="createStaffForm">
                 <div class="modal-body">
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <i class="fa fa-envelope" style="font-size: 48px; color: #667eea;"></i>
-                        <h4 style="margin-top: 15px;">Verify Your Email</h4>
-                        <p>We've sent a 6-digit code to <strong id="otpEmailDisplay"></strong></p>
+                    <div class="form-group">
+                        <label for="staff_name">Full Name <span style="color: red;">*</span></label>
+                        <input type="text" class="form-control" id="staff_name" name="name"
+                               placeholder="Enter full name" required>
+                        <span class="form-error" id="error_staff_name"></span>
                     </div>
-
-                    <div class="otp-container" id="otpContainer">
-                        <!-- OTP inputs will be created here by JavaScript -->
+                    <div class="form-group">
+                        <label for="staff_username">Username <span style="color: red;">*</span></label>
+                        <input type="text" class="form-control" id="staff_username" name="username"
+                               placeholder="Enter username" required>
+                        <span class="form-error" id="error_staff_username"></span>
                     </div>
-
-                    <div class="otp-timer">
-                        Code expires in: <span id="otpCountdown">5:00</span>
+                    <div class="form-group">
+                        <label for="staff_email">Email <span style="color: red;">*</span></label>
+                        <input type="email" class="form-control" id="staff_email" name="email"
+                               placeholder="Enter email address" required>
+                        <span class="form-error" id="error_staff_email"></span>
                     </div>
-
-                    <div style="text-align: center; margin-top: 15px;">
-                        <p>Didn't receive the code?
-                            <a href="javascript:void(0);" class="resend-otp disabled" id="resendOtpLink">Resend OTP</a>
-                        </p>
+                    <div class="form-group">
+                        <label for="staff_phone">Phone Number <span style="color: red;">*</span></label>
+                        <input type="text" class="form-control" id="staff_phone" name="phone"
+                               placeholder="Enter phone" pattern="0\d{9}" required>
+                        <span class="form-error" id="error_staff_phone"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="staff_address">Address <span style="color: red;">*</span></label>
+                        <input type="text" class="form-control" id="staff_address" name="address"
+                               placeholder="Enter address" required>
+                        <span class="form-error" id="error_staff_address"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="staff_password">Password <span style="color: red;">*</span></label>
+                        <input type="password" class="form-control" id="staff_password" name="password"
+                               placeholder="Enter password" required>
+                        <span class="form-error" id="error_staff_password"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="staff_confirmPassword">Confirm Password <span
+                                style="color: red;">*</span></label>
+                        <input type="password" class="form-control" id="staff_confirmPassword"
+                               name="confirmPassword"
+                               placeholder="Re-enter password" required>
+                        <span class="form-error" id="error_staff_confirmPassword"></span>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-default" id="backToFormBtn">Back</button>
-                    <button type="button" class="btn btn-primary" id="verifyOtpBtn">Verify & Create</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="createStaffBtn">Save</button>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 </div>
@@ -452,6 +495,29 @@
                         <div class="tg-footercol">
                             <strong class="tg-logo"><a href="javascript:void(0);"><img src="../images/flogo.png"
                                                                                        alt="image description"></a></strong>
+                            <div class="tg-searchbox">
+                                <div class="tg-widget tg-widgetsearch">
+                                    <form class="tg-formtheme tg-formsearch" th:action="@{/search}">
+                                        <div class="form-group">
+                                            <input type="search" name="keyword" class="form-control"
+                                                   placeholder="Search with author, title, category... ">
+                                            <button type="submit"><i class="icon-magnifier"></i></button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="tg-wishlistandcart">
+                                <div sec:authorize="hasRole('USER')"
+                                     class="dropdown tg-themedropdown tg-minicartdropdown">
+                                    <a id="tg-minicart" class="tg-btnthemedropdown" data-toggle="dropdown"
+                                       aria-haspopup="true" aria-expanded="false">
+                                    <span class="tg-themebadge"
+                                          th:text=""></span>
+                                        <a th:href="@{view-cart}"><i class="icon-cart"></i>
+                                            <span style="margin-left: 10px;">Cart</span></a>
+                                    </a>
+                                </div>
+                            </div>
                             <ul class="tg-contactinfo">
                                 <li><i class="icon-apartment"></i>
                                     <address>Ha Dong, Hanoi, Vietnam</address>
@@ -523,301 +589,7 @@
 <script src="../js/appear.js"></script>
 <script src="../js/gmap3.js"></script>
 <script src="../js/main.js"></script>
-
-<script>
-    (function () {
-        'use strict';
-
-        const StaffManager = {
-            formData: {},
-            countdownTimer: null,
-            timeLeft: 300,
-
-            init: function () {
-                const self = this;
-
-                $('#addStaffBtn').on('click', function () {
-                    $('#createStaffModal').modal('show');
-                });
-
-                $('#createStaffForm').on('submit', function (e) {
-                    e.preventDefault();
-                    self.handleFormSubmit();
-                });
-
-                $('#verifyOtpBtn').on('click', function () {
-                    self.handleOtpVerification();
-                });
-
-                $('#backToFormBtn').on('click', function () {
-                    self.backToForm();
-                });
-
-                $('#resendOtpLink').on('click', function () {
-                    if (!$(this).hasClass('disabled')) {
-                        self.resendOtp();
-                    }
-                });
-
-                $('#createStaffModal').on('show.bs.modal', function () {
-                    self.createOtpInputs();
-                });
-
-                $('#createStaffModal').on('hidden.bs.modal', function () {
-                    self.resetModal();
-                });
-            },
-
-            createOtpInputs: function () {
-                const container = $('#otpContainer');
-                container.empty();
-
-                for (let i = 0; i < 6; i++) {
-                    const input = $('<input>', {
-                        type: 'text',
-                        class: 'otp-input',
-                        maxlength: 1,
-                        'data-index': i,
-                        inputmode: 'numeric'
-                    });
-                    container.append(input);
-                }
-
-                this.setupOtpInputHandlers();
-            },
-
-            setupOtpInputHandlers: function () {
-                const inputs = $('.otp-input');
-                inputs.off('input keydown paste');
-
-                inputs.on('input', function () {
-                    const val = this.value.replace(/[^0-9]/g, '');
-                    this.value = val;
-
-                    if (val.length === 1) {
-                        const index = parseInt($(this).data('index'));
-                        if (index < 5) {
-                            inputs.eq(index + 1).focus();
-                        }
-                    }
-                });
-
-                inputs.on('keydown', function (e) {
-                    if (e.keyCode === 8 && !this.value) {
-                        const index = parseInt($(this).data('index'));
-                        if (index > 0) {
-                            inputs.eq(index - 1).focus();
-                        }
-                    }
-                });
-
-                inputs.first().on('paste', function (e) {
-                    e.preventDefault();
-                    const pastedData = e.originalEvent.clipboardData.getData('text');
-                    const digits = pastedData.replace(/[^0-9]/g, '').slice(0, 6);
-
-                    inputs.each(function (index) {
-                        $(this).val(digits[index] || '');
-                    });
-
-                    if (digits.length === 6) {
-                        inputs.eq(5).focus();
-                    }
-                });
-            },
-
-            handleFormSubmit: function () {
-                const self = this;
-
-                this.formData = {
-                    step: 'validate',
-                    name: $('#staff_name').val(),
-                    username: $('#staff_username').val(),
-                    email: $('#staff_email').val(),
-                    phone: $('#staff_phone').val(),
-                    address: $('#staff_address').val(),
-                    password: $('#staff_password').val(),
-                    confirmPassword: $('#staff_confirmPassword').val()
-                };
-
-                $('#sendOtpBtn').prop('disabled', true)
-                    .html('<i class="fa fa-spinner fa-spin"></i> Sending...');
-
-                $.ajax({
-                    url: '/admin/create-staff',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(this.formData),
-                    success: function (response) {
-                        if (response.success) {
-                            self.showOtpForm();
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'OTP Sent!',
-                                text: 'Please check your email for the verification code.',
-                                timer: 2000,
-                                showConfirmButton: false
-                            });
-                        } else {
-                            Swal.fire('Error', response.message, 'error');
-                        }
-                    },
-                    error: function () {
-                        Swal.fire('Error', 'Failed to send OTP. Please try again.', 'error');
-                    },
-                    complete: function () {
-                        $('#sendOtpBtn').prop('disabled', false).text('Send OTP');
-                    }
-                });
-            },
-
-            handleOtpVerification: function () {
-                const self = this;
-                const otp = $('.otp-input').map(function () {
-                    return $(this).val();
-                }).get().join('');
-
-                if (otp.length !== 6) {
-                    Swal.fire('Error', 'Please enter all 6 digits.', 'error');
-                    return;
-                }
-
-                $('#verifyOtpBtn').prop('disabled', true)
-                    .html('<i class="fa fa-spinner fa-spin"></i> Verifying...');
-
-                $.ajax({
-                    url: '/admin/create-staff',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify($.extend({}, this.formData, {
-                        step: 'verify',
-                        otp: otp
-                    })),
-                    success: function (response) {
-                        if (response.success) {
-                            self.stopCountdown();
-                            $('#createStaffModal').modal('hide');
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Success!',
-                                text: response.message,
-                                showConfirmButton: true
-                            }).then(function () {
-                                window.location.reload();
-                            });
-                        } else {
-                            Swal.fire('Error', response.message, 'error');
-                            self.clearOtpInputs();
-                        }
-                    },
-                    error: function () {
-                        Swal.fire('Error', 'An error occurred. Please try again.', 'error');
-                    },
-                    complete: function () {
-                        $('#verifyOtpBtn').prop('disabled', false).text('Verify');
-                    }
-                });
-            },
-
-            showOtpForm: function () {
-                $('#staffInfoForm').hide();
-                $('#otpVerificationForm').show();
-                $('#otpEmailDisplay').text(this.formData.email);
-                this.startCountdown();
-
-                setTimeout(function () {
-                    $('.otp-input').first().focus();
-                }, 100);
-            },
-
-            backToForm: function () {
-                this.stopCountdown();
-                $('#otpVerificationForm').hide();
-                $('#staffInfoForm').show();
-                this.clearOtpInputs();
-            },
-
-            startCountdown: function () {
-                const self = this;
-                this.timeLeft = 300;
-                $('#resendOtpLink').addClass('disabled');
-                $('#otpCountdown').parent().removeClass('expired');
-
-                if (this.countdownTimer) {
-                    clearInterval(this.countdownTimer);
-                }
-
-                this.countdownTimer = setInterval(function () {
-                    self.timeLeft--;
-                    const minutes = Math.floor(self.timeLeft / 60);
-                    const seconds = self.timeLeft % 60;
-                    $('#otpCountdown').text(
-                        minutes + ':' + (seconds < 10 ? '0' : '') + seconds
-                    );
-
-                    if (self.timeLeft === 0) {
-                        self.stopCountdown();
-                        $('#otpCountdown').parent().addClass('expired');
-                        $('#otpCountdown').text('Expired');
-                        $('#resendOtpLink').removeClass('disabled');
-                    }
-                }, 1000);
-            },
-
-            stopCountdown: function () {
-                if (this.countdownTimer) {
-                    clearInterval(this.countdownTimer);
-                    this.countdownTimer = null;
-                }
-            },
-
-            resendOtp: function () {
-                const self = this;
-                $('#resendOtpLink').addClass('disabled');
-
-                $.ajax({
-                    url: '/admin/create-staff',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(this.formData),
-                    success: function (response) {
-                        if (response.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'OTP Resent!',
-                                text: 'A new code has been sent to your email.',
-                                timer: 2000,
-                                showConfirmButton: false
-                            });
-                            self.stopCountdown();
-                            self.startCountdown();
-                            self.clearOtpInputs();
-                        }
-                    }
-                });
-            },
-
-            clearOtpInputs: function () {
-                $('.otp-input').val('');
-                $('.otp-input').first().focus();
-            },
-
-            resetModal: function () {
-                this.stopCountdown();
-                $('#staffInfoForm').show();
-                $('#otpVerificationForm').hide();
-                $('#createStaffForm')[0].reset();
-                this.clearOtpInputs();
-                this.formData = {};
-            }
-        };
-
-        $(document).ready(function () {
-            StaffManager.init();
-        });
-
-    })();
-</script>
+<script src="../js/staff_form_validation.js"></script>
 
 </body>
 </html>

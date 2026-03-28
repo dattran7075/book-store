@@ -108,7 +108,6 @@ public class MainController implements ErrorController {
         }
         model.addAttribute("newArrivals", newArrivals);
 
-        // ✅ Calculate ratings for New Arrivals using Map
         Map<Integer, Double> newArrivalsRatings = new HashMap<>();
         for (Book book : newArrivals) {
             Double avgRating = commentService.getAverageRating(book);
@@ -154,7 +153,7 @@ public class MainController implements ErrorController {
         }
         model.addAttribute("recommendedBooks", recommendedBooks);
 
-        // ✅ Calculate ratings for Recommended Books using Map
+        //  Calculate ratings for Recommended Books using Map
         Map<Integer, Double> recommendedRatings = new HashMap<>();
         for (Book book : recommendedBooks) {
             Double avgRating = commentService.getAverageRating(book);
@@ -269,6 +268,7 @@ public class MainController implements ErrorController {
                 account.setEmail(email);
                 account.setPassword(passwordEncoder.encode(password));
                 account.setRole("USER");
+                account.setStatus("ACTIVE");
                 account.setCreated_at(new Date());
                 account = accountService.save(account);
 
@@ -628,7 +628,7 @@ public class MainController implements ErrorController {
             if (sortBy.isEmpty()) sortBy = null;
         }
 
-        // ✅ Handle price preset
+        // Handle price preset
         if (pricePreset != null && !pricePreset.isEmpty() && priceMin == null && priceMax == null) {
             switch (pricePreset) {
                 case "0-150000":
@@ -691,7 +691,7 @@ public class MainController implements ErrorController {
         model.addAttribute("totalElements", bookPage.getTotalElements());
 
         addCartInfoToModel(model);
-        return "products";  // Reuse template
+        return "products";
     }
 
     @GetMapping("/detail-product")
@@ -709,43 +709,52 @@ public class MainController implements ErrorController {
 
         model.addAttribute("book", book);
 
-        // ── Comment attributes ───────────────────────────────────────────────
+
         String username = request.getRemoteUser();
         boolean canReview = false;
         boolean hasCommented = false;
-        Comment myComment = null;
+        List<Comment> myComments = new ArrayList<>();
         boolean isUserRole = false;
 
         if (username != null) {
             Account account = accountService.findByUsername(username);
             User user = userService.findByAccount(account);
             model.addAttribute("username", username);
-
-            // Only USER role gets tabs — ADMIN sees guest view
             isUserRole = "USER".equals(account.getRole());
-            canReview = bookService.hasCompletedOrderWithBook(user, book);
+            canReview = commentService.canUserReview(user, book);
             hasCommented = commentService.hasUserCommented(user, book);
+            myComments = commentService.getAllMyCommentsForBook(user, book);
 
-            // My comment (any status) – for My Review tab
-            myComment = commentService.getMyCommentForBook(user, book).orElse(null);
-
-            // If already has a comment, cannot write a new one
-            if (myComment != null) canReview = false;
         }
 
         // Approved comments – visible to everyone
-        model.addAttribute("approvedComments", commentService.getApprovedCommentsByBook(book));
-        model.addAttribute("myComment", myComment);
+        List<Comment> approvedComments = commentService.getApprovedCommentsByBook(book);
+        model.addAttribute("approvedComments", approvedComments);
+
+        int totalReviews = approvedComments.size();
+
+        // List [star, count, percent] từ 5→1,
+        List<int[]> ratingStats = new ArrayList<>();
+        for (int s = 5; s >= 1; s--) {
+            final int star = s;
+            long count = approvedComments.stream()
+                    .filter(c -> c.getStar() != null && c.getStar().intValue() == star)
+                    .count();
+            int percent = totalReviews > 0 ? (int) (count * 100 / totalReviews) : 0;
+            ratingStats.add(new int[]{star, (int) count, percent});
+        }
+
+        model.addAttribute("ratingStats", ratingStats);
+        model.addAttribute("averageRating", commentService.getAverageRating(book));
+        model.addAttribute("totalReviews", totalReviews);
+        model.addAttribute("myComments", myComments);
         model.addAttribute("hasCommented", hasCommented);
         model.addAttribute("canReview", canReview);
         model.addAttribute("isUserRole", isUserRole);
-
-        // Empty Comment object for the write-review form
         model.addAttribute("comment", new Comment());
 
         addCartInfoToModel(model);
 
-        // ── Sidebar categories ───────────────────────────────────────────────
         List<Category> categoryList = categoryService.findAll();
         model.addAttribute("categoryList", categoryList);
 

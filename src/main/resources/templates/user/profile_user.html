@@ -29,9 +29,11 @@
             font-size: 18px;
             padding: 0;
         }
+
         .btn-toggle-password:hover {
             color: #666;
         }
+
         .btn-toggle-password.active {
             color: #d32f2f;
         }
@@ -80,14 +82,15 @@
         <div class="container">
             <div class="row">
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                    <strong class="tg-logo"><a href="index-2.html"><img src="images/logo.png"
-                                                                        alt="company name here"></a></strong>
+                    <strong class="tg-logo"><a href="/"><img src="/images/logoSWP.png"
+                                                             alt="company name here"></a></strong>
                     <div class="tg-wishlistandcart">
                         <div sec:authorize="hasRole('USER')" class="dropdown tg-themedropdown tg-minicartdropdown">
                             <a id="tg-minicart" class="tg-btnthemedropdown" data-toggle="dropdown"
                                aria-haspopup="true" aria-expanded="false">
                                 <span class="tg-themebadge"
-                                      th:text="${cartTotalBooks != null ? cartTotalBooks : 0}"></span>
+                                      th:with="qty=${cartTotalBooks != null ? cartTotalBooks : 0}"
+                                      th:text="${qty >= 10000 ? '10k+' : (qty >= 1000 ? (qty / 1000) + 'k+' : (qty >= 100 ? '99+' : qty))}"></span>
                                 <a th:href="@{view-cart}"><i
                                         class="icon-cart"></i>
                                     <span style="margin-left: 10px;">Cart</span></a>
@@ -117,14 +120,55 @@
                                 <li><a th:href="@{/}">Home</a></li>
                                 <li><a th:href="@{/products}" sec:authorize="!hasRole('ADMIN')">Books</a></li>
                                 <li><a th:href="@{/manage-product}" sec:authorize="hasRole('ADMIN')">Books</a></li>
+                                <li class="menu-item-has-children menu-item-has-mega-menu"
+                                    sec:authorize="!hasRole('ADMIN')">
+                                    <a href="javascript:void(0);">All Categories</a>
+                                    <div class="mega-menu tg-category-mega-menu">
+                                        <ul class="tg-themetabnav" role="tablist">
+                                            <li th:each="entry, iterStat : ${categoryHierarchy}"
+                                                th:class="${iterStat.index == 0 ? 'active' : ''}"
+                                                role="presentation">
+                                                <a th:href="'#cat' + ${entry.key.id}" role="tab" data-toggle="tab"
+                                                   th:text="${entry.key.name}">Root Category</a>
+                                            </li>
+                                        </ul>
+                                        <div class="tab-content tg-themetabcontent">
+                                            <div th:each="entry, iterStat : ${categoryHierarchy}"
+                                                 th:id="|cat${entry.key.id}|" role="tabpanel"
+                                                 th:class="${iterStat.index == 0 ? 'tab-pane active' : 'tab-pane'}">
+                                                <ul class="tg-level1-container">
+                                                    <li th:each="level1 : ${entry.value}">
+                                                        <div class="tg-linkstitle"><h2 th:text="${level1.name}">
+                                                            Level 1</h2></div>
+                                                        <ul th:if="${level1.children != null}">
+                                                            <li th:each="level2 : ${level1.children}">
+                                                                <a th:href="@{/products(categoryId=${level2.id})}"
+                                                                   th:text="${level2.name}">Level 2</a>
+                                                                <ul th:if="${level2.children != null}">
+                                                                    <li th:each="level3 : ${level2.children}">
+                                                                        <a th:href="@{/products(categoryId=${level3.id})}"
+                                                                           th:text="${level3.name}">Level 3</a>
+                                                                    </li>
+                                                                </ul>
+                                                            </li>
+                                                        </ul>
+                                                        <a class="tg-btnviewall"
+                                                           th:href="@{/products(categoryId=${level1.id})}">View
+                                                            All</a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
                                 <li><a th:href="@{/manage-category}" sec:authorize="hasRole('ADMIN')">Categories</a>
                                 </li>
                                 <li><a th:href="@{/manage-author}" sec:authorize="hasRole('ADMIN')">Authors</a></li>
                                 <li><a th:href="@{/manage-user}" sec:authorize="hasRole('ADMIN')">Users</a></li>
                                 <li><a th:href="@{/manage-order}" sec:authorize="hasRole('ADMIN')">Orders</a></li>
-                                <li><a th:href="@{/manage-promotion}" sec:authorize="hasRole('ADMIN')">Promotions</a>
+                                <li><a th:href="@{/manage-promotion}"
+                                       sec:authorize="hasRole('ADMIN')">Promotions</a></li>
                                 <li><a th:href="@{/statistic}" sec:authorize="hasRole('ADMIN')">Statistics</a></li>
-                                </li>
                             </ul>
                         </div>
                     </nav>
@@ -170,7 +214,8 @@
 
                                 <!-- Full Name Field -->
                                 <div class="form-group">
-                                    <label for="name"><span style="color: red;">*</span><strong>Full name</strong></label>
+                                    <label for="name"><span style="color: red;">*</span><strong>Full
+                                        name</strong></label>
                                     <input type="text" th:field="*{name}" class="form-control" style="width: 600px;"
                                            id="name" name="name" disabled>
                                 </div>
@@ -184,33 +229,38 @@
 
                                 <!-- Phone Field -->
                                 <div class="form-group">
-                                    <label for="phone"><span style="color: red;">*</span><strong>Phone number</strong></label>
+                                    <label for="phone"><span style="color: red;">*</span><strong>Phone
+                                        number</strong></label>
                                     <input type="text" th:field="*{phone}" class="form-control" style="width: 600px;"
                                            id="phone" name="phone" disabled>
                                 </div>
 
                                 <!-- Address Field -->
                                 <div class="form-group">
-                                    <label for="address"><span style="color: red;">*</span><strong>Address</strong></label>
+                                    <label for="address"><span
+                                            style="color: red;">*</span><strong>Address</strong></label>
                                     <input type="text" th:field="*{address}" class="form-control" style="width: 600px;"
                                            id="address" name="address" disabled>
                                 </div>
                             </div>
 
                             <!-- RIGHT COLUMN: Account Information -->
-                            <div th:if="${user.account != null}" class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-right">
+                            <div th:if="${user.account != null}"
+                                 class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-right">
                                 <h2>Account</h2>
                                 <div class="form-group">
-                                    <label for="username"><span style="color: red;">*</span><strong>Username</strong></label>
+                                    <label for="username"><span
+                                            style="color: red;">*</span><strong>Username</strong></label>
                                     <input type="text" th:value="*{account.username}" class="form-control"
-                                           style="width: 400px;" id="username" disabled>
+                                           style="width: 400px;" id="username" readonly>
                                 </div>
                                 <button sec:authorize="hasRole('USER')" type="button" class="btn btn-warning"
                                         id="editPass-btn" style="display:block;" data-toggle="modal"
                                         data-target="#myModal_edit_password">Change password
                                 </button>
                             </div>
-                            <div th:unless="${user.account != null}" class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-right">
+                            <div th:unless="${user.account != null}"
+                                 class="col-xs-12 col-sm-12 col-md-6 col-lg-5 pull-right">
                                 <h2>Account</h2>
                                 <div class="form-group">
                                     <label><strong>Username</strong></label>
@@ -224,8 +274,12 @@
                         </div>
 
                         <!-- Edit and Save Buttons -->
-                        <button type="button" class="btn btn-warning" id="edit-btn" style="display:block; margin-top: 20px;">Edit</button>
-                        <button type="submit" class="btn btn-primary" id="save-btn" style="display:none; margin-top: 20px;">Save</button>
+                        <button type="button" class="btn btn-warning" id="edit-btn"
+                                style="display:block; margin-top: 20px;">Edit
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="save-btn"
+                                style="display:none; margin-top: 20px;">Save
+                        </button>
                     </div>
                 </form>
             </div>
@@ -252,8 +306,10 @@
                     <div class="form-group">
                         <label><span style="color: red;">*</span>Old password</label>
                         <div style="position: relative; display: flex; align-items: center;">
-                            <input type="password" class="form-control password-input" name="oldPassword" id="oldPassword" required style="padding-right: 45px; flex: 1;">
-                            <button type="button" class="btn-toggle-password" data-target="#oldPassword" style="position: absolute; right: 12px;">
+                            <input type="password" class="form-control password-input" name="oldPassword"
+                                   id="oldPassword" required style="padding-right: 45px; flex: 1;">
+                            <button type="button" class="btn-toggle-password" data-target="#oldPassword"
+                                    style="position: absolute; right: 12px;">
                                 <i class="fa fa-eye"></i>
                             </button>
                         </div>
@@ -263,8 +319,10 @@
                     <div class="form-group">
                         <label style="margin-top:10px;"><span style="color: red;">*</span>New password</label>
                         <div style="position: relative; display: flex; align-items: center;">
-                            <input type="password" class="form-control password-input" name="newPassword" id="newPassword" required style="padding-right: 45px; flex: 1;">
-                            <button type="button" class="btn-toggle-password" data-target="#newPassword" style="position: absolute; right: 12px;">
+                            <input type="password" class="form-control password-input" name="newPassword"
+                                   id="newPassword" required style="padding-right: 45px; flex: 1;">
+                            <button type="button" class="btn-toggle-password" data-target="#newPassword"
+                                    style="position: absolute; right: 12px;">
                                 <i class="fa fa-eye"></i>
                             </button>
                         </div>
@@ -274,8 +332,10 @@
                     <div class="form-group">
                         <label style="margin-top:10px;"><span style="color: red;">*</span>Confirm new password</label>
                         <div style="position: relative; display: flex; align-items: center;">
-                            <input type="password" class="form-control password-input" name="confirmNewPassword" id="confirmNewPassword" required style="padding-right: 45px; flex: 1;">
-                            <button type="button" class="btn-toggle-password" data-target="#confirmNewPassword" style="position: absolute; right: 12px;">
+                            <input type="password" class="form-control password-input" name="confirmNewPassword"
+                                   id="confirmNewPassword" required style="padding-right: 45px; flex: 1;">
+                            <button type="button" class="btn-toggle-password" data-target="#confirmNewPassword"
+                                    style="position: absolute; right: 12px;">
                                 <i class="fa fa-eye"></i>
                             </button>
                         </div>
@@ -427,7 +487,6 @@
     const emailUser = document.querySelector('#email');
     const phoneUser = document.querySelector('#phone');
     const addressUser = document.querySelector('#address');
-    const usernameUser = document.querySelector('#username');
     editBtn.addEventListener('click', function (event) {
         event.preventDefault();
 
@@ -436,22 +495,20 @@
             emailUser.disabled = false;
             phoneUser.disabled = false;
             addressUser.disabled = false;
-            usernameUser.disabled = true;
             saveBtn.style.display = 'block';
             editBtn.style.display = 'none';
-            // addBtn.style.display = 'none';
         }
     });
     saveBtn.style.display = 'none';
 </script>
 <!-- Password Toggle Script -->
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Password toggle functionality
         const toggleButtons = document.querySelectorAll('.btn-toggle-password');
 
         toggleButtons.forEach(button => {
-            button.addEventListener('click', function(e) {
+            button.addEventListener('click', function (e) {
                 e.preventDefault();
 
                 const targetId = this.getAttribute('data-target');

@@ -20,10 +20,13 @@
     <link rel="stylesheet" href="../css/responsive.css">
     <script src="../js/vendor/modernizr-2.8.3-respond-1.4.2.min.js"></script>
     <style>
-        .label-created { background-color: #6c757d; }
+        .label-created {
+            background-color: #6c757d;
+        }
     </style>
 </head>
 <body>
+<!-- ============================= HEADER START ============================= -->
 <header id="tg-header" class="tg-header tg-haslayout">
     <div class="tg-topbar">
         <div class="container">
@@ -33,31 +36,68 @@
                         <div>
                             <li style="list-style:none;" class="menu-item-has-children"
                                 sec:authorize="isAuthenticated()">
-                                <a href=""><i id="user_icon" class="fa fa-user"></i> Welcome
-                                    <span th:text="${currentStaff != null ? currentStaff.name : ''}"></span>
+                                <a href="">
+                                    <i id="user_icon" class="fa fa-user"></i> Welcome
+                                    <span th:if="${currentUserName != null}" th:text="${currentUserName}"></span>
+                                    <span class="sr-only"></span>
                                 </a>
                                 <div class="mega-menu user">
                                     <ul class="tg-themetabnav" role="tablist">
-                                        <li><a th:href="@{/profile}">Profile</a></li>
-                                        <li><a class="tg-userlogout" th:href="@{/logout}">Logout</a></li>
+                                        <li><a th:href="@{/profile}">Profile<span class="sr-only">(current)</span></a>
+                                        </li>
+                                        <li sec:authorize="hasRole('USER')">
+                                            <a th:href="@{/orders}">Orders<span class="sr-only">(current)</span></a>
+                                        </li>
+                                        <li><a class="tg-userlogout" th:href="@{/logout}">Logout<span
+                                                class="sr-only">(current)</span></a></li>
                                     </ul>
                                 </div>
                             </li>
+                            <br>
+                            <a class="nav-link text" th:href="@{/signup}" style="margin-right: 30px"
+                               sec:authorize="!isAuthenticated()">Sign up<span class="sr-only">(current)</span></a>
+                            <a class="nav-link text" th:href="@{/login}"
+                               sec:authorize="!isAuthenticated()">Login<span class="sr-only">(current)</span></a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
     <div class="tg-middlecontainer" style="padding: 10px;">
         <div class="container">
             <div class="row">
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                    <strong class="tg-logo"><a th:href="@{/}"><img src="../images/logo.png" alt="company name here"></a></strong>
+                    <strong class="tg-logo"><a href="/"><img src="/images/logoSWP.png"
+                                                             alt="company name here"></a></strong>
+                    <div class="tg-searchbox">
+                        <div class="tg-widget tg-widgetsearch">
+                            <form class="tg-formtheme tg-formsearch" th:action="@{/search}">
+                                <div class="form-group">
+                                    <input type="search" name="keyword" class="form-control"
+                                           placeholder="Search with author, title, category... ">
+                                    <button type="submit"><i class="icon-magnifier"></i></button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="tg-wishlistandcart">
+                        <div sec:authorize="hasRole('USER')" class="dropdown tg-themedropdown tg-minicartdropdown">
+                            <a id="tg-minicart" class="tg-btnthemedropdown" data-toggle="dropdown"
+                               aria-haspopup="true" aria-expanded="false">
+                                    <span class="tg-themebadge"
+                                          th:text="${cartTotalBooks != null ? cartTotalBooks : 0}"></span>
+                                <a th:href="@{view-cart}"><i class="icon-cart"></i>
+                                    <span style="margin-left: 10px;">Cart</span></a>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
     <div class="tg-navigationarea">
         <div class="container">
             <div class="row">
@@ -75,12 +115,119 @@
                         <div id="tg-navigation" class="collapse navbar-collapse tg-navigation">
                             <ul>
                                 <li><a th:href="@{/}">Home</a></li>
-                                <li><a th:href="@{/staff/books}">Books</a></li>
-                                <li><a th:href="@{/staff/orders}">Orders</a></li>
-                                <li><a th:href="@{/staff/categories}">Categories</a></li>
-                                <li><a th:href="@{/staff/authors}">Authors</a></li>
-                                <li class="tg-active"><a th:href="@{/staff/promotions}">Promotions</a></li>
-                                <li><a th:href="@{/staff/languages}">Languages</a></li>
+
+                                <!-- ========== USER ========== -->
+                                <li>
+                                    <a th:href="@{/products}"
+                                       sec:authorize="!hasRole('ADMIN') and !hasRole('STAFF')">Books</a>
+                                </li>
+
+                                <li class="menu-item-has-children menu-item-has-mega-menu"
+                                    sec:authorize="hasRole('USER')">
+                                    <a href="javascript:void(0);">All Categories</a>
+                                    <div class="mega-menu tg-category-mega-menu">
+                                        <ul class="tg-themetabnav" role="tablist">
+                                            <li th:each="entry, iterStat : ${categoryHierarchy}"
+                                                th:class="${iterStat.index == 0 ? 'active' : ''}"
+                                                role="presentation">
+                                                <a th:href="'#cat' + ${entry.key.id}"
+                                                   role="tab" data-toggle="tab"
+                                                   th:text="${entry.key.name}">Root Category</a>
+                                            </li>
+                                        </ul>
+                                        <div class="tab-content tg-themetabcontent">
+                                            <div th:each="entry, iterStat : ${categoryHierarchy}"
+                                                 th:id="|cat${entry.key.id}|"
+                                                 role="tabpanel"
+                                                 th:class="${iterStat.index == 0 ? 'tab-pane active' : 'tab-pane'}">
+                                                <ul class="tg-level1-container">
+                                                    <li th:each="level1 : ${entry.value}">
+                                                        <div class="tg-linkstitle">
+                                                            <h2 th:text="${level1.name}">Level 1</h2>
+                                                        </div>
+                                                        <ul th:if="${level1.children != null}">
+                                                            <li th:each="level2 : ${level1.children}">
+                                                                <a th:href="@{/products(categoryId=${level2.id})}"
+                                                                   th:text="${level2.name}">Level 2</a>
+                                                                <ul th:if="${level2.children != null}">
+                                                                    <li th:each="level3 : ${level2.children}">
+                                                                        <a th:href="@{/products(categoryId=${level3.id})}"
+                                                                           th:text="${level3.name}">Level 3</a>
+                                                                    </li>
+                                                                </ul>
+                                                            </li>
+                                                        </ul>
+                                                        <a class="tg-btnviewall"
+                                                           th:href="@{/products(categoryId=${level1.id})}">View
+                                                            All</a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+
+                                <!-- ========== ADMIN ========== -->
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-product}">Books</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a
+                                        th:href="@{/admin/manage-category}">Categories</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a
+                                        th:href="@{/admin/manage-author}">Authors</a></li>
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-user}">Users</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-order}">Orders</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a
+                                        th:href="@{/admin/manage-promotion}">Promotions</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/statistic}">Statistics</a>
+                                </li>
+                                <li sec:authorize="hasRole('ADMIN')"><a th:href="@{/admin/manage-staff}">Staff</a>
+                                </li>
+                                <li class="menu-item-has-children" sec:authorize="hasRole('ADMIN')">
+                                    <a href="javascript:void(0);"><i class="fa fa-bars"></i></a>
+                                    <div class="mega-menu">
+                                        <ul>
+                                            <li><a th:href="@{/admin/manage-series}"><i class="fa fa-book"></i>
+                                                Series</a></li>
+                                            <li><a th:href="@{/admin/manage-language}"><i class="fa fa-flag"></i>
+                                                Language</a></li>
+                                            <li><a th:href="@{/admin/manage-publisher}"><i
+                                                    class="fa fa-briefcase"></i> Publisher</a></li>
+                                            <li><a th:href="@{/admin/manage-translator}"><i class="fa fa-users"></i>
+                                                Translator</a></li>
+                                            <li><a th:href="@{/admin/manage-comment}"><i class="fa fa-comments"></i>
+                                                Reviews</a></li>
+                                        </ul>
+                                    </div>
+                                </li>
+
+                                <!-- ========== STAFF ========== -->
+                                <li sec:authorize="hasRole('STAFF')"><a th:href="@{/staff/books}">Books</a></li>
+                                <li sec:authorize="hasRole('STAFF')"><a th:href="@{/staff/orders}">My Orders</a>
+                                </li>
+                                <li sec:authorize="hasRole('STAFF')"><a
+                                        th:href="@{/staff/categories}">Categories</a></li>
+                                <li sec:authorize="hasRole('STAFF')"><a th:href="@{/staff/authors}">Authors</a></li>
+                                <li sec:authorize="hasRole('STAFF')"><a
+                                        th:href="@{/staff/promotions}">Promotions</a></li>
+                                <li class="menu-item-has-children" sec:authorize="hasRole('STAFF')">
+                                    <a href="javascript:void(0);"><i class="fa fa-bars"></i></a>
+                                    <div class="mega-menu">
+                                        <ul>
+                                            <li><a th:href="@{/staff/series}"><i class="fa fa-book"></i> Series</a>
+                                            </li>
+                                            <li><a th:href="@{/staff/languages}"><i class="fa fa-flag"></i> Language</a>
+                                            </li>
+                                            <li><a th:href="@{/staff/publishers}"><i class="fa fa-briefcase"></i>
+                                                Publisher</a></li>
+                                            <li><a th:href="@{/staff/translators}"><i class="fa fa-users"></i>
+                                                Translator</a></li>
+                                        </ul>
+                                    </div>
+                                </li>
                             </ul>
                         </div>
                     </nav>
@@ -89,6 +236,7 @@
         </div>
     </div>
 </header>
+<!-- ============================= HEADER END ============================= -->
 
 <div class="tg-innerbanner tg-haslayout tg-parallax tg-bginnerbanner" data-z-index="-100"
      data-appear-top-offset="600" data-parallax="scroll"
@@ -111,96 +259,86 @@
 <main id="tg-main" class="tg-main tg-haslayout">
     <div class="tg-sectionspace tg-haslayout" style="padding-top: 50px;">
         <div class="container">
-
-            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible" role="alert"
-                 style="margin-bottom: 20px;">
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-                <strong>Error!</strong> <span th:text="${errorMessage}"></span>
-            </div>
-
             <div class="row">
-                <div class="col-xs-12">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover">
-                            <thead>
-                            <tr>
-                                <th>No.</th>
-                                <th>Code</th>
-                                <th>Name</th>
-                                <th>Discount Type</th>
-                                <th>Discount Value</th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
-                                <th>Usage</th>
-                                <th>Min Order</th>
-                                <th>Status</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:each="promotion, iterStat : ${promotionList}">
-                                <td th:text="${(page - 1) * 10 + iterStat.count}"></td>
-                                <td><strong th:text="${promotion.code}"></strong></td>
-                                <td th:text="${promotion.name}"></td>
-                                <td>
-                                    <span th:if="${promotion.discountType == 'PER_PRODUCT'}"
-                                          class="label label-primary">
-                                        <i class="fa fa-tag"></i> Per Product
-                                    </span>
-                                    <span th:if="${promotion.discountType == 'ORDER_FIXED'}"
-                                          class="label label-success">
-                                        <i class="fa fa-shopping-cart"></i> Per Order
-                                    </span>
-                                </td>
-                                <td th:text="${#numbers.formatDecimal(promotion.discountValue, 0, 'COMMA', 0, 'POINT') + ' VND'}"></td>
-                                <td th:text="${#temporals.format(promotion.startDate, 'dd-MM-yyyy')}"></td>
-                                <td th:text="${#temporals.format(promotion.endDate, 'dd-MM-yyyy')}"></td>
-                                <td>
-                                    <span th:text="${promotion.usedCount + '/' + promotion.maxUsage}"></span>
-                                    <span th:if="${promotion.usedCount >= promotion.maxUsage}"
-                                          class="label label-danger" style="margin-left: 5px;">Full</span>
-                                </td>
-                                <td th:text="${#numbers.formatDecimal(promotion.minOrder, 0, 'COMMA', 0, 'POINT') + ' VND'}"></td>
-                                <td>
-                                    <span th:class="${
-                                        promotion.displayStatus == 'ACTIVE' ? 'label label-success' :
-                                        (promotion.displayStatus == 'EXPIRED' ? 'label label-warning' :
-                                        'label label-created')
-                                    }" th:text="${promotion.displayStatus}">
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr th:if="${#lists.isEmpty(promotionList)}">
-                                <td colspan="10" style="text-align:center; padding: 30px; color: #999;">
-                                    <i class="fa fa-inbox" style="font-size:36px;"></i>
-                                    <p style="margin-top:10px;">No promotions found.</p>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
+                <div id="tg-content" class="tg-content">
+                    <div class="tg-products">
+                        <div class="tg-productgrid">
+                            <!-- Messages -->
+                            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible" role="alert"
+                                 style="margin-bottom: 15px;">
+                                <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                                <strong><i class="fa fa-exclamation-circle"></i> Error!</strong>
+                                <span th:text="${errorMessage}"></span>
+                            </div>
+
+                            <!-- Promotion Table - GIỐNG ADMIN NHƯNG KHÔNG CÓ BUTTON EDIT/DELETE -->
+                            <table class="table table-bordered">
+                                <thead>
+                                <tr>
+                                    <th>No.</th>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Discount</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Usage</th>
+                                    <th>Min Order</th>
+                                    <th>Status</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <th:block th:each="promotion, iterStat: ${promotionList}">
+                                    <tr>
+                                        <td th:text="${(page - 1) * 10 + iterStat.count}"></td>
+                                        <td><strong th:text="${promotion.code}"></strong></td>
+                                        <td th:text="${promotion.name}"></td>
+                                        <td th:text="${#numbers.formatInteger(promotion.discountValue, 1, 'COMMA') + ' VND'}"></td>
+                                        <td th:text="${#temporals.format(promotion.startDate, 'dd-MM-yyyy')}"></td>
+                                        <td th:text="${#temporals.format(promotion.endDate, 'dd-MM-yyyy')}"></td>
+                                        <td>
+                                            <span th:text="${promotion.usedCount + '/' + promotion.maxUsage}"></span>
+                                            <span th:if="${promotion.usedCount >= promotion.maxUsage}"
+                                                  class="label label-danger" style="margin-left: 5px;">Full</span>
+                                        </td>
+                                        <td th:text="${#numbers.formatInteger(promotion.minOrder, 1, 'COMMA') + ' VND'}"></td>
+                                        <td>
+                                            <span th:class="${promotion.displayStatus == 'ACTIVE' ? 'label label-success' : (promotion.displayStatus == 'EXPIRED' ? 'label label-warning' : 'label label-created')}"
+                                                  th:text="${promotion.displayStatus}"></span>
+                                        </td>
+                                    </tr>
+                                </th:block>
+
+                                <!-- Empty State -->
+                                <tr th:if="${#lists.isEmpty(promotionList)}">
+                                    <td colspan="9" style="text-align: center; padding: 40px;">
+                                        <i class="fa fa-inbox" style="font-size: 48px; color: #ccc;"></i>
+                                        <p style="margin-top: 15px; color: #999;">No promotions found.</p>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Pagination -->
-            <nav aria-label="Page navigation" style="text-align: center;">
-                <ul class="pagination">
-                    <li th:classappend="${page == 1} ? 'disabled'">
-                        <a th:if="${page > 1}" th:href="@{/staff/promotions(page=${page - 1})}">&laquo;</a>
-                        <span th:if="${page == 1}">&laquo;</span>
-                    </li>
-                    <li th:each="i : ${#numbers.sequence(1, totalPage)}" th:classappend="${i == page} ? 'active'">
-                        <a th:href="@{/staff/promotions(page=${i})}" th:text="${i}"></a>
-                    </li>
-                    <li th:classappend="${page == totalPage} ? 'disabled'">
-                        <a th:if="${page < totalPage}" th:href="@{/staff/promotions(page=${page + 1})}">&raquo;</a>
-                        <span th:if="${page == totalPage}">&raquo;</span>
-                    </li>
-                </ul>
-            </nav>
-
         </div>
+
+        <!-- Pagination -->
+        <nav aria-label="Page navigation" style="text-align: center;">
+            <ul class="pagination">
+                <li th:classappend="${page == 1} ? 'disabled'">
+                    <a th:if="${page > 1}" th:href="@{/staff/promotions(page=${page - 1})}">&laquo;</a>
+                    <span th:if="${page == 1}">&laquo;</span>
+                </li>
+                <li th:each="i : ${#numbers.sequence(1, totalPage)}" th:classappend="${i == page} ? 'active'">
+                    <a th:href="@{/staff/promotions(page=${i})}" th:text="${i}"></a>
+                </li>
+                <li th:classappend="${page == totalPage} ? 'disabled'">
+                    <a th:if="${page < totalPage}" th:href="@{/staff/promotions(page=${page + 1})}">&raquo;</a>
+                    <span th:if="${page == totalPage}">&raquo;</span>
+                </li>
+            </ul>
+        </nav>
     </div>
 </main>
 
