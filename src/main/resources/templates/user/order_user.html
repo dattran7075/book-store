@@ -221,7 +221,6 @@
                                                 <th>Total</th>
                                                 <th>Payment</th>
                                                 <th>Status</th>
-                                                <th>Date</th>
                                                 <th style="min-width: 160px;">Actions</th>
                                             </tr>
 
@@ -293,9 +292,6 @@
                                                               style="background-color: #34495e; color: white;"
                                                               th:text="${order.status}"></span>
                                                     </td>
-
-                                                    <!-- Date -->
-                                                    <td th:text="${#temporals.format(order.createdAt, 'dd/MM/yyyy')}"></td>
 
                                                     <!-- Actions -->
                                                     <td>
