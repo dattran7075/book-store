@@ -807,7 +807,7 @@ public class UserController {
             if (!isValidSignature) {
                 model.addAttribute("paymentStatus", "FAILED");
                 model.addAttribute("message", "Signature verification failed! Possible tampering detected.");
-                return "vnpay-result";
+                return "user/vnpay-result";
             }
 
             // Extract key information from callback
@@ -856,7 +856,7 @@ public class UserController {
                 model.addAttribute("orderId", orderId);
                 model.addAttribute("message", "Payment successful!");
                 model.addAttribute("transactionNo", vnp_TransactionNo);
-                model.addAttribute("amount", Long.parseLong(vnp_Amount) / 100); // Convert back to VND
+                model.addAttribute("amount", Long.parseLong(vnp_Amount) / 100);
 
             } else {
                 // Payment failed
